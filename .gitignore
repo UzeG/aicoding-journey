@@ -1,0 +1,17 @@
+# === OS ===
+.DS_Store
+
+# === Python ===
+__pycache__/
+*.py[cod]
+*.db
+*.env
+
+# === Node ===
+node_modules/
+dist/
+
+# === IDE ===
+.idea/
+
+reports/

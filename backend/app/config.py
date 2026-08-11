@@ -1,0 +1,36 @@
+from pydantic_settings import BaseSettings
+
+
+class Settings(BaseSettings):
+    # Application
+    APP_HOST: str = "0.0.0.0"
+    APP_PORT: int = 8000
+    PUBLIC_BASE_URL: str = "http://localhost:5173"
+
+    # Database
+    DATABASE_URL: str = "sqlite+aiosqlite:///./htmlhost.db"
+
+    # JWT
+    JWT_SECRET: str = "dev-secret-change-in-production"
+    JWT_ALGORITHM: str = "HS256"
+    JWT_EXPIRE_MINUTES: int = 1440  # 24 hours
+
+    # Encryption for stored API keys (generate with: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())")
+    ENCRYPTION_KEY: str = ""
+
+    # LLM defaults (platform-level, user can override)
+    LLM_MODEL: str = "deepseek-chat"
+    LLM_API_KEY: str = ""
+    LLM_BASE_URL: str = "https://api.deepseek.com"
+
+    # API Proxy
+    PROXY_ALLOWED_DOMAINS: str = "api.openweathermap.org,api.github.com,restapi.amap.com"
+    PROXY_WHITELIST_MODE: str = "open"  # "open" or "strict"
+
+    # Content Safety
+    CONTENT_FILTER_ENABLED: bool = True
+
+    model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
+
+
+settings = Settings()
