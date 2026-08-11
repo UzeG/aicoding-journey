@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef } from 'react'
 import { useSearchParams } from 'react-router-dom'
+import { CircleAlert } from 'lucide-react'
 import CodePanel from '../components/generator/CodePanel'
 import PreviewPanel from '../components/generator/PreviewPanel'
 import PromptInput from '../components/generator/PromptInput'
@@ -51,7 +52,7 @@ export default function GeneratorView() {
   return (
     <div className="h-[calc(100vh-56px)] flex flex-col">
       {/* Top bar */}
-      <div className="px-4 py-3 bg-white border-b border-gray-200 flex items-center gap-4">
+      <div className="px-4 py-3 bg-card border-b border-border flex items-center gap-4">
         <div className="flex-1 max-w-2xl">
           <PromptInput onGenerate={handleGenerate} disabled={isStreaming} initialValue={!isStreaming ? initialPrompt : undefined} />
         </div>
@@ -60,12 +61,15 @@ export default function GeneratorView() {
 
       {/* Error */}
       {error && (
-        <div className="px-4 py-2 bg-red-50 border-b border-red-200 text-red-600 text-sm">{error}</div>
+        <div className="flex items-center gap-2 px-4 py-2 bg-destructive/10 border-b border-destructive/20 text-destructive text-sm">
+          <CircleAlert className="size-4 shrink-0" />
+          {error}
+        </div>
       )}
 
       {/* Split panels */}
       <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
-        <div className="flex-1 border-r border-gray-200 overflow-hidden">
+        <div className="flex-1 border-r border-border overflow-hidden">
           <CodePanel code={codeContent} isStreaming={isStreaming} />
         </div>
         <div className="flex-1 overflow-hidden">

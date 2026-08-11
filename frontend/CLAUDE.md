@@ -1,6 +1,6 @@
 # Frontend — AI Coding HTML 托管平台
 
-React 19 + TypeScript + Vite + TailwindCSS 4 + Monaco Editor + Zustand。
+React 19 + TypeScript + Vite + TailwindCSS 4 + Monaco Editor + Zustand + shadcn/ui + lucide-react。
 
 ## 启动
 
@@ -23,19 +23,22 @@ frontend/src/
 ├── api/
 │   ├── client.ts                 # axios 实例 (baseURL, JWT 拦截器, 401 处理)
 │   └── endpoints.ts              # 所有 API 函数
+├── lib/
+│   └── utils.ts                  # cn() 工具函数 (clsx + tailwind-merge, shadcn 依赖)
 ├── stores/                       # Zustand
 │   ├── auth.ts                   # 登录状态, user, fetchUser, logout
 │   └── generation.ts             # 生成状态: isStreaming, codeContent, pageId
 ├── hooks/
 │   └── useSSE.ts                 # SSE 流式消费 (fetch + ReadableStream)
 ├── components/
+│   ├── ui/                       # shadcn/ui 组件 (Button/Input/Textarea/Card/Badge/Dialog/Select/Label)
 │   ├── layout/AppHeader.tsx      # 导航栏 (logo, 菜单, 登录状态)
 │   ├── generator/
 │   │   ├── PromptInput.tsx       # textarea + 发送按钮
 │   │   ├── CodePanel.tsx         # Monaco Editor (readOnly, 流式追加)
 │   │   ├── PreviewPanel.tsx      # iframe sandbox (500ms 防抖 srcdoc)
 │   │   └── PublishButton.tsx     # 发布 + 结果弹窗 (链接/二维码)
-│   ├── template/TemplateCard.tsx # 场景卡片
+│   ├── template/TemplateCard.tsx # 场景卡片 (后端 emoji icon → lucide 图标映射)
 │   └── common/
 │       ├── LoadingSpinner.tsx
 │       └── ConfirmDialog.tsx
@@ -94,4 +97,7 @@ MyPagesView 点击编辑 → navigate("/generator?pageId={id}")
 - **LLM 配置**: Settings 页面存到后端 users 表，API Key 使用 password 输入框
 - **401 处理**: axios 拦截器自动清除 token 并跳转 /login
 - **TailwindCSS 4**: 使用 `@tailwindcss/vite` 插件，CSS-first 配置
+- **shadcn/ui**: CSS-first 配置，`index.css` 的 `:root` 定义 CSS 变量 + `@theme inline` 映射到 Tailwind token（主色 emerald）。组件手写维护在 `src/components/ui/`（未用 shadcn CLI）
+- **图标**: 所有 UI 一律用 lucide-react 图标，禁用 emoji。`TemplateCard` 内置后端 seed emoji（📱💰🎂🎮📊）→ lucide 映射表；模板名前导 emoji 用 `stripEmoji()` 剥离
+- **Radix Select 哨兵值**: SelectItem 的 value 不允许空字符串，"自定义..." 选项用 `__custom__` 哨兵，选中后映射回 `''` 再渲染自定义 Input（见 SettingsView）
 - **ID 类型**: 所有 Page ID 为 `string`（不是 `number`），禁止 `parseInt()`——Snowflake ID 超 JS 安全整数

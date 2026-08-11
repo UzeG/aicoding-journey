@@ -1,6 +1,16 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { Upload, Loader2, PartyPopper, Clipboard, ExternalLink } from 'lucide-react'
 import { publishPage } from '../../api/endpoints'
+import { Button } from '../ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '../ui/dialog'
 import type { PublishResult } from '../../types'
 
 interface Props {
@@ -32,47 +42,45 @@ export default function PublishButton({ pageId, disabled }: Props) {
 
   return (
     <div>
-      <button
-        onClick={handlePublish}
-        disabled={disabled || publishing || !pageId}
-        className="px-6 py-2.5 bg-emerald-600 text-white rounded-lg text-sm font-medium
-                   hover:bg-emerald-700 disabled:bg-gray-300 disabled:cursor-not-allowed
-                   transition-colors"
-      >
-        {publishing ? '发布中...' : '📤 发布页面'}
-      </button>
+      <Button onClick={handlePublish} disabled={disabled || publishing || !pageId}>
+        {publishing ? <Loader2 className="size-4 animate-spin" /> : <Upload className="size-4" />}
+        {publishing ? '发布中...' : '发布页面'}
+      </Button>
 
-      {result && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setResult(null)}>
-          <div className="bg-white rounded-xl p-8 max-w-md mx-4 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-lg font-semibold mb-4">🎉 发布成功！</h3>
-            <div className="bg-gray-50 rounded-lg p-4 mb-4">
-              <p className="text-sm text-gray-500 mb-2">页面链接</p>
-              <a href={result.url} target="_blank" rel="noopener noreferrer" className="text-emerald-600 break-all text-sm font-mono hover:underline">
-                {result.url}
-              </a>
+      <Dialog open={!!result} onOpenChange={(open) => !open && setResult(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <div className="flex items-center gap-2">
+              <PartyPopper className="size-5 text-primary" />
+              <DialogTitle>发布成功！</DialogTitle>
             </div>
-            <div className="flex gap-3">
-              <button
-                onClick={() => navigator.clipboard.writeText(result.url)}
-                className="flex-1 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm transition-colors"
-              >
-                📋 复制链接
-              </button>
-              <button
-                onClick={() => window.open(result.url, '_blank')}
-                className="flex-1 px-4 py-2 bg-emerald-600 text-white hover:bg-emerald-700 rounded-lg text-sm transition-colors"
-              >
-                🔗 打开页面
-              </button>
-            </div>
+            <DialogDescription>页面已上线，复制链接或打开访问。</DialogDescription>
+          </DialogHeader>
+          <div className="rounded-lg bg-muted p-4">
+            <p className="text-sm text-muted-foreground mb-2">页面链接</p>
+            <a
+              href={result?.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary break-all text-sm font-mono hover:underline"
+            >
+              {result?.url}
+            </a>
           </div>
-        </div>
-      )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => result && navigator.clipboard.writeText(result.url)}>
+              <Clipboard className="size-4" />
+              复制链接
+            </Button>
+            <Button onClick={() => result && window.open(result.url, '_blank')}>
+              <ExternalLink className="size-4" />
+              打开页面
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
-      {error && (
-        <p className="text-red-500 text-sm mt-2">{error}</p>
-      )}
+      {error && <p className="text-destructive text-sm mt-2">{error}</p>}
     </div>
   )
 }
