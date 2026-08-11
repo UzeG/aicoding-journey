@@ -1,9 +1,54 @@
 import logging
+import re
 from typing import AsyncGenerator
 
 from app.services.system_prompt import get_system_prompt
 
 logger = logging.getLogger(__name__)
+
+# Common prompt prefixes to strip when distilling a project title
+_TITLE_STRIP_PATTERNS = [
+    re.compile(r"^帮我生成一个?"),
+    re.compile(r"^帮我创建一个?"),
+    re.compile(r"^生成一个?"),
+    re.compile(r"^创建一个?"),
+    re.compile(r"^请帮我生成一个?"),
+    re.compile(r"^请帮我创建一个?"),
+    re.compile(r"^制作一个?"),
+    re.compile(r"^画一个?"),
+    re.compile(r"^写一个?"),
+    re.compile(r"^做一个?"),
+    re.compile(r"^设计一个?"),
+]
+
+
+def _distill_title(prompt: str) -> str:
+    """Fallback: extract a short title from the user prompt using rules."""
+    prompt = prompt.strip()
+    if len(prompt) <= 10:
+        return prompt
+    for pat in _TITLE_STRIP_PATTERNS:
+        prompt = pat.sub("", prompt, count=1)
+    prompt = prompt.strip()
+    if len(prompt) > 10:
+        prompt = prompt[:10]
+    return prompt or "未命名"
+
+
+_TITLE_REGEX = re.compile(r'<!--\s*TITLE:\s*(.+?)\s*-->')
+
+
+def _extract_llm_title(html: str) -> tuple[str | None, str]:
+    """Extract LLM-generated title from HTML comment and remove it.
+
+    Returns (title, cleaned_html). title is None if no TITLE comment found.
+    """
+    m = _TITLE_REGEX.search(html)
+    if m:
+        title = m.group(1).strip()
+        html = _TITLE_REGEX.sub("", html, count=1).strip()
+        return title, html
+    return None, html
 
 # Lazy import to avoid loading openai at module level
 
@@ -106,6 +151,10 @@ async def create_llm_stream(
         # Extract HTML from full response (for DB storage)
         html_content = _extract_html(full_content)
 
+        # Extract LLM-generated title from HTML comment, fall back to rule-based
+        llm_title, html_content = _extract_llm_title(html_content)
+        distilled_title = llm_title or _distill_title(prompt)
+
         # Clean the final content for display — strip trailing ``` if present
         final_display = _strip_trailing_fence(html_content)
 
@@ -130,10 +179,10 @@ async def create_llm_stream(
                 existing_page = result.scalar_one_or_none()
 
             if existing_page is not None:
-                # Update existing draft — no duplicate
-                existing_page.title = prompt[:50]
+                # Update existing draft
+                existing_page.title = distilled_title
                 existing_page.html_content = html_content
-                existing_page.original_prompt = prompt
+                existing_page.prompt = prompt
                 existing_page.file_size = len(html_content.encode("utf-8"))
                 final_page_id = existing_page.id
             else:
@@ -142,9 +191,9 @@ async def create_llm_stream(
                 page = Page(
                     id=new_id,
                     user_id=user_id,
-                    title=prompt[:50],
+                    title=distilled_title,
                     html_content=html_content,
-                    original_prompt=prompt,
+                    prompt=prompt,
                     file_size=len(html_content.encode("utf-8")),
                 )
                 db.add(page)
@@ -153,7 +202,7 @@ async def create_llm_stream(
             await db.commit()
 
         yield {"type": "final", "content": final_display}
-        yield {"type": "done", "page_id": str(final_page_id), "tokens_used": total_tokens}
+        yield {"type": "done", "page_id": str(final_page_id), "tokens_used": total_tokens, "title": distilled_title}
 
     except Exception as e:
         logger.exception("LLM call failed")

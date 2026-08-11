@@ -58,7 +58,7 @@ class RefineRequest(BaseModel):
 class PageCreate(BaseModel):
     title: Optional[str] = None
     html_content: str = ""
-    original_prompt: Optional[str] = None
+    prompt: Optional[str] = None
 
 
 class PageUpdate(BaseModel):
@@ -71,7 +71,7 @@ class PageResponse(BaseModel):
     short_code: Optional[str]
     title: Optional[str]
     html_content: str = ""
-    original_prompt: Optional[str]
+    prompt: Optional[str]
     file_size: Optional[int]
     is_published: bool
     is_saved: bool
@@ -116,6 +116,14 @@ class PublishResponse(BaseModel):
     @classmethod
     def coerce_id(cls, v: Any) -> str:
         return str(v)
+
+
+class SaveDraftRequest(BaseModel):
+    title: Optional[str] = None
+
+
+class PublishRequest(BaseModel):
+    title: Optional[str] = None
 
 
 # ── Templates ──

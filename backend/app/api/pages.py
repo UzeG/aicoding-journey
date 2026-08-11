@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_current_user, get_db
 from app.config import settings
 from app.models import AuditLog, Page, User
-from app.schemas import PageListItem, PageResponse, PageUpdate, PublishResponse
+from app.schemas import PageListItem, PageResponse, PageUpdate, PublishRequest, PublishResponse, SaveDraftRequest
 from app.services.publish_scanner import scan_html
 from app.services.sdk_injector import inject_sdk
 from app.utils.snowflake import generate_short_code
@@ -70,6 +70,7 @@ async def update_page(
 @router.post("/{page_id}/publish", response_model=PublishResponse)
 async def publish_page(
     page_id: str,
+    req: PublishRequest = PublishRequest(),
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -77,6 +78,9 @@ async def publish_page(
     page = result.scalar_one_or_none()
     if not page:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Page not found")
+
+    if req.title is not None:
+        page.title = req.title
 
     # 1. Safety scan
     scan_result = await scan_html(page.html_content)
@@ -110,6 +114,7 @@ async def publish_page(
 @router.post("/{page_id}/save-draft")
 async def save_draft(
     page_id: str,
+    req: SaveDraftRequest = SaveDraftRequest(),
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -118,6 +123,8 @@ async def save_draft(
     if not page:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Page not found")
 
+    if req.title is not None:
+        page.title = req.title
     page.is_saved = True
     await db.commit()
     return {"ok": True}

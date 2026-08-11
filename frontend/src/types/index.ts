@@ -21,7 +21,7 @@ export interface PageItem {
 
 export interface PageDetail extends PageItem {
   html_content: string
-  original_prompt: string | null
+  prompt: string | null
   file_size: number | null
   is_saved: boolean
 }

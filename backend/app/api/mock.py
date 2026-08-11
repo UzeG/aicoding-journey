@@ -11,6 +11,7 @@ from starlette.responses import StreamingResponse
 from app.api.deps import get_current_user, get_db
 from app.models import User
 from app.schemas import GenerateRequest
+from app.services.llm_service import _distill_title
 from app.utils.snowflake import generate_id
 
 router = APIRouter()
@@ -121,10 +122,11 @@ async def mock_generate(
         )
         existing_page = result.scalar_one_or_none()
 
+    distilled_title = _distill_title(req.prompt)
     if existing_page is not None:
-        existing_page.title = req.prompt[:50]
+        existing_page.title = distilled_title
         existing_page.html_content = MOCK_HTML
-        existing_page.original_prompt = req.prompt
+        existing_page.prompt = req.prompt
         existing_page.file_size = len(MOCK_HTML.encode("utf-8"))
         final_page_id = existing_page.id
     else:
@@ -132,9 +134,9 @@ async def mock_generate(
         page = Page(
             id=new_id,
             user_id=user.id,
-            title=req.prompt[:50],
+            title=distilled_title,
             html_content=MOCK_HTML,
-            original_prompt=req.prompt,
+            prompt=req.prompt,
             file_size=len(MOCK_HTML.encode("utf-8")),
         )
         db.add(page)
@@ -157,7 +159,7 @@ async def mock_generate(
             yield f"data: {json.dumps({'type': 'final', 'content': MOCK_HTML}, ensure_ascii=False)}\n\n"
 
             # Emit done event
-            yield f"data: {json.dumps({'type': 'done', 'page_id': str(final_page_id), 'tokens_used': 0}, ensure_ascii=False)}\n\n"
+            yield f"data: {json.dumps({'type': 'done', 'page_id': str(final_page_id), 'tokens_used': 0, 'title': distilled_title}, ensure_ascii=False)}\n\n"
 
         except asyncio.CancelledError:
             logger.info("Mock stream: cancelled")

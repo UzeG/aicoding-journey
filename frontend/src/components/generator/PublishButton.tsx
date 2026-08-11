@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Upload, Loader2, PartyPopper, Clipboard, ExternalLink } from 'lucide-react'
 import { publishPage } from '../../api/endpoints'
+import { useGenerationStore } from '../../stores/generation'
 import { Button } from '../ui/button'
 import {
   Dialog,
@@ -11,6 +12,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '../ui/dialog'
+import SavePageDialog from './SavePageDialog'
 import type { PublishResult } from '../../types'
 
 interface Props {
@@ -20,16 +22,26 @@ interface Props {
 
 export default function PublishButton({ pageId, disabled }: Props) {
   const [publishing, setPublishing] = useState(false)
+  const [dialogOpen, setDialogOpen] = useState(false)
   const [result, setResult] = useState<PublishResult | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const title = useGenerationStore((s) => s.title)
+  const setTitle = useGenerationStore((s) => s.setTitle)
   const navigate = useNavigate()
 
-  const handlePublish = async () => {
+  const handleClick = () => {
+    if (!pageId) return
+    setDialogOpen(true)
+  }
+
+  const handleConfirm = async (values: { title: string }) => {
     if (!pageId) return
     setPublishing(true)
     setError(null)
     try {
-      const res = await publishPage(pageId)
+      const res = await publishPage(pageId, values.title)
+      setTitle(values.title)
+      setDialogOpen(false)
       setResult(res.data)
       window.open(res.data.url, '_blank')
       navigate('/mypages')
@@ -42,10 +54,21 @@ export default function PublishButton({ pageId, disabled }: Props) {
 
   return (
     <div>
-      <Button onClick={handlePublish} disabled={disabled || publishing || !pageId}>
+      <Button onClick={handleClick} disabled={disabled || publishing || !pageId}>
         {publishing ? <Loader2 className="size-4 animate-spin" /> : <Upload className="size-4" />}
         {publishing ? '发布中...' : '发布页面'}
       </Button>
+
+      <SavePageDialog
+        open={dialogOpen}
+        onClose={() => setDialogOpen(false)}
+        onConfirm={handleConfirm}
+        defaultValues={{ title }}
+        loading={publishing}
+        title="发布页面"
+        description="确认页面名称后发布到公网。"
+        confirmLabel="发布"
+      />
 
       <Dialog open={!!result} onOpenChange={(open) => !open && setResult(null)}>
         <DialogContent>

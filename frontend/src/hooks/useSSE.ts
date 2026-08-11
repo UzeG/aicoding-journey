@@ -41,7 +41,7 @@ export function useSSE() {
             } else if (event.type === 'final') {
               store.setCode(event.content)
             } else if (event.type === 'done') {
-              store.finishStreaming(event.page_id)
+              store.finishStreaming(event.page_id, event.title || '')
             } else if (event.type === 'error') {
               store.setError(event.message)
             }
