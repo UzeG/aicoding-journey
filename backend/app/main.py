@@ -34,5 +34,9 @@ app.add_middleware(
 
 # Mount API routes
 app.include_router(router)
+# Mount mock API routes (development-only — no real LLM calls)
+from app.api.mock import router as mock_router
+
+app.include_router(mock_router, prefix="/api")
 # Mount public page access (no /api prefix)
 app.include_router(public_router)

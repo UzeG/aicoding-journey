@@ -12,7 +12,7 @@ import { getPage } from '../api/endpoints'
 
 export default function GeneratorView() {
   const [searchParams] = useSearchParams()
-  const { isStreaming, codeContent, pageId, isSaved, error } = useGenerationStore()
+  const { isStreaming, codeContent, pageId, error } = useGenerationStore()
   const { startGeneration } = useSSE()
   const abortRef = useRef<AbortController | null>(null)
   const initialPrompt = searchParams.get('prompt') || ''

@@ -7,10 +7,11 @@ React 19 + TypeScript + Vite + TailwindCSS 4 + Monaco Editor + Zustand + shadcn/
 ```bash
 cd frontend
 npm install        # 首次
-npm run dev        # http://localhost:5173
+npm run dev        # http://localhost:5173（正式模式，真实 LLM 调用）
+npm run dev:mock   # Mock 模式（跳过 LLM，使用样本 HTML，零 Token 消耗）
 ```
 
-Vite proxy 配置：`/api` 和 `/p` 自动转发到 `http://localhost:8000`。
+Vite proxy 配置：`/api` 和 `/p` 转发到 `http://localhost:8000`。Mock 模式下 `/api/generate` 被 rewrite 为 `/api/mock/generate`。
 
 ## 目录结构
 
@@ -103,3 +104,4 @@ MyPagesView 点击编辑 → navigate("/generator?pageId={id}")
 - **图标**: 所有 UI 一律用 lucide-react 图标，禁用 emoji。`TemplateCard` 内置后端 seed emoji（📱💰🎂🎮📊）→ lucide 映射表；模板名前导 emoji 用 `stripEmoji()` 剥离
 - **Radix Select 哨兵值**: SelectItem 的 value 不允许空字符串，"自定义..." 选项用 `__custom__` 哨兵，选中后映射回 `''` 再渲染自定义 Input（见 SettingsView）
 - **ID 类型**: 所有 Page ID 为 `string`（不是 `number`），禁止 `parseInt()`——Snowflake ID 超 JS 安全整数
+- **Mock 模式**: `npm run dev:mock` 启动，`.env.mock` 设 `VITE_MOCK_LLM=true`。`vite.config.ts` 中 `/api/generate` 被 rewrite 为 `/api/mock/generate`，返回样本 HTML。前端代码无需改动。正式模式用 `npm run dev`

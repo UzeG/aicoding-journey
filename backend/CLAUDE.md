@@ -55,6 +55,7 @@ backend/
 | POST | /api/auth/login | No | 登录 |
 | GET | /api/auth/me | JWT | 用户信息 |
 | POST | /api/generate | JWT | SSE 流式生成 HTML |
+| POST | /api/mock/generate | JWT | Mock SSE 流式（开发用，跳过 LLM） |
 | GET | /api/pages | JWT | 页面列表 |
 | GET/PUT/DELETE | /api/pages/{id} | JWT | 页面 CRUD |
 | POST | /api/pages/{id}/publish | JWT | 发布 |
@@ -80,3 +81,5 @@ backend/
 - **PUBLIC_BASE_URL**: 默认 `http://localhost:5173`（开发走 Vite proxy）
 - **max_tokens**: 32768（DeepSeek V4 支持最大 384K，32K 足够大部分 HTML 页面）
 - **System Prompt**: UnoCSS runtime CDN（非 Tailwind！后者 npm 包无预编译 CSS），ECharts 强制 `setOption` 后 `resize()`
+- **Mock API**: `/api/mock/generate`（`app/api/mock.py`）返回硬编码样本 HTML，与正式端点 SSE 协议一致，同样创建 DB 记录。前端通过 `npm run dev:mock` 启用（Vite proxy rewrite `/api/generate` → `/api/mock/generate`）。Mock 端点跳过 content filter
+- **ENVIRONMENT**: `config.py` 新增 `ENVIRONMENT` 字段（默认 `"development"`），附带 `is_development()` / `is_production()` 便捷方法

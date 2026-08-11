@@ -2,6 +2,9 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
+    # Environment
+    ENVIRONMENT: str = "development"  # "development" | "production"
+
     # Application
     APP_HOST: str = "0.0.0.0"
     APP_PORT: int = 8000
@@ -31,6 +34,12 @@ class Settings(BaseSettings):
     CONTENT_FILTER_ENABLED: bool = True
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
+
+    def is_development(self) -> bool:
+        return self.ENVIRONMENT == "development"
+
+    def is_production(self) -> bool:
+        return self.ENVIRONMENT == "production"
 
 
 settings = Settings()
