@@ -1,5 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
-import { Eye } from 'lucide-react'
+import { Eye, Loader2 } from 'lucide-react'
 
 interface Props {
   htmlContent: string
@@ -7,19 +6,6 @@ interface Props {
 }
 
 export default function PreviewPanel({ htmlContent, isStreaming }: Props) {
-  const [debouncedHtml, setDebouncedHtml] = useState('')
-  const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
-
-  useEffect(() => {
-    if (isStreaming) {
-      clearTimeout(timerRef.current)
-      timerRef.current = setTimeout(() => setDebouncedHtml(htmlContent), 500)
-    } else {
-      setDebouncedHtml(htmlContent)
-    }
-    return () => clearTimeout(timerRef.current)
-  }, [htmlContent, isStreaming])
-
   return (
     <div className="h-full w-full relative bg-white">
       <div className="absolute top-0 left-0 right-0 z-10 flex items-center px-4 py-2 bg-white border-b border-border text-xs text-muted-foreground">
@@ -28,10 +14,16 @@ export default function PreviewPanel({ htmlContent, isStreaming }: Props) {
           预览
         </span>
       </div>
-      {debouncedHtml ? (
+
+      {isStreaming ? (
+        <div className="flex flex-col items-center justify-center h-full gap-3 text-muted-foreground" style={{ paddingTop: 32 }}>
+          <Loader2 className="size-8 text-primary animate-spin" />
+          <span className="text-sm">生成中，完成后自动预览...</span>
+        </div>
+      ) : htmlContent ? (
         <iframe
-          key={`preview-${debouncedHtml.length}`}
-          srcDoc={debouncedHtml}
+          key={`preview-${htmlContent.length}`}
+          srcDoc={htmlContent}
           sandbox="allow-scripts"
           allow="webgl"
           className="w-full h-full border-0"
