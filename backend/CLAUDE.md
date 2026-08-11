@@ -58,6 +58,7 @@ backend/
 | GET | /api/pages | JWT | 页面列表 |
 | GET/PUT/DELETE | /api/pages/{id} | JWT | 页面 CRUD |
 | POST | /api/pages/{id}/publish | JWT | 发布 |
+| POST | /api/pages/{id}/save-draft | JWT | 保存草稿（is_saved=True） |
 | GET | /p/{short_code} | No | 公开访问已发布页面 |
 | GET | /api/templates | No | 模板列表 |
 | POST | /api/proxy | No | API 代理网关 |
@@ -72,9 +73,10 @@ backend/
 - **SSE 事件协议**: `token`（流式代码） → `final`（精确提取的 HTML，替换 Monaco 内容） → `done`（page_id + tokens_used） → 可选 `error`
 - **流式过滤**: `create_llm_stream` 会缓冲 token 直到检测到 HTML 开始标记（`\`\`\`html` / `<!DOCTYPE` / `<html>`），才转发给前端。防止 LLM 输出的中文描述文字混入 Monaco 编辑器
 - **Page 复用**: `GenerateRequest.page_id` 可选字段——前端重新生成时传入已有 pageId，后端在 `create_llm_stream` 中检查：若页面存在、属于当前用户且 `is_published=False`，则 UPDATE 该记录而非 INSERT 新记录；已发布的页面不会被覆盖（会创建新 Page）。这避免了"我的页面"中出现多余的草稿记录
+- **is_saved 机制**: 生成时 `is_saved=False`，页面不会出现在列表（`list_pages` 过滤 `is_published OR is_saved`）。用户主动点击"保存草稿"后 `is_saved=True`，页面才在"我的页面"中可见
 - **LLM 优先级**: 请求参数 > 用户配置 > `.env` 平台默认
 - **短码**: Snowflake ID → Base62 → 取后 7 位
 - **passlib/bcrypt**: 需 `bcrypt<4.1.0`（新版不兼容 passlib）
 - **PUBLIC_BASE_URL**: 默认 `http://localhost:5173`（开发走 Vite proxy）
-- **max_tokens**: 8192（太小会导致 HTML 生成不完整）
+- **max_tokens**: 32768（DeepSeek V4 支持最大 384K，32K 足够大部分 HTML 页面）
 - **System Prompt**: UnoCSS runtime CDN（非 Tailwind！后者 npm 包无预编译 CSS），ECharts 强制 `setOption` 后 `resize()`

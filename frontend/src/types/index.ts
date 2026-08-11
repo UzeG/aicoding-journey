@@ -12,6 +12,7 @@ export interface PageItem {
   short_code: string | null
   title: string | null
   is_published: boolean
+  is_saved: boolean
   visibility: string
   status: string
   created_at: string
@@ -22,6 +23,7 @@ export interface PageDetail extends PageItem {
   html_content: string
   original_prompt: string | null
   file_size: number | null
+  is_saved: boolean
 }
 
 export interface Template {

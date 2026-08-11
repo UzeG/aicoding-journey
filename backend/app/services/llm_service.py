@@ -68,7 +68,7 @@ async def create_llm_stream(
             model=model,
             messages=messages,
             temperature=0.3,
-            max_tokens=8192,
+            max_tokens=32768,
             stream=True,
             stream_options={"include_usage": True},
         )

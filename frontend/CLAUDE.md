@@ -27,7 +27,7 @@ frontend/src/
 │   └── utils.ts                  # cn() 工具函数 (clsx + tailwind-merge, shadcn 依赖)
 ├── stores/                       # Zustand
 │   ├── auth.ts                   # 登录状态, user, fetchUser, logout
-│   └── generation.ts             # 生成状态: isStreaming, codeContent, pageId
+│   └── generation.ts             # 生成状态: isStreaming, codeContent, pageId, isSaved
 ├── hooks/
 │   └── useSSE.ts                 # SSE 流式消费 (fetch + ReadableStream)
 ├── components/
@@ -37,7 +37,8 @@ frontend/src/
 │   │   ├── PromptInput.tsx       # textarea + 发送按钮
 │   │   ├── CodePanel.tsx         # Monaco Editor (readOnly, 流式追加)
 │   │   ├── PreviewPanel.tsx      # iframe sandbox (500ms 防抖 srcdoc)
-│   │   └── PublishButton.tsx     # 发布 + 结果弹窗 (链接/二维码)
+│   │   ├── PublishButton.tsx     # 发布 + 新窗口打开 + 跳转我的页面
+│   │   └── SaveDraftButton.tsx   # 保存草稿 (is_saved=True 后列表可见)
 │   ├── template/TemplateCard.tsx # 场景卡片 (后端 emoji icon → lucide 图标映射)
 │   └── common/
 │       ├── LoadingSpinner.tsx
@@ -70,15 +71,16 @@ PromptInput → useSSE.startGeneration(prompt, templateId, currentPageId)
   → fetch POST /api/generate (ReadableStream, body 含 page_id)
   → SSE "token"  → generationStore.appendCode → Monaco 实时显示
   → SSE "final"  → generationStore.setCode → 用后端精确提取的 HTML 替换（去掉 ``` 等残留）
-  → SSE "done"   → generationStore.finishStreaming → PublishButton 可用
+  → SSE "done"   → generationStore.finishStreaming → PublishButton / SaveDraftButton 可用
+  → 点击保存草稿 → saveDraft(pageId) → is_saved=True → "我的页面"中可见
   → 点击发布      → publishPage(pageId) → 安全扫描 → SDK 注入 → window.open 新窗口 + navigate /mypages
 ```
 
 编辑已有页面：
 ```
 MyPagesView 点击编辑 → navigate("/generator?pageId={id}")
-  → GeneratorView 读取 pageId → getPage(id) → store.loadPage(id, html, prompt)
-  → Monaco/iframe 回填已有内容
+  → GeneratorView 读取 pageId → getPage(id) → store.loadPage(id, html, prompt, isSaved)
+  → Monaco/iframe 回填已有内容，SaveDraftButton 根据 isSaved 显示状态
 ```
 
 ## 状态管理 (Zustand)
@@ -86,7 +88,7 @@ MyPagesView 点击编辑 → navigate("/generator?pageId={id}")
 | Store | 关键字段 |
 |---|---|
 | `useAuthStore` | user, isAuthenticated, login(), register(), fetchUser(), logout() |
-| `useGenerationStore` | isStreaming, codeContent, pageId, error, startStreaming(), appendCode(), setCode(), loadPage(), finishStreaming() |
+| `useGenerationStore` | isStreaming, codeContent, pageId, isSaved, error, startStreaming(), appendCode(), setCode(), loadPage(), finishStreaming(), setSaved() |
 
 ## 关键设计决策
 

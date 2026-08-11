@@ -28,6 +28,7 @@ export const getPage = (id: string) => api.get<PageDetail>(`/pages/${id}`)
 export const updatePage = (id: string, data: { title?: string; html_content?: string }) =>
   api.put<PageDetail>(`/pages/${id}`, data)
 export const publishPage = (id: string) => api.post<PublishResult>(`/pages/${id}/publish`)
+export const saveDraft = (id: string) => api.post(`/pages/${id}/save-draft`)
 export const deletePage = (id: string) => api.delete(`/pages/${id}`)
 
 // Templates

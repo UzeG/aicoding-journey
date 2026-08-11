@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import HTMLResponse
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user, get_db
@@ -25,7 +25,7 @@ async def list_pages(
 ):
     result = await db.execute(
         select(Page)
-        .where(Page.user_id == user.id, Page.status != "deleted")
+        .where(Page.user_id == user.id, Page.status != "deleted", or_(Page.is_published == True, Page.is_saved == True))
         .order_by(Page.updated_at.desc())
     )
     return result.scalars().all()
@@ -105,6 +105,22 @@ async def publish_page(
         short_code=page.short_code,
         url=f"{settings.PUBLIC_BASE_URL}/p/{page.short_code}",
     )
+
+
+@router.post("/{page_id}/save-draft")
+async def save_draft(
+    page_id: str,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(select(Page).where(Page.id == int(page_id), Page.user_id == user.id))
+    page = result.scalar_one_or_none()
+    if not page:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Page not found")
+
+    page.is_saved = True
+    await db.commit()
+    return {"ok": True}
 
 
 @router.delete("/{page_id}")

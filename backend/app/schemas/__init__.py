@@ -74,6 +74,7 @@ class PageResponse(BaseModel):
     original_prompt: Optional[str]
     file_size: Optional[int]
     is_published: bool
+    is_saved: bool
     visibility: str
     status: str
     created_at: datetime
@@ -92,6 +93,7 @@ class PageListItem(BaseModel):
     short_code: Optional[str]
     title: Optional[str]
     is_published: bool
+    is_saved: bool
     visibility: str
     status: str
     created_at: datetime

@@ -5,13 +5,14 @@ import CodePanel from '../components/generator/CodePanel'
 import PreviewPanel from '../components/generator/PreviewPanel'
 import PromptInput from '../components/generator/PromptInput'
 import PublishButton from '../components/generator/PublishButton'
+import SaveDraftButton from '../components/generator/SaveDraftButton'
 import { useSSE } from '../hooks/useSSE'
 import { useGenerationStore } from '../stores/generation'
 import { getPage } from '../api/endpoints'
 
 export default function GeneratorView() {
   const [searchParams] = useSearchParams()
-  const { isStreaming, codeContent, pageId, error } = useGenerationStore()
+  const { isStreaming, codeContent, pageId, isSaved, error } = useGenerationStore()
   const { startGeneration } = useSSE()
   const abortRef = useRef<AbortController | null>(null)
   const initialPrompt = searchParams.get('prompt') || ''
@@ -32,7 +33,7 @@ export default function GeneratorView() {
     loadedRef.current = true
     const loadPage = useGenerationStore.getState().loadPage
     getPage(editPageId).then((res) => {
-      loadPage(editPageId, res.data.html_content, res.data.original_prompt || '')
+      loadPage(editPageId, res.data.html_content, res.data.original_prompt || '', res.data.is_saved)
     }).catch(() => {
       useGenerationStore.getState().setError('加载页面失败')
     })
@@ -56,6 +57,7 @@ export default function GeneratorView() {
         <div className="flex-1 max-w-2xl">
           <PromptInput onGenerate={handleGenerate} disabled={isStreaming} initialValue={!isStreaming ? initialPrompt : undefined} />
         </div>
+        <SaveDraftButton pageId={pageId} disabled={isStreaming || !codeContent || !pageId} />
         <PublishButton pageId={pageId} disabled={isStreaming || !codeContent || !pageId} />
       </div>
 

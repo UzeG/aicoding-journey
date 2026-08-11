@@ -37,6 +37,7 @@ class Page(Base):
     original_prompt: Mapped[str | None] = mapped_column(Text, default=None)
     file_size: Mapped[int | None] = mapped_column(Integer, default=None)
     is_published: Mapped[bool] = mapped_column(Boolean, default=False)
+    is_saved: Mapped[bool] = mapped_column(Boolean, default=False)
     visibility: Mapped[str] = mapped_column(String(20), default="public")
     status: Mapped[str] = mapped_column(String(20), default="active")
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
