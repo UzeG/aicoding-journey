@@ -1,13 +1,26 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { useEffect } from 'react'
 import AppHeader from './components/layout/AppHeader'
 import HomeView from './views/HomeView'
 import GeneratorView from './views/GeneratorView'
-import MyPagesView from './views/MyPagesView'
+import UserProfileView from './views/UserProfileView'
 import LoginView from './views/LoginView'
 import SettingsView from './views/SettingsView'
-import PublishedPageView from './views/PublishedPageView'
+
 import { useAuthStore } from './stores/auth'
+
+function HomeRedirect() {
+  const user = useAuthStore((s) => s.user)
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
+  const loading = useAuthStore((s) => s.loading)
+
+  if (!isAuthenticated) return <Navigate to="/login" replace />
+  if (loading || !user) {
+    return <div className="flex items-center justify-center py-20"><p className="text-muted-foreground">加载中...</p></div>
+  }
+  if (!user.user_id) return <Navigate to="/login" replace />
+  return <Navigate to={`/${user.user_id}`} replace />
+}
 
 export default function App() {
   const { fetchUser, isAuthenticated } = useAuthStore()
@@ -26,10 +39,11 @@ export default function App() {
           <Routes>
             <Route path="/" element={<HomeView />} />
             <Route path="/generator" element={<GeneratorView />} />
-            <Route path="/mypages" element={<MyPagesView />} />
+            <Route path="/home" element={<HomeRedirect />} />
             <Route path="/login" element={<LoginView />} />
             <Route path="/settings" element={<SettingsView />} />
-            <Route path="/published/:shortCode" element={<PublishedPageView />} />
+
+            <Route path="/:userId" element={<UserProfileView />} />
           </Routes>
         </main>
       </div>

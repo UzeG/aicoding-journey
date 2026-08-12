@@ -3,13 +3,14 @@ export interface User {
   phone: string
   nickname: string | null
   user_type: string
+  user_id?: string | null
   token_balance: number
   created_at: string
 }
 
 export interface PageItem {
   id: string
-  short_code: string | null
+  page_id: string | null
   title: string | null
   is_published: boolean
   is_saved: boolean
@@ -39,6 +40,24 @@ export interface LLMSettings {
 
 export interface PublishResult {
   id: string
-  short_code: string
+  page_id: string
   url: string
+}
+
+export interface CheckUserIdResponse {
+  available: boolean
+}
+
+export interface CheckPageIdResponse {
+  available: boolean
+}
+
+export interface UserPublic {
+  nickname: string | null
+  user_id: string | null
+}
+
+export interface UserProfile {
+  user: UserPublic
+  pages: PageItem[]
 }

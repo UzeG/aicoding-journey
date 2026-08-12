@@ -39,6 +39,7 @@ async def seed():
                 password_hash=hash_password("123456"),
                 nickname="Demo用户",
                 user_type="registered",
+                user_id="demo",
             )
             db.add(demo_user)
             print("Seeded: 1 demo user")

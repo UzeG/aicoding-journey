@@ -11,11 +11,16 @@ class RegisterRequest(BaseModel):
     phone: str = Field(..., min_length=11, max_length=11, pattern=r"^\d{11}$")
     password: str = Field(..., min_length=6, max_length=128)
     nickname: Optional[str] = None
+    user_id: str = Field(..., min_length=3, max_length=30, pattern=r"^[a-zA-Z0-9_-]{3,30}$")
 
 
 class LoginRequest(BaseModel):
-    phone: str = Field(..., min_length=11, max_length=11)
+    account: str = Field(..., min_length=1, max_length=128)  # phone or user_id
     password: str = Field(..., min_length=1)
+
+
+class CheckUserIdResponse(BaseModel):
+    available: bool
 
 
 class TokenResponse(BaseModel):
@@ -28,6 +33,7 @@ class UserResponse(BaseModel):
     phone: str
     nickname: Optional[str]
     user_type: str
+    user_id: Optional[str] = None
     token_balance: int
     created_at: datetime
 
@@ -43,13 +49,6 @@ class GenerateRequest(BaseModel):
     api_key: Optional[str] = None
     base_url: Optional[str] = None
 
-
-class RefineRequest(BaseModel):
-    page_id: int
-    refine_prompt: str = Field(..., min_length=1, max_length=4000)
-    model: Optional[str] = None
-    api_key: Optional[str] = None
-    base_url: Optional[str] = None
 
 
 # ── Pages ──
@@ -67,7 +66,7 @@ class PageUpdate(BaseModel):
 
 class PageResponse(BaseModel):
     id: str
-    short_code: Optional[str]
+    page_id: Optional[str]
     title: Optional[str]
     html_content: str = ""
     prompt: Optional[str]
@@ -89,7 +88,7 @@ class PageResponse(BaseModel):
 
 class PageListItem(BaseModel):
     id: str
-    short_code: Optional[str]
+    page_id: Optional[str]
     title: Optional[str]
     is_published: bool
     is_saved: bool
@@ -108,7 +107,7 @@ class PageListItem(BaseModel):
 
 class PublishResponse(BaseModel):
     id: str
-    short_code: str
+    page_id: str
     url: str
 
     @field_validator("id", mode="before")
@@ -123,6 +122,15 @@ class SaveDraftRequest(BaseModel):
 
 class PublishRequest(BaseModel):
     title: Optional[str] = None
+    page_id: Optional[str] = Field(default=None, max_length=50)
+
+
+class UpdatePageIdRequest(BaseModel):
+    page_id: str = Field(..., min_length=1, max_length=50, pattern=r"^[a-zA-Z0-9_-]{1,50}$")
+
+
+class CheckPageIdResponse(BaseModel):
+    available: bool
 
 
 # ── Prompts ──
@@ -146,6 +154,18 @@ class LLMSettingsUpdate(BaseModel):
     model: Optional[str] = None
     api_key: Optional[str] = None
     base_url: Optional[str] = None
+
+
+# ── User Profile (public) ──
+
+class UserPublicResponse(BaseModel):
+    nickname: Optional[str]
+    user_id: Optional[str] = None
+
+
+class UserProfileResponse(BaseModel):
+    user: UserPublicResponse
+    pages: list[PageListItem]
 
 
 # ── Proxy ──

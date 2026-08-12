@@ -13,3 +13,6 @@ router.include_router(proxy.router, prefix="/api", tags=["proxy"])
 
 # Public page access router (no /api prefix)
 public_router = pages.public_router
+
+# Public user profile API
+router.include_router(pages.users_router, prefix="/api/users", tags=["users"])

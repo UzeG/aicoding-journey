@@ -1,18 +1,30 @@
-from fastapi import APIRouter, Depends, HTTPException, Request, status
-from fastapi.responses import HTMLResponse
-from sqlalchemy import or_, select
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi.responses import HTMLResponse, RedirectResponse
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user, get_db
 from app.config import settings
-from app.models import AuditLog, Page, User
-from app.schemas import PageListItem, PageResponse, PageUpdate, PublishRequest, PublishResponse, SaveDraftRequest
+from app.models import AuditLog, Page, PageIdRedirect, User
+from app.schemas import (
+    CheckPageIdResponse,
+    PageListItem,
+    PageResponse,
+    PageUpdate,
+    PublishRequest,
+    PublishResponse,
+    SaveDraftRequest,
+    UpdatePageIdRequest,
+    UserProfileResponse,
+    UserPublicResponse,
+)
+from app.services.page_id import generate_page_id, validate_page_id_format
 from app.services.publish_scanner import scan_html
 from app.services.sdk_injector import inject_sdk
-from app.utils.snowflake import generate_short_code
 
 router = APIRouter()
 public_router = APIRouter()
+users_router = APIRouter()
 
 
 # ── Authenticated routes ──
@@ -31,27 +43,47 @@ async def list_pages(
     return result.scalars().all()
 
 
-@router.get("/{page_id}", response_model=PageResponse)
-async def get_page(
-    page_id: str,
+@router.get("/check-id", response_model=CheckPageIdResponse)
+async def check_page_id(
+    page_id: str = Query(..., min_length=1, max_length=50),
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    result = await db.execute(select(Page).where(Page.id == int(page_id), Page.user_id == user.id))
+    """Check if a page_id is available for the current user (case-insensitive)."""
+    if not validate_page_id_format(page_id.lower()):
+        return CheckPageIdResponse(available=False)
+
+    result = await db.execute(
+        select(Page).where(
+            Page.user_id == user.id,
+            func.lower(Page.page_id) == page_id.lower(),
+        )
+    )
+    existing = result.scalar_one_or_none()
+    return CheckPageIdResponse(available=existing is None)
+
+
+@router.get("/{pk}", response_model=PageResponse)
+async def get_page(
+    pk: str,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(select(Page).where(Page.id == int(pk), Page.user_id == user.id))
     page = result.scalar_one_or_none()
     if not page:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Page not found")
     return page
 
 
-@router.put("/{page_id}", response_model=PageResponse)
+@router.put("/{pk}", response_model=PageResponse)
 async def update_page(
-    page_id: str,
+    pk: str,
     req: PageUpdate,
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    result = await db.execute(select(Page).where(Page.id == int(page_id), Page.user_id == user.id))
+    result = await db.execute(select(Page).where(Page.id == int(pk), Page.user_id == user.id))
     page = result.scalar_one_or_none()
     if not page:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Page not found")
@@ -67,14 +99,14 @@ async def update_page(
     return page
 
 
-@router.post("/{page_id}/publish", response_model=PublishResponse)
+@router.post("/{pk}/publish", response_model=PublishResponse)
 async def publish_page(
-    page_id: str,
+    pk: str,
     req: PublishRequest = PublishRequest(),
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    result = await db.execute(select(Page).where(Page.id == int(page_id), Page.user_id == user.id))
+    result = await db.execute(select(Page).where(Page.id == int(pk), Page.user_id == user.id))
     page = result.scalar_one_or_none()
     if not page:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Page not found")
@@ -82,43 +114,98 @@ async def publish_page(
     if req.title is not None:
         page.title = req.title
 
+    # Resolve page_id: user-provided → validate + check uniqueness; otherwise auto-generate
+    if req.page_id and req.page_id.strip():
+        custom_id = req.page_id.strip()
+        if not validate_page_id_format(custom_id.lower()):
+            raise HTTPException(status_code=400, detail="Page ID format invalid. Use letters, numbers, hyphens, underscores (1-50 chars).")
+        # Check uniqueness within user (case-insensitive)
+        existing = await db.execute(
+            select(Page).where(
+                Page.user_id == user.id,
+                func.lower(Page.page_id) == custom_id.lower(),
+                Page.id != int(pk),
+            )
+        )
+        if existing.scalar_one_or_none():
+            raise HTTPException(status_code=409, detail="This page ID is already taken. Choose another.")
+        # If changing an existing page_id, record redirect
+        if page.page_id and page.page_id.lower() != custom_id.lower():
+            db.add(PageIdRedirect(page_fk=page.id, old_page_id=page.page_id))
+        page.page_id = custom_id
+    elif not page.page_id:
+        page.page_id = generate_page_id()
+
     # 1. Safety scan
     scan_result = await scan_html(page.html_content)
     if not scan_result["passed"]:
         raise HTTPException(status_code=400, detail=f"Content rejected: {scan_result['issues']}")
 
-    # 2. Generate short code if not already
-    if not page.short_code:
-        page.short_code = generate_short_code()
-
-    # 3. Inject platform SDK
-    page.html_content = inject_sdk(page.html_content, str(page.id), page.short_code)
+    # 2. Inject platform SDK
+    page.html_content = inject_sdk(page.html_content, str(page.id), page.page_id)
     page.file_size = len(page.html_content.encode("utf-8"))
 
     page.is_published = True
     await db.commit()
     await db.refresh(page)
 
-    # 4. Audit log
-    audit = AuditLog(user_id=user.id, action="publish", content=page.title or page.short_code, result="passed")
+    # 3. Audit log
+    audit = AuditLog(user_id=user.id, action="publish", content=page.title or page.page_id, result="passed")
     db.add(audit)
     await db.commit()
 
     return PublishResponse(
         id=str(page.id),
-        short_code=page.short_code,
-        url=f"{settings.PUBLIC_BASE_URL}/p/{page.short_code}",
+        page_id=page.page_id,
+        url=f"{settings.PUBLIC_BASE_URL}/{user.user_id}/{page.page_id}",
     )
 
 
-@router.post("/{page_id}/save-draft")
+@router.put("/{pk}/page-id")
+async def update_page_id(
+    pk: str,
+    req: UpdatePageIdRequest,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Change a page's page_id (preserves old page_id as redirect)."""
+    result = await db.execute(select(Page).where(Page.id == int(pk), Page.user_id == user.id))
+    page = result.scalar_one_or_none()
+    if not page:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Page not found")
+
+    new_id = req.page_id.strip()
+    if not validate_page_id_format(new_id.lower()):
+        raise HTTPException(status_code=400, detail="Page ID format invalid.")
+
+    # Check uniqueness (case-insensitive, excluding self)
+    existing = await db.execute(
+        select(Page).where(
+            Page.user_id == user.id,
+            func.lower(Page.page_id) == new_id.lower(),
+            Page.id != int(pk),
+        )
+    )
+    if existing.scalar_one_or_none():
+        raise HTTPException(status_code=409, detail="This page ID is already taken.")
+
+    # Record redirect from old → new
+    if page.page_id:
+        db.add(PageIdRedirect(page_fk=page.id, old_page_id=page.page_id))
+
+    page.page_id = new_id
+    await db.commit()
+    return {"page_id": page.page_id, "url": f"{settings.PUBLIC_BASE_URL}/{user.user_id}/{page.page_id}"}
+
+
+@router.post("/{pk}/save-draft")
 async def save_draft(
-    page_id: str,
+    pk: str,
     req: SaveDraftRequest = SaveDraftRequest(),
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    result = await db.execute(select(Page).where(Page.id == int(page_id), Page.user_id == user.id))
+    result = await db.execute(select(Page).where(Page.id == int(pk), Page.user_id == user.id))
     page = result.scalar_one_or_none()
     if not page:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Page not found")
@@ -130,13 +217,13 @@ async def save_draft(
     return {"ok": True}
 
 
-@router.delete("/{page_id}")
+@router.delete("/{pk}")
 async def delete_page(
-    page_id: str,
+    pk: str,
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    result = await db.execute(select(Page).where(Page.id == int(page_id), Page.user_id == user.id))
+    result = await db.execute(select(Page).where(Page.id == int(pk), Page.user_id == user.id))
     page = result.scalar_one_or_none()
     if not page:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Page not found")
@@ -149,14 +236,138 @@ async def delete_page(
 # ── Public routes ──
 
 
-@public_router.get("/p/{short_code}")
-async def serve_page(short_code: str, db: AsyncSession = Depends(get_db)):
-    """Serve a published HTML page publicly."""
+@public_router.get("/{user_id}")
+async def serve_user_profile(
+    user_id: str,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """Serve a user's public profile — list of published pages."""
     result = await db.execute(
-        select(Page).where(Page.short_code == short_code, Page.is_published == True, Page.status == "active")
+        select(User).where(func.lower(User.user_id) == user_id.lower())
+    )
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+    pages_result = await db.execute(
+        select(Page)
+        .where(Page.user_id == user.id, Page.is_published == True, Page.status == "active")
+        .order_by(Page.updated_at.desc())
+    )
+    pages = pages_result.scalars().all()
+
+    # Simple HTML profile page for now; can be enhanced later
+    page_links = "\n".join(
+        f'<li><a href="/{user.user_id}/{p.page_id}">{p.title or p.page_id}</a></li>'
+        for p in pages
+    )
+    html = f"""<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{user.nickname or user.user_id}'s pages</title>
+  <style>
+    body {{ font-family: system-ui, sans-serif; max-width: 800px; margin: 0 auto; padding: 2rem; }}
+    ul {{ list-style: none; padding: 0; }}
+    li {{ margin: 0.5rem 0; }}
+    a {{ color: #00a650; text-decoration: none; }}
+    a:hover {{ text-decoration: underline; }}
+  </style>
+</head>
+<body>
+  <h1>{user.nickname or user.user_id}</h1>
+  <p>@{user.user_id}</p>
+  <h2>Published pages ({len(pages)})</h2>
+  <ul>{page_links or '<li>No published pages yet.</li>'}</ul>
+</body>
+</html>"""
+    return HTMLResponse(content=html, status_code=200)
+
+
+@public_router.get("/{user_id}/{page_id}")
+async def serve_page(
+    user_id: str,
+    page_id: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """Serve a published HTML page at /{user_id}/{page_id} with redirect support."""
+    # 1. Find the user
+    result = await db.execute(
+        select(User).where(func.lower(User.user_id) == user_id.lower())
+    )
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+    # 2. Try direct match
+    result = await db.execute(
+        select(Page).where(
+            Page.user_id == user.id,
+            func.lower(Page.page_id) == page_id.lower(),
+            Page.is_published == True,
+            Page.status == "active",
+        )
     )
     page = result.scalar_one_or_none()
+
+    # 3. If not found, try redirect table
+    if not page:
+        redirect_result = await db.execute(
+            select(PageIdRedirect, Page).join(Page, PageIdRedirect.page_fk == Page.id).where(
+                Page.user_id == user.id,
+                func.lower(PageIdRedirect.old_page_id) == page_id.lower(),
+            )
+        )
+        row = redirect_result.first()
+        if row:
+            redirect, page = row
+            return RedirectResponse(
+                url=f"/{user.user_id}/{page.page_id}",
+                status_code=301,
+            )
+
     if not page:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Page not found")
 
     return HTMLResponse(content=page.html_content, status_code=200)
+
+
+# ── Public user profile API ──
+
+
+@users_router.get("/{user_id}", response_model=UserProfileResponse)
+async def get_user_profile(
+    user_id: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """Get user public profile and published pages."""
+    result = await db.execute(
+        select(User).where(func.lower(User.user_id) == user_id.lower())
+    )
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+    pages_result = await db.execute(
+        select(Page)
+        .where(Page.user_id == user.id, Page.is_published == True, Page.status == "active")
+        .order_by(Page.updated_at.desc())
+    )
+    pages = pages_result.scalars().all()
+
+    return UserProfileResponse(
+        user=UserPublicResponse(nickname=user.nickname, user_id=user.user_id),
+        pages=[PageListItem(
+            id=str(p.id),
+            page_id=p.page_id,
+            title=p.title,
+            is_published=p.is_published,
+            is_saved=p.is_saved,
+            visibility=p.visibility,
+            status=p.status,
+            created_at=p.created_at,
+            updated_at=p.updated_at,
+        ) for p in pages],
+    )

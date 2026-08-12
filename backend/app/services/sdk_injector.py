@@ -1,14 +1,20 @@
 """Inject platform SDK into published HTML pages."""
 
 
-def inject_sdk(html: str, page_id: str, short_code: str) -> str:
-    """Inject window.platform SDK before </body> tag."""
+def inject_sdk(html: str, page_pk: str, page_id: str) -> str:
+    """Inject window.platform SDK before </body> tag.
+
+    Args:
+        html: The page HTML content.
+        page_pk: Internal page primary key (Snowflake ID as string).
+        page_id: Public page slug.
+    """
 
     sdk_script = f"""
 <script>
 (function() {{
   var p = window.platform = {{
-    page: {{ id: '{page_id}', shortCode: '{short_code}' }},
+    page: {{ id: '{page_pk}', pageId: '{page_id}' }},
     api: {{
       call: async function(url, opts) {{
         opts = opts || {{}};
@@ -26,7 +32,7 @@ def inject_sdk(html: str, page_id: str, short_code: str) -> str:
       }}
     }}
   }};
-  console.log('[Platform SDK] Page ready:', p.page.shortCode);
+  console.log('[Platform SDK] Page ready:', p.page.pageId);
 }})();
 </script>
 <!-- AI 辅助生成 -->

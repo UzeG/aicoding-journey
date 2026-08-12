@@ -38,5 +38,5 @@ app.include_router(router)
 from app.api.mock import router as mock_router
 
 app.include_router(mock_router, prefix="/api")
-# Mount public page access (no /api prefix)
+# Mount public page access (no /api prefix) — /{user_id} and /{user_id}/{page_id}
 app.include_router(public_router)

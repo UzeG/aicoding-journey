@@ -15,6 +15,7 @@ class User(Base):
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     nickname: Mapped[str | None] = mapped_column(String(50), default=None)
     user_type: Mapped[str] = mapped_column(String(20), default="registered")
+    user_id: Mapped[str | None] = mapped_column(String(30), unique=True, nullable=True, index=True)
 
     llm_model: Mapped[str | None] = mapped_column(String(100), default=None)
     llm_api_key: Mapped[str | None] = mapped_column(String(512), default=None)
@@ -31,7 +32,7 @@ class Page(Base):
 
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
     user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id"), nullable=False, index=True)
-    short_code: Mapped[str | None] = mapped_column(String(8), unique=True, nullable=True, index=True)
+    page_id: Mapped[str | None] = mapped_column(String(50), unique=True, nullable=True, index=True)
     title: Mapped[str | None] = mapped_column(String(200), default=None)
     html_content: Mapped[str] = mapped_column(Text, nullable=False, default="")
     prompt: Mapped[str | None] = mapped_column(Text, default=None)
@@ -45,6 +46,15 @@ class Page(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())
 
     user = relationship("User", back_populates="pages")
+
+
+class PageIdRedirect(Base):
+    __tablename__ = "page_id_redirects"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    page_fk: Mapped[int] = mapped_column(BigInteger, ForeignKey("pages.id"), nullable=False)
+    old_page_id: Mapped[str] = mapped_column(String(50), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
 
 class RecommendedPrompt(Base):

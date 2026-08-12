@@ -27,17 +27,46 @@ async def get_db() -> AsyncSession:
 
 def _run_migration_sync(conn):
     """Run migrations synchronously (called via conn.run_sync)."""
-    # Check if original_prompt column still exists
-    result = conn.execute(
-        text("PRAGMA table_info('pages')")
-    )
+    # ── pages table ──
+    result = conn.execute(text("PRAGMA table_info('pages')"))
     columns = {row[1] for row in result.fetchall()}
+
     if "original_prompt" in columns:
         logger.info("Migrating: original_prompt → prompt")
         conn.execute(text("ALTER TABLE pages RENAME COLUMN original_prompt TO prompt"))
     if "step1_output" not in columns:
         logger.info("Migrating: adding step1_output column to pages")
         conn.execute(text("ALTER TABLE pages ADD COLUMN step1_output TEXT"))
+    if "short_code" in columns:
+        logger.info("Migrating: short_code → page_id")
+        conn.execute(text("ALTER TABLE pages RENAME COLUMN short_code TO page_id"))
+
+    # ── users table ──
+    result = conn.execute(text("PRAGMA table_info('users')"))
+    user_columns = {row[1] for row in result.fetchall()}
+    if "user_id" not in user_columns:
+        logger.info("Migrating: adding user_id column to users")
+        conn.execute(text("ALTER TABLE users ADD COLUMN user_id TEXT"))
+        conn.execute(text("CREATE UNIQUE INDEX IF NOT EXISTS idx_users_user_id ON users(user_id)"))
+        # Backfill user_id for existing users (e.g. demo user without user_id)
+        from app.utils.snowflake import generate_id as _gen
+        existing = conn.execute(
+            text("SELECT id FROM users WHERE user_id IS NULL")
+        ).fetchall()
+        for (uid,) in existing:
+            auto_uid = f"u{_gen():016x}"[:10]
+            conn.execute(
+                text("UPDATE users SET user_id = :uid WHERE id = :id"),
+                {"uid": auto_uid, "id": uid},
+            )
+            logger.info(f"Backfilled user_id={auto_uid} for user {uid}")
+
+    # ── page_id_redirects table (created by Base.metadata.create_all) ──
+    # Ensure composite unique index for (user_id, page_id) on pages
+    conn.execute(text(
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_pages_user_page ON pages(user_id, page_id) "
+        "WHERE page_id IS NOT NULL"
+    ))
 
 
 async def init_db():

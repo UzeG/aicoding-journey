@@ -17,7 +17,6 @@ export default defineConfig(({ mode }) => {
             }
           : 'http://localhost:8000',
         '/api': 'http://localhost:8000',
-        '/p': 'http://localhost:8000',
       },
     },
   }

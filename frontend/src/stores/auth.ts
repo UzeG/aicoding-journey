@@ -6,8 +6,8 @@ interface AuthState {
   user: User | null
   isAuthenticated: boolean
   loading: boolean
-  login: (phone: string, password: string) => Promise<void>
-  register: (phone: string, password: string, nickname?: string) => Promise<void>
+  login: (account: string, password: string) => Promise<void>
+  register: (account: string, password: string, user_id: string, nickname?: string) => Promise<void>
   fetchUser: () => Promise<void>
   logout: () => void
 }
@@ -17,14 +17,14 @@ export const useAuthStore = create<AuthState>((set) => ({
   isAuthenticated: !!localStorage.getItem('access_token'),
   loading: false,
 
-  login: async (phone, password) => {
-    const res = await apiLogin(phone, password)
+  login: async (account, password) => {
+    const res = await apiLogin(account, password)
     localStorage.setItem('access_token', res.data.access_token)
     set({ isAuthenticated: true })
   },
 
-  register: async (phone, password, nickname) => {
-    const res = await apiRegister(phone, password, nickname)
+  register: async (phone, password, user_id, nickname) => {
+    const res = await apiRegister(phone, password, user_id, nickname)
     localStorage.setItem('access_token', res.data.access_token)
     set({ isAuthenticated: true })
   },

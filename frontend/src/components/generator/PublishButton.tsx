@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Upload, Loader2, PartyPopper, Clipboard, ExternalLink } from 'lucide-react'
 import { publishPage } from '../../api/endpoints'
+import { useAuthStore } from '../../stores/auth'
 import { useGenerationStore } from '../../stores/generation'
 import { Button } from '../ui/button'
 import {
@@ -27,6 +28,7 @@ export default function PublishButton({ pageId, disabled }: Props) {
   const [error, setError] = useState<string | null>(null)
   const title = useGenerationStore((s) => s.title)
   const setTitle = useGenerationStore((s) => s.setTitle)
+  const currentUserId = useAuthStore((s) => s.user?.user_id)
   const navigate = useNavigate()
 
   const handleClick = () => {
@@ -34,17 +36,17 @@ export default function PublishButton({ pageId, disabled }: Props) {
     setDialogOpen(true)
   }
 
-  const handleConfirm = async (values: { title: string }) => {
+  const handleConfirm = async (values: { title: string; page_id: string }) => {
     if (!pageId) return
     setPublishing(true)
     setError(null)
     try {
-      const res = await publishPage(pageId, values.title)
+      const res = await publishPage(pageId, values.title, values.page_id || undefined)
       setTitle(values.title)
       setDialogOpen(false)
       setResult(res.data)
       window.open(res.data.url, '_blank')
-      navigate('/mypages')
+      navigate(`/${currentUserId}`)
     } catch (err: any) {
       setError(err.response?.data?.detail || '发布失败，请重试')
     } finally {
@@ -63,11 +65,12 @@ export default function PublishButton({ pageId, disabled }: Props) {
         open={dialogOpen}
         onClose={() => setDialogOpen(false)}
         onConfirm={handleConfirm}
-        defaultValues={{ title }}
+        defaultValues={{ title, page_id: '' }}
         loading={publishing}
         title="发布页面"
         description="确认页面名称后发布到公网。"
         confirmLabel="发布"
+        showPageId
       />
 
       <Dialog open={!!result} onOpenChange={(open) => !open && setResult(null)}>

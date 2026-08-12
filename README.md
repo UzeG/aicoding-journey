@@ -24,7 +24,7 @@ cd backend
 python -m app.seed
 ```
 
-这会创建 SQLite 数据库、预设 5 个模板场景和一个 Demo 用户（13800138000 / 123456）。
+这会创建 SQLite 数据库、预设 5 个推荐提示词和一个 Demo 用户（13800138000 / 123456，user_id=demo）。
 
 ### 3. 启动后端
 
@@ -45,12 +45,12 @@ npm run dev
 
 ## 使用流程
 
-1. 打开 http://localhost:5173 → 看到首页 + 5 个模板卡片
-2. 注册/登录（或用 Demo 账号：13800138000 / 123456）
-3. 输入描述或点击模板卡片 → 跳转到生成器
+1. 打开 http://localhost:5173 → 看到首页 + 5 个推荐提示词
+2. 注册/登录（或用 Demo 账号：13800138000 / 123456，支持手机号或 user_id=demo 登录）
+3. 输入描述或点击推荐提示词 → 跳转到生成器
 4. 左侧代码实时流式打出，右侧 iframe 实时预览
-5. 点击「发布页面」→ 获得短链接 `/p/xxxxxxx`
-6. 访问「我的页面」管理已生成页面
+5. 点击「发布页面」→ 设置 page_id → 获得短链接 `/{你的user_id}/{page_id}`
+6. 访问「我的页面」（即 `/{你的user_id}`）管理已生成页面
 
 ## LLM 配置
 
@@ -74,7 +74,7 @@ npm run dev
 │       └── api/         # API 客户端
 ├── backend/           # Python FastAPI
 │   └── app/
-│       ├── api/         # 路由 (auth, generate, pages, templates, proxy, settings)
+│       ├── api/         # 路由 (auth, generate, pages, prompts, proxy, settings)
 │       ├── services/    # 业务逻辑 (LLM, SSE, 安全扫描, SDK 注入)
 │       ├── models/      # ORM 模型
 │       └── schemas/     # Pydantic 模型

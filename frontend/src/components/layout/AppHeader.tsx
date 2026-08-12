@@ -4,15 +4,18 @@ import { useAuthStore } from '../../stores/auth'
 import { Button } from '../ui/button'
 import { cn } from '../../lib/utils'
 
-const navItems = [
-  { to: '/', label: '首页', icon: LayoutGrid },
-  { to: '/mypages', label: '我的页面', icon: FileText, auth: true },
-  { to: '/settings', label: '设置', icon: Settings },
-]
+function useNavItems(userId?: string | null) {
+  return [
+    { to: '/', label: '首页', icon: LayoutGrid },
+    { to: userId ? `/${userId}` : '/login', label: '我的页面', icon: FileText, auth: true },
+    { to: '/settings', label: '设置', icon: Settings },
+  ]
+}
 
 export default function AppHeader() {
   const { user, isAuthenticated, logout } = useAuthStore()
   const navigate = useNavigate()
+  const navItems = useNavItems(user?.user_id)
 
   const handleLogout = () => {
     logout()
