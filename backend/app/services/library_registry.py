@@ -6,6 +6,8 @@ Each entry: {key: {name, type, tags, ...}}
 - usage_notes: injected into Step 2 prompt only when selected (avoids polluting context)
 """
 
+import json
+
 LIBRARY_REGISTRY: dict[str, dict] = {
     "unocss": {
         "name": "UnoCSS Runtime",
@@ -87,36 +89,51 @@ def build_libraries_selection_text() -> str:
     return "\n".join(lines)
 
 
-def build_step2_library_section(selected_keys: list[str]) -> str:
-    """Build the CDN libraries section for Step 2 prompt.
+def build_step2_usage_notes(selected_keys: list[str]) -> str:
+    """Build library usage notes for Step 2 system prompt.
 
     Only includes libraries that were selected in Step 1 + always-default ones.
+    Returns empty string if no library has usage_notes.
     """
     all_keys = set(selected_keys) | set(get_default_libraries())
-    script_lines = []
-    usage_notes_lines = []
+    lines = []
+    for key in all_keys:
+        lib = LIBRARY_REGISTRY.get(key)
+        if not lib or "usage_notes" not in lib:
+            continue
+        lines.append(f"### {lib['name']}\n{lib['usage_notes']}")
+    return "\n\n".join(lines) if lines else ""
+
+
+def build_cdn_includes(selected_keys: list[str]) -> dict:
+    """Build CDN HTML tags for injection into the page skeleton.
+
+    Returns {"head": str, "body_end": str}.
+    - head: importmap → CSS links → head scripts (ordered)
+    - body_end: scripts that go before </body>
+    """
+    all_keys = set(selected_keys) | set(get_default_libraries())
+    importmaps = []
+    head_others = []
+    body_parts = []
 
     for key in all_keys:
         lib = LIBRARY_REGISTRY.get(key)
         if not lib:
             continue
 
-        if lib["type"] == "script":
-            head_attr = ' ← 放在 <head> 中' if lib.get("head") else ""
-            script_lines.append(f"- {lib['name']}: <script src=\"{lib['url']}\"></script>{head_attr}")
+        if lib["type"] == "importmap":
+            importmaps.append(
+                f'<script type="importmap">{json.dumps({"imports": lib["importmap"]})}</script>'
+            )
         elif lib["type"] == "css":
-            script_lines.append(f"- {lib['name']}: <link rel=\"stylesheet\" href=\"{lib['url']}\"> ← 放在 <head> 中")
-        elif lib["type"] == "importmap":
-            importmap_json = str(lib["importmap"]).replace("'", '"')
-            script_lines.append(f"- {lib['name']}: 使用 ES importmap 引入")
-            script_lines.append(f"  <script type=\"importmap\">{importmap_json}</script>")
-            script_lines.append(f"  <script type=\"module\">import * as THREE from 'three'; import {{ OrbitControls }} from 'three/addons/controls/OrbitControls.js';</script>")
+            head_others.append(f'<link rel="stylesheet" href="{lib["url"]}">')
+        elif lib["type"] == "script":
+            if lib.get("head"):
+                head_others.append(f'<script src="{lib["url"]}"></script>')
+            else:
+                body_parts.append(f'<script src="{lib["url"]}"></script>')
 
-        if "usage_notes" in lib:
-            usage_notes_lines.append(f"### {lib['name']} 使用规范\n{lib['usage_notes']}")
-
-    result = "## CDN LIBRARIES (use these exact URLs only)\n" + "\n".join(script_lines)
-    if usage_notes_lines:
-        result += "\n\n" + "\n\n".join(usage_notes_lines)
-
-    return result
+    head = "\n  ".join(importmaps + head_others)
+    body_end = "\n  ".join(body_parts)
+    return {"head": head, "body_end": body_end}

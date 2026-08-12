@@ -3,11 +3,18 @@ import logging
 import re
 from typing import AsyncGenerator
 
+from app.services.library_registry import build_cdn_includes
 from app.services.system_prompt import get_step1_prompt, get_step2_prompt
 
 logger = logging.getLogger(__name__)
 
 _TITLE_REGEX = re.compile(r'<!--\s*TITLE:\s*(.+?)\s*-->')
+_STYLE_RE = re.compile(r'<style[^>]*>(.*?)</style>', re.DOTALL | re.IGNORECASE)
+_BODY_RE = re.compile(r'<body[^>]*>(.*?)</body>', re.DOTALL | re.IGNORECASE)
+_SCRIPT_RE = re.compile(
+    r'<script[^>]*type=["\']module["\'][^>]*>(.*?)</script>',
+    re.DOTALL | re.IGNORECASE,
+)
 
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -25,7 +32,7 @@ async def create_two_step_stream(
     """Two-step HTML generation pipeline.
 
     Step 1: Understand user intent + select CDN libraries (non-streaming LLM call)
-    Step 2: Generate HTML with only selected libraries in context (SSE streaming)
+    Step 2: Generate HTML fragments, assemble with CDN includes (SSE streaming)
 
     Yields: progress events, token events, final, done, error
     """
@@ -35,13 +42,15 @@ async def create_two_step_stream(
     step1 = None
     try:
         step1 = await _run_step1_understand(prompt, user_config)
+        if not step1.get("refined_prompt"):
+            raise ValueError(f"Step 1 returned empty/missing refined_prompt: {step1}")
         refined_prompt = step1.get("refined_prompt", prompt)
         libraries = step1.get("libraries", [])
         logger.info(f"Step 1 result: libraries={libraries}, refined_prompt={refined_prompt[:100]}")
     except Exception as e:
-        logger.exception("Step 1 failed, falling back to raw prompt")
-        refined_prompt = prompt
-        libraries = []
+        logger.exception("Step 1 failed")
+        yield {"type": "error", "message": "需求分析失败，请重试"}
+        return
 
     # ── Step 2: Generate ──
     yield {"type": "progress", "step": "generate", "message": "正在生成页面..."}
@@ -87,7 +96,7 @@ async def _run_step1_understand(prompt: str, user_config: dict) -> dict:
 
 
 # ═══════════════════════════════════════════════════════════════════════
-# Step 2: Generate HTML (streaming)
+# Step 2: Generate HTML fragments & assemble
 # ═══════════════════════════════════════════════════════════════════════
 
 
@@ -100,7 +109,7 @@ async def _run_step2_generate(
     request=None,
     page_id: int | None = None,
 ) -> AsyncGenerator[dict, None]:
-    """SSE streaming HTML generation with library-filtered system prompt."""
+    """SSE streaming HTML fragment generation + assembly with CDN includes."""
     from openai import AsyncOpenAI
 
     client = _build_client(user_config)
@@ -154,12 +163,20 @@ async def _run_step2_generate(
             if chunk.usage:
                 total_tokens = chunk.usage.total_tokens
 
-        # Extract & clean HTML
-        html_content = _extract_html(full_content)
-        llm_title, html_content = _extract_llm_title(html_content)
+        # ── Extract fragments, assemble complete HTML ──
+        raw = _extract_html(full_content)
+        parsed = _parse_fragment(raw)
+        llm_title, body_content = _extract_llm_title(parsed["body"])
         if not llm_title:
             llm_title = _distill_title(refined_prompt)
-        final_display = _strip_trailing_fence(html_content)
+
+        assembled = _assemble_html(
+            style=parsed["style"],
+            body=body_content,
+            script=parsed["script"],
+            selected_libraries=libraries,
+            title=llm_title,
+        )
 
         # Persist page record
         from app.database import async_session
@@ -182,10 +199,10 @@ async def _run_step2_generate(
 
             if existing_page is not None:
                 existing_page.title = llm_title
-                existing_page.html_content = html_content
+                existing_page.html_content = assembled
                 existing_page.prompt = refined_prompt
                 existing_page.step1_output = step1_output
-                existing_page.file_size = len(html_content.encode("utf-8"))
+                existing_page.file_size = len(assembled.encode("utf-8"))
                 final_page_id = existing_page.id
             else:
                 new_id = generate_id()
@@ -193,22 +210,85 @@ async def _run_step2_generate(
                     id=new_id,
                     user_id=user_id,
                     title=llm_title,
-                    html_content=html_content,
+                    html_content=assembled,
                     prompt=refined_prompt,
                     step1_output=step1_output,
-                    file_size=len(html_content.encode("utf-8")),
+                    file_size=len(assembled.encode("utf-8")),
                 )
                 db.add(page)
                 final_page_id = new_id
 
             await db.commit()
 
-        yield {"type": "final", "content": final_display}
+        yield {"type": "final", "content": assembled}
         yield {"type": "done", "page_id": str(final_page_id), "tokens_used": total_tokens, "title": llm_title}
 
     except Exception as e:
         logger.exception("Step 2 LLM call failed")
         yield {"type": "error", "message": str(e)}
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# Fragment parsing & assembly
+# ═══════════════════════════════════════════════════════════════════════
+
+
+def _parse_fragment(html: str) -> dict:
+    """Parse LLM output into {style, body, script} fragments."""
+    result = {"style": "", "body": "", "script": ""}
+
+    m = _STYLE_RE.search(html)
+    if m:
+        result["style"] = m.group(1).strip()
+
+    m = _BODY_RE.search(html)
+    if m:
+        result["body"] = m.group(1).strip()
+
+    m = _SCRIPT_RE.search(html)
+    if m:
+        result["script"] = m.group(1).strip()
+
+    # Fallback: if no <body> tag found, treat remaining content as body
+    if not result["body"]:
+        remaining = _STYLE_RE.sub("", html)
+        remaining = _SCRIPT_RE.sub("", remaining)
+        result["body"] = remaining.strip()
+
+    return result
+
+
+def _assemble_html(
+    style: str,
+    body: str,
+    script: str,
+    selected_libraries: list[str],
+    title: str,
+) -> str:
+    """Assemble complete HTML page from LLM fragments + CDN includes."""
+    includes = build_cdn_includes(selected_libraries)
+
+    head_parts = [
+        '  <meta charset="UTF-8">',
+        '  <meta name="viewport" content="width=device-width, initial-scale=1.0">',
+        f"  <title>{title}</title>",
+    ]
+    if includes["head"]:
+        head_parts.append(f"  {includes['head']}")
+    if style:
+        head_parts.append(f"  <style>\n{style}\n  </style>")
+
+    body_parts = [f"<body>{body}"]
+    if script:
+        body_parts.append(f"  <script type=\"module\">\n{script}\n  </script>")
+    if includes["body_end"]:
+        body_parts.append(f"  {includes['body_end']}")
+    body_parts.append("</body>")
+
+    head = "\n".join(head_parts)
+    body_html = "\n".join(body_parts)
+
+    return f"<!DOCTYPE html>\n<html lang=\"zh-CN\">\n<head>\n{head}\n</head>\n{body_html}\n</html>"
 
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -315,13 +395,6 @@ def _trim_to_html_start(buffer: str) -> str:
             idx += 1
         return buffer[idx:]
     return ""
-
-
-def _strip_trailing_fence(content: str) -> str:
-    stripped = content.rstrip()
-    if stripped.endswith("```"):
-        return stripped[:-3].rstrip()
-    return content
 
 
 def decrypt_api_key(encrypted: str) -> str:

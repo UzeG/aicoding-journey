@@ -1,6 +1,6 @@
 from app.services.library_registry import (
     build_libraries_selection_text,
-    build_step2_library_section,
+    build_step2_usage_notes,
 )
 
 
@@ -38,22 +38,53 @@ Respond with ONLY this JSON (no other text):
 
 
 def get_step2_prompt(libraries: list[str]) -> str:
-    """Step 2 system prompt: generate the HTML with only selected CDN libraries."""
+    """Step 2 system prompt: generate HTML fragments with library usage notes."""
 
-    lib_section = build_step2_library_section(libraries)
+    usage_notes = build_step2_usage_notes(libraries)
 
-    return f"""You are an expert frontend developer. Generate a COMPLETE, self-contained HTML file based on the user's description.
+    usage_section = ""
+    if usage_notes:
+        usage_section = (
+            "\n## CDN LIBRARY USAGE NOTES\n"
+            "These libraries are already included in the page — you can use them directly:\n\n"
+            f"{usage_notes}\n"
+        )
+
+    return f"""You are an expert frontend developer. Generate the core content of a web page based on the user's description.
+
+## OUTPUT FORMAT — CRITICAL
+Your ENTIRE response must contain exactly these sections in order:
+
+```html
+<style>
+/* Custom CSS that UnoCSS cannot express (animations, keyframes, etc.) */
+/* Omit this section entirely if you don't need custom CSS */
+</style>
+
+<body class="...UnoCSS utility classes...">
+<!-- TITLE: 简短中文标题 -->
+...page content using UnoCSS classes for all styling...
+</body>
+
+<script type="module">
+// JS logic using libraries below
+// Omit this section entirely if you don't need JavaScript
+</script>
+```
+
+- The FIRST character you output must be `<` (opening style or body tag)
+- Do NOT output `<!DOCTYPE>`, `<html>`, `<head>`, or any CDN `<script>`/`<link>` tags — they are added automatically
+- Do NOT write any introduction, description, or conclusion text
+- `<style>`: optional section for CSS animations/keyframes that UnoCSS cannot do
+- `<body>`: REQUIRED. Must start with `<!-- TITLE: xxx -->` comment. All elements use UnoCSS utility classes
+- `<script type="module">`: optional section for JS logic. Importmap is already set up — use bare imports
 
 ## CRITICAL RULES — FOLLOW EXACTLY
-1. Your ENTIRE response must be a single ```html code block. The FIRST character you output must be ` (backtick). Do NOT write any introduction, description, or conclusion text. No "以下是", no "Here is", no explanations whatsoever.
-2. Structure: ```html\\n<!DOCTYPE html>\\n<html>...</html>\\n```
-3. All CSS in <style> tag, all JS in <script> tag. Single file only.
-4. Mobile-first responsive design. Touch targets >= 44x44px.
-5. Visual style: clean, modern, with smooth CSS transitions.
-6. **Styling**: Use UnoCSS (Tailwind-compatible) utility classes for ALL styling — `class="flex items-center gap-4 p-6 bg-white rounded-xl shadow-sm"`. Do NOT write custom CSS unless UnoCSS cannot achieve the effect. Every element should use UnoCSS classes for layout, spacing, color, typography, borders, shadows, and transitions.
-
-{lib_section}
-
+1. Your ENTIRE response must be the three-fragment structure above inside a ```html code block
+2. Mobile-first responsive design. Touch targets >= 44x44px
+3. Visual style: clean, modern, with smooth CSS transitions
+4. **Styling**: Use UnoCSS (Tailwind-compatible) utility classes for ALL styling — `class="flex items-center gap-4 p-6 bg-white rounded-xl shadow-sm"`. Do NOT write custom CSS unless UnoCSS cannot achieve the effect
+{usage_section}
 ## API CALLS（仅在需要拉取外部数据时参考）
 To fetch external data from the published page, use this proxy pattern:
 ```js
@@ -68,12 +99,12 @@ fetch('/api/proxy', {{
 
 ## SAFETY RED LINES (non-negotiable)
 - NEVER use eval(), new Function(), document.write()
+- NEVER use `return` at the top level of a <script> — it's a SyntaxError. Wrap code in a function or IIFE if you need early exit
 - NEVER access document.cookie, localStorage, sessionStorage
 - NEVER include external image URLs (use inline SVG or CSS graphics instead)
 - NEVER embed external iframes
 - If the user asks for gambling, adult content, phishing, political content: output a styled HTML page saying "抱歉，无法生成该内容。"
 - Do NOT invent fake CDN URLs or npm package URLs
-- ONLY use libraries from the CDN LIBRARIES section above. Do NOT add libraries not listed there
 
 ## TITLE
 - At the very start of <body>, include a hidden HTML comment with a 2-8 character Chinese title: `<!-- TITLE: 日历 -->`

@@ -11,27 +11,21 @@ from starlette.responses import StreamingResponse
 from app.api.deps import get_current_user, get_db
 from app.models import User
 from app.schemas import GenerateRequest
-from app.services.llm_service import _distill_title
+from app.services.llm_service import _assemble_html, _distill_title, _extract_html, _parse_fragment
 from app.utils.snowflake import generate_id
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
-# Sample HTML page for mock generation — a data dashboard with UnoCSS + ECharts
-MOCK_HTML = """<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Dev Mock — 数据仪表盘</title>
-<script src="https://cdn.jsdelivr.net/npm/@unocss/runtime@0.62.0"></script>
-<script src="https://cdn.jsdelivr.net/npm/echarts@5.6.0/dist/echarts.min.js"></script>
+# Sample HTML fragment (three-fragment format — what LLM would output)
+MOCK_FRAGMENT = """```html
 <style>
   *{margin:0;padding:0;box-sizing:border-box}
   body{font-family:system-ui,-apple-system,sans-serif;background:#0f172a;color:#e2e8f0;min-height:100vh}
 </style>
-</head>
+
 <body>
+<!-- TITLE: 数据仪表盘 -->
 <div class="max-w-5xl mx-auto px-4 py-8 md:px-8 md:py-12">
   <header class="text-center mb-10">
     <h1 class="text-3xl md:text-4xl font-bold text-white mb-3">数据仪表盘</h1>
@@ -67,7 +61,10 @@ MOCK_HTML = """<!DOCTYPE html>
     <p class="text-xs text-slate-500">Mock Mode · 未消耗 LLM Token</p>
   </footer>
 </div>
-<script>
+</body>
+
+<script type="module">
+import * as echarts from 'echarts';
 (function() {
   var el = document.getElementById('chart');
   if (!el) return;
@@ -85,8 +82,9 @@ MOCK_HTML = """<!DOCTYPE html>
   window.addEventListener('resize', function() { c.resize(); });
 })();
 </script>
-</body>
-</html>"""
+```"""
+
+MOCK_LIBRARIES = ["echarts"]
 
 # Chunk size for streaming — ~20 characters per token event
 CHUNK_SIZE = 20
@@ -103,9 +101,8 @@ async def mock_generate(
 ):
     """Mock SSE streaming HTML generation — returns sample HTML instead of calling LLM.
 
-    Follows the exact same SSE protocol as /api/generate (token → final → done)
-    and creates a real Page record so save/publish flows work identically.
-    Content filter is skipped in mock mode to allow testing with any prompt.
+    Follows the exact same SSE protocol as /api/generate and assembles the
+    complete HTML with CDN includes (same pipeline as the real flow).
     """
     # Build page_id — reuse existing draft if page_id provided, otherwise create new
     from app.models import Page
@@ -122,12 +119,23 @@ async def mock_generate(
         )
         existing_page = result.scalar_one_or_none()
 
+    # Assemble complete HTML from mock fragment + CDN includes
+    raw = _extract_html(MOCK_FRAGMENT)
+    fragment = _parse_fragment(raw)
     distilled_title = _distill_title(req.prompt)
+    assembled_html = _assemble_html(
+        style=fragment["style"],
+        body=fragment["body"],
+        script=fragment["script"],
+        selected_libraries=MOCK_LIBRARIES,
+        title=distilled_title,
+    )
+
     if existing_page is not None:
         existing_page.title = distilled_title
-        existing_page.html_content = MOCK_HTML
+        existing_page.html_content = assembled_html
         existing_page.prompt = req.prompt
-        existing_page.file_size = len(MOCK_HTML.encode("utf-8"))
+        existing_page.file_size = len(assembled_html.encode("utf-8"))
         final_page_id = existing_page.id
     else:
         new_id = generate_id()
@@ -135,9 +143,9 @@ async def mock_generate(
             id=new_id,
             user_id=user.id,
             title=distilled_title,
-            html_content=MOCK_HTML,
+            html_content=assembled_html,
             prompt=req.prompt,
-            file_size=len(MOCK_HTML.encode("utf-8")),
+            file_size=len(assembled_html.encode("utf-8")),
         )
         db.add(page)
         final_page_id = new_id
@@ -154,17 +162,17 @@ async def mock_generate(
             yield f"data: {json.dumps({'type': 'progress', 'step': 'generate', 'message': '正在生成页面...'}, ensure_ascii=False)}\n\n"
             await asyncio.sleep(0.3)
 
-            # Emit token chunks to simulate streaming
-            for i in range(0, len(MOCK_HTML), CHUNK_SIZE):
+            # Emit fragment chunks to simulate streaming (LLM outputs fragments)
+            for i in range(0, len(MOCK_FRAGMENT), CHUNK_SIZE):
                 if await request.is_disconnected():
                     logger.info("Mock stream: client disconnected")
                     return
-                chunk = MOCK_HTML[i:i + CHUNK_SIZE]
+                chunk = MOCK_FRAGMENT[i:i + CHUNK_SIZE]
                 yield f"data: {json.dumps({'type': 'token', 'content': chunk}, ensure_ascii=False)}\n\n"
                 await asyncio.sleep(CHUNK_DELAY)
 
-            # Emit final event with complete HTML
-            yield f"data: {json.dumps({'type': 'final', 'content': MOCK_HTML}, ensure_ascii=False)}\n\n"
+            # Emit final event with assembled complete HTML
+            yield f"data: {json.dumps({'type': 'final', 'content': assembled_html}, ensure_ascii=False)}\n\n"
 
             # Emit done event
             yield f"data: {json.dumps({'type': 'done', 'page_id': str(final_page_id), 'tokens_used': 0, 'title': distilled_title}, ensure_ascii=False)}\n\n"
