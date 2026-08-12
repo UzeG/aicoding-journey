@@ -1,19 +1,19 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Sparkles, LayoutTemplate, ArrowRight, Wand2 } from 'lucide-react'
-import { listTemplates } from '../api/endpoints'
+import { Sparkles, Lightbulb, ArrowRight, Wand2 } from 'lucide-react'
+import { listPrompts } from '../api/endpoints'
 import PromptInput from '../components/generator/PromptInput'
-import TemplateCard from '../components/template/TemplateCard'
+import PromptCard from '../components/home/PromptCard'
 import { useAuthStore } from '../stores/auth'
-import type { Template } from '../types'
+import type { RecommendedPrompt } from '../types'
 
 export default function HomeView() {
-  const [templates, setTemplates] = useState<Template[]>([])
+  const [prompts, setPrompts] = useState<RecommendedPrompt[]>([])
   const { isAuthenticated } = useAuthStore()
   const navigate = useNavigate()
 
   useEffect(() => {
-    listTemplates().then((res) => setTemplates(res.data)).catch(() => {})
+    listPrompts().then((res) => setPrompts(res.data)).catch(() => {})
   }, [])
 
   const handleGenerate = (prompt: string) => {
@@ -22,14 +22,6 @@ export default function HomeView() {
       return
     }
     navigate(`/generator?prompt=${encodeURIComponent(prompt)}`)
-  }
-
-  const handleTemplateClick = (template: Template) => {
-    if (!isAuthenticated) {
-      navigate('/login')
-      return
-    }
-    navigate(`/generator?prompt=${encodeURIComponent(template.prompt_hint || template.name)}&templateId=${template.id}`)
   }
 
   return (
@@ -55,7 +47,7 @@ export default function HomeView() {
             <Sparkles className="size-4 text-primary" /> 流式生成
           </span>
           <span className="flex items-center gap-1.5">
-            <LayoutTemplate className="size-4 text-primary" /> 丰富模板
+            <Lightbulb className="size-4 text-primary" /> 推荐提示词
           </span>
           <span className="flex items-center gap-1.5">
             <ArrowRight className="size-4 text-primary" /> 一键发布
@@ -63,18 +55,20 @@ export default function HomeView() {
         </div>
       </div>
 
-      {/* Templates */}
-      <div>
-        <div className="flex items-center gap-2 mb-5">
-          <LayoutTemplate className="size-5 text-primary" />
-          <h2 className="text-xl font-semibold text-foreground">快速开始 — 选择一个场景</h2>
+      {/* Recommended Prompts */}
+      {prompts.length > 0 && (
+        <div>
+          <div className="flex items-center gap-2 mb-5">
+            <Lightbulb className="size-5 text-primary" />
+            <h2 className="text-xl font-semibold text-foreground">不知道说什么？试试这些</h2>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {prompts.map((p) => (
+              <PromptCard key={p.id} prompt={p.prompt} onClick={handleGenerate} />
+            ))}
+          </div>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {templates.map((t) => (
-            <TemplateCard key={t.id} template={t} onClick={handleTemplateClick} />
-          ))}
-        </div>
-      </div>
+      )}
     </div>
   )
 }

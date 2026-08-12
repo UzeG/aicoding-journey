@@ -9,7 +9,7 @@ from app.api.deps import get_client_ip, get_current_user, get_db
 from app.models import AuditLog, User
 from app.schemas import GenerateRequest
 from app.services.content_filter import check_prompt
-from app.services.llm_service import create_llm_stream
+from app.services.llm_service import create_two_step_stream
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -22,7 +22,11 @@ async def generate(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """SSE streaming HTML generation."""
+    """Two-step SSE streaming HTML generation.
+
+    Step 1: Understand intent + select CDN libraries
+    Step 2: Generate HTML with library-filtered system prompt
+    """
     # 1. Content filter
     filter_result = await check_prompt(req.prompt)
     if not filter_result["passed"]:
@@ -36,11 +40,10 @@ async def generate(
     db.add(audit)
     await db.commit()
 
-    # 3. Resolve API key — decrypt if from user config
+    # 3. Resolve API key
     api_key = req.api_key
     if not api_key and user.llm_api_key:
         from app.services.llm_service import decrypt_api_key
-
         try:
             api_key = decrypt_api_key(user.llm_api_key)
         except Exception:
@@ -52,16 +55,16 @@ async def generate(
         "base_url": req.base_url or user.llm_base_url,
     }
 
-    # 4. Return SSE stream
+    # 4. Two-step SSE stream
     async def event_stream():
         try:
-            async for event in create_llm_stream(
+            async for event in create_two_step_stream(
                 req.prompt, user_config, str(user.id), request,
-                template_id=req.template_id, page_id=req.page_id,
+                page_id=req.page_id,
             ):
                 yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
         except Exception as e:
-            logger.exception("LLM stream error")
+            logger.exception("Stream error")
             yield f"data: {json.dumps({'type': 'error', 'message': str(e)}, ensure_ascii=False)}\n\n"
 
     return StreamingResponse(

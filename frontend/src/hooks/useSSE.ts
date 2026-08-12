@@ -4,7 +4,7 @@ import { useGenerationStore } from '../stores/generation'
 export function useSSE() {
   const store = useGenerationStore()
 
-  const startGeneration = async (prompt: string, templateId?: number | null, existingPageId?: string | null) => {
+  const startGeneration = async (prompt: string, existingPageId?: string | null) => {
     // Capture current pageId before startStreaming resets it
     const pageId = existingPageId ?? useGenerationStore.getState().pageId
     store.startStreaming(prompt)
@@ -12,7 +12,7 @@ export function useSSE() {
     const abortController = new AbortController()
 
     try {
-      const response = await generateSSE(prompt, templateId, pageId, abortController.signal)
+      const response = await generateSSE(prompt, pageId, abortController.signal)
 
       if (!response.ok) {
         const data = await response.json()
@@ -36,7 +36,9 @@ export function useSSE() {
           if (!line.startsWith('data: ')) continue
           try {
             const event = JSON.parse(line.slice(6))
-            if (event.type === 'token') {
+            if (event.type === 'progress') {
+              store.setProgress(event.step, event.message)
+            } else if (event.type === 'token') {
               store.appendCode(event.content)
             } else if (event.type === 'final') {
               store.setCode(event.content)

@@ -26,14 +26,9 @@ export interface PageDetail extends PageItem {
   is_saved: boolean
 }
 
-export interface Template {
+export interface RecommendedPrompt {
   id: number
-  name: string
-  description: string | null
-  icon: string | null
-  category: string | null
-  prompt_hint: string | null
-  sort_order: number
+  prompt: string
 }
 
 export interface LLMSettings {

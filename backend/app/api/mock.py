@@ -146,6 +146,14 @@ async def mock_generate(
 
     async def event_stream():
         try:
+            # Simulate Step 1: understand
+            yield f"data: {json.dumps({'type': 'progress', 'step': 'understand', 'message': '正在理解需求...'}, ensure_ascii=False)}\n\n"
+            await asyncio.sleep(0.5)
+
+            # Simulate Step 2: generate
+            yield f"data: {json.dumps({'type': 'progress', 'step': 'generate', 'message': '正在生成页面...'}, ensure_ascii=False)}\n\n"
+            await asyncio.sleep(0.3)
+
             # Emit token chunks to simulate streaming
             for i in range(0, len(MOCK_HTML), CHUNK_SIZE):
                 if await request.is_disconnected():

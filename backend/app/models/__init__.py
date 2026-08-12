@@ -46,16 +46,11 @@ class Page(Base):
     user = relationship("User", back_populates="pages")
 
 
-class Template(Base):
-    __tablename__ = "templates"
+class RecommendedPrompt(Base):
+    __tablename__ = "recommended_prompts"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    name: Mapped[str] = mapped_column(String(100), nullable=False)
-    description: Mapped[str | None] = mapped_column(String(500), default=None)
-    icon: Mapped[str | None] = mapped_column(String(50), default=None)
-    category: Mapped[str | None] = mapped_column(String(50), default=None)
-    prompt_hint: Mapped[str | None] = mapped_column(Text, default=None)
-    system_prompt_append: Mapped[str | None] = mapped_column(Text, default=None)
+    prompt: Mapped[str] = mapped_column(Text, nullable=False)
     sort_order: Mapped[int] = mapped_column(Integer, default=0)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
 

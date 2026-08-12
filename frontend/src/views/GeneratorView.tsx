@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { CircleAlert } from 'lucide-react'
+import { CircleAlert, Loader2 } from 'lucide-react'
 import CodePanel from '../components/generator/CodePanel'
 import PreviewPanel from '../components/generator/PreviewPanel'
 import PromptInput from '../components/generator/PromptInput'
@@ -12,20 +12,19 @@ import { getPage } from '../api/endpoints'
 
 export default function GeneratorView() {
   const [searchParams] = useSearchParams()
-  const { isStreaming, codeContent, pageId, error } = useGenerationStore()
+  const { isStreaming, codeContent, pageId, error, progressStep, progressMessage } = useGenerationStore()
   const { startGeneration } = useSSE()
   const abortRef = useRef<AbortController | null>(null)
   const initialPrompt = searchParams.get('prompt') || ''
-  const templateId = searchParams.get('templateId')
   const editPageId = searchParams.get('pageId')
   const loadedRef = useRef(false)
 
   const handleGenerate = useCallback(async (prompt: string) => {
     abortRef.current?.abort()
     const currentPageId = useGenerationStore.getState().pageId
-    const controller = await startGeneration(prompt, templateId ? parseInt(templateId) : null, currentPageId)
+    const controller = await startGeneration(prompt, currentPageId)
     if (controller) abortRef.current = controller
-  }, [startGeneration, templateId])
+  }, [startGeneration])
 
   // Load existing page for editing
   useEffect(() => {
@@ -66,6 +65,17 @@ export default function GeneratorView() {
         <div className="flex items-center gap-2 px-4 py-2 bg-destructive/10 border-b border-destructive/20 text-destructive text-sm">
           <CircleAlert className="size-4 shrink-0" />
           {error}
+        </div>
+      )}
+
+      {/* Progress indicator */}
+      {isStreaming && progressStep && (
+        <div className="flex items-center gap-3 px-4 py-2.5 bg-emerald-50/50 border-b border-emerald-100 text-sm text-emerald-700">
+          <Loader2 className="size-4 animate-spin shrink-0" />
+          <span>{progressMessage}</span>
+          <span className="text-emerald-400 text-xs ml-auto">
+            {progressStep === 'understand' ? '步骤 1/2' : '步骤 2/2'}
+          </span>
         </div>
       )}
 

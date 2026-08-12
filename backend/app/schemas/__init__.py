@@ -38,7 +38,6 @@ class UserResponse(BaseModel):
 
 class GenerateRequest(BaseModel):
     prompt: str = Field(..., min_length=1, max_length=4000)
-    template_id: Optional[int] = None
     page_id: Optional[int] = None
     model: Optional[str] = None
     api_key: Optional[str] = None
@@ -126,16 +125,11 @@ class PublishRequest(BaseModel):
     title: Optional[str] = None
 
 
-# ── Templates ──
+# ── Prompts ──
 
-class TemplateResponse(BaseModel):
+class PromptResponse(BaseModel):
     id: int
-    name: str
-    description: Optional[str]
-    icon: Optional[str]
-    category: Optional[str]
-    prompt_hint: Optional[str]
-    sort_order: int
+    prompt: str
 
     model_config = {"from_attributes": True}
 

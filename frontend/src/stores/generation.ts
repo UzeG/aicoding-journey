@@ -8,6 +8,8 @@ interface GenerationState {
   title: string
   isSaved: boolean
   error: string | null
+  progressStep: string | null
+  progressMessage: string
 
   startStreaming: (prompt: string) => void
   appendCode: (content: string) => void
@@ -15,6 +17,7 @@ interface GenerationState {
   loadPage: (pageId: string, codeContent: string, prompt: string, isSaved?: boolean, title?: string) => void
   finishStreaming: (pageId: string, title?: string) => void
   setTitle: (title: string) => void
+  setProgress: (step: string, message: string) => void
   setSaved: () => void
   setError: (error: string) => void
   reset: () => void
@@ -28,9 +31,11 @@ export const useGenerationStore = create<GenerationState>((set) => ({
   title: '',
   isSaved: false,
   error: null,
+  progressStep: null,
+  progressMessage: '',
 
   startStreaming: (prompt) =>
-    set({ isStreaming: true, codeContent: '', pageId: null, prompt, title: '', isSaved: false, error: null }),
+    set({ isStreaming: true, codeContent: '', pageId: null, prompt, title: '', isSaved: false, error: null, progressStep: null, progressMessage: '' }),
 
   appendCode: (content) =>
     set((state) => ({ codeContent: state.codeContent + content })),
@@ -42,10 +47,13 @@ export const useGenerationStore = create<GenerationState>((set) => ({
     set({ pageId, codeContent, prompt, isSaved, title, isStreaming: false, error: null }),
 
   finishStreaming: (pageId, title = '') =>
-    set({ isStreaming: false, pageId, title }),
+    set({ isStreaming: false, pageId, title, progressStep: null, progressMessage: '' }),
 
   setTitle: (title) =>
     set({ title }),
+
+  setProgress: (step, message) =>
+    set({ progressStep: step, progressMessage: message }),
 
   setSaved: () =>
     set({ isSaved: true }),
@@ -54,5 +62,5 @@ export const useGenerationStore = create<GenerationState>((set) => ({
     set({ isStreaming: false, error }),
 
   reset: () =>
-    set({ isStreaming: false, codeContent: '', pageId: null, prompt: '', title: '', isSaved: false, error: null }),
+    set({ isStreaming: false, codeContent: '', pageId: null, prompt: '', title: '', isSaved: false, error: null, progressStep: null, progressMessage: '' }),
 }))

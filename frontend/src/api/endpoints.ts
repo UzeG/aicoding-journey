@@ -1,5 +1,5 @@
 import api from './client'
-import type { LLMSettings, PageDetail, PageItem, PublishResult, Template, User } from '../types'
+import type { LLMSettings, PageDetail, PageItem, PublishResult, RecommendedPrompt, User } from '../types'
 
 // Auth
 export const login = (phone: string, password: string) =>
@@ -11,14 +11,14 @@ export const register = (phone: string, password: string, nickname?: string) =>
 export const getMe = () => api.get<User>('/auth/me')
 
 // Generate
-export const generateSSE = (prompt: string, templateId?: number | null, pageId?: string | null, signal?: AbortSignal) =>
+export const generateSSE = (prompt: string, pageId?: string | null, signal?: AbortSignal) =>
   fetch('/api/generate', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${localStorage.getItem('access_token')}`,
     },
-    body: JSON.stringify({ prompt, template_id: templateId, page_id: pageId || null }),
+    body: JSON.stringify({ prompt, page_id: pageId || null }),
     signal,
   })
 
@@ -33,8 +33,8 @@ export const saveDraft = (id: string, title?: string) =>
   api.post(`/pages/${id}/save-draft`, { title })
 export const deletePage = (id: string) => api.delete(`/pages/${id}`)
 
-// Templates
-export const listTemplates = () => api.get<Template[]>('/templates')
+// Prompts
+export const listPrompts = () => api.get<RecommendedPrompt[]>('/prompts')
 
 // Settings
 export const getLLMSettings = () => api.get<LLMSettings>('/settings/llm')
