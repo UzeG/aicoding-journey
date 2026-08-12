@@ -40,19 +40,11 @@ async def generate(
     db.add(audit)
     await db.commit()
 
-    # 3. Resolve API key
-    api_key = req.api_key
-    if not api_key and user.llm_api_key:
-        from app.services.llm_service import decrypt_api_key
-        try:
-            api_key = decrypt_api_key(user.llm_api_key)
-        except Exception:
-            api_key = user.llm_api_key
-
+    # 3. Build user config — api_key is stored encrypted, decrypted once in _build_client
     user_config = {
-        "api_key": api_key,
-        "model": req.model or user.llm_model,
-        "base_url": req.base_url or user.llm_base_url,
+        "api_key": user.llm_api_key,
+        "model": user.llm_model,
+        "base_url": user.llm_base_url,
     }
 
     # 4. Two-step SSE stream

@@ -52,9 +52,6 @@ class UpdateProfileRequest(BaseModel):
 class GenerateRequest(BaseModel):
     prompt: str = Field(..., min_length=1, max_length=4000)
     page_id: Optional[int] = None
-    model: Optional[str] = None
-    api_key: Optional[str] = None
-    base_url: Optional[str] = None
 
 
 

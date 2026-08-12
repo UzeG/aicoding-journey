@@ -87,7 +87,7 @@ backend/
 - **两步 LLM**: Step 1 理解需求 + 从注册表选 CDN 库 → Step 2 根据选中库注入对应的 system prompt（含 CDN 链接 + 使用规范）。避免全量库列表暗示 LLM 添加不必要的图表/3D
 - **Page 复用**: `GenerateRequest.page_id` 可选字段——前端重新生成时传入已有 pageId，后端在 `create_llm_stream` 中检查：若页面存在、属于当前用户且 `is_published=False`，则 UPDATE 该记录而非 INSERT 新记录；已发布的页面不会被覆盖（会创建新 Page）
 - **is_saved 机制**: 生成时 `is_saved=False`，页面不会出现在列表（`list_pages` 过滤 `is_published OR is_saved`）。用户主动点击"保存草稿"后 `is_saved=True`，页面才在用户主页中可见
-- **LLM 优先级**: 请求参数 > 用户配置 > `.env` 平台默认
+- **LLM 优先级**: 用户配置 > `.env` 平台默认（api_key 由 `_build_client` 统一解密，仅一处）
 - **user_id**: 注册必填，大小写不敏感匹配（存储保留原始大小写），保留字禁止注册。支持作为登录凭据
 - **头像存储**: 上传端点 `POST /api/auth/me/avatar`（multipart），格式按 magic bytes 校验（jpg/png/webp/gif），存 `static/avatars/{user_id}_{ts}.{ext}`，换头像删旧文件，DB 存相对 URL。`main.py` mount `/static`
 - **get_optional_user**: 公开端点的可选鉴权依赖（有 token 解析用户，无则 None）。`get_user_profile` 用它判断是否本人，本人返回 `is_published OR is_saved`（含草稿），他人只返回已发布

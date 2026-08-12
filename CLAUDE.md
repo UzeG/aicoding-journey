@@ -51,7 +51,7 @@ cd frontend && npm run dev
 - SSE 流式生成 + 左右分屏实时预览
 - 一键发布 + `/{user_id}/{page_id}` 短链接
 - 页面管理（列表、编辑、删除，区分发布/草稿）
-- LLM 配置（platform/user/request 三级优先级）
+- LLM 配置（platform/user 两级优先级）
 - API 代理网关（解决生成页面的 CORS 问题）
 - 内容安全：prompt 过滤 + 发布前 HTML 扫描 + iframe sandbox
 - Platform SDK 自动注入（`window.platform`）

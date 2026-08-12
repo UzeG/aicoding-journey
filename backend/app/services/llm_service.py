@@ -301,7 +301,7 @@ def _assemble_html(
 
 
 def _build_client(user_config: dict):
-    """Build an AsyncOpenAI client from user config."""
+    """Build an AsyncOpenAI client from user config. Decrypts stored API key here."""
     from openai import AsyncOpenAI
 
     from app.config import settings
@@ -312,11 +312,11 @@ def _build_client(user_config: dict):
     if not api_key:
         raise ValueError("No LLM API key configured.")
 
-    if len(api_key) > 64:
-        try:
-            api_key = decrypt_api_key(api_key)
-        except Exception:
-            pass
+    # api_key 可能来自 DB 加密存储（密文）或 env 明文——统一在此尝试解密，失败则视为明文
+    try:
+        api_key = decrypt_api_key(api_key)
+    except Exception:
+        pass
 
     return AsyncOpenAI(api_key=api_key, base_url=base_url)
 
