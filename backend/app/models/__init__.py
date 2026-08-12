@@ -35,6 +35,7 @@ class Page(Base):
     title: Mapped[str | None] = mapped_column(String(200), default=None)
     html_content: Mapped[str] = mapped_column(Text, nullable=False, default="")
     prompt: Mapped[str | None] = mapped_column(Text, default=None)
+    step1_output: Mapped[str | None] = mapped_column(Text, default=None)
     file_size: Mapped[int | None] = mapped_column(Integer, default=None)
     is_published: Mapped[bool] = mapped_column(Boolean, default=False)
     is_saved: Mapped[bool] = mapped_column(Boolean, default=False)

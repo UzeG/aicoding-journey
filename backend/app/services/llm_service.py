@@ -32,6 +32,7 @@ async def create_two_step_stream(
     # ── Step 1: Understand ──
     yield {"type": "progress", "step": "understand", "message": "正在理解需求..."}
 
+    step1 = None
     try:
         step1 = await _run_step1_understand(prompt, user_config)
         refined_prompt = step1.get("refined_prompt", prompt)
@@ -45,8 +46,10 @@ async def create_two_step_stream(
     # ── Step 2: Generate ──
     yield {"type": "progress", "step": "generate", "message": "正在生成页面..."}
 
+    step1_output = json.dumps(step1, ensure_ascii=False) if step1 is not None else None
+
     async for event in _run_step2_generate(
-        refined_prompt, libraries, user_config, user_id, request, page_id
+        refined_prompt, libraries, user_config, user_id, step1_output, request, page_id
     ):
         yield event
 
@@ -93,6 +96,7 @@ async def _run_step2_generate(
     libraries: list[str],
     user_config: dict,
     user_id: str,
+    step1_output: str | None = None,
     request=None,
     page_id: int | None = None,
 ) -> AsyncGenerator[dict, None]:
@@ -180,6 +184,7 @@ async def _run_step2_generate(
                 existing_page.title = llm_title
                 existing_page.html_content = html_content
                 existing_page.prompt = refined_prompt
+                existing_page.step1_output = step1_output
                 existing_page.file_size = len(html_content.encode("utf-8"))
                 final_page_id = existing_page.id
             else:
@@ -190,6 +195,7 @@ async def _run_step2_generate(
                     title=llm_title,
                     html_content=html_content,
                     prompt=refined_prompt,
+                    step1_output=step1_output,
                     file_size=len(html_content.encode("utf-8")),
                 )
                 db.add(page)

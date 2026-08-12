@@ -35,6 +35,9 @@ def _run_migration_sync(conn):
     if "original_prompt" in columns:
         logger.info("Migrating: original_prompt → prompt")
         conn.execute(text("ALTER TABLE pages RENAME COLUMN original_prompt TO prompt"))
+    if "step1_output" not in columns:
+        logger.info("Migrating: adding step1_output column to pages")
+        conn.execute(text("ALTER TABLE pages ADD COLUMN step1_output TEXT"))
 
 
 async def init_db():
