@@ -1,9 +1,11 @@
+from typing import Optional
+
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_user, get_db
+from app.api.deps import get_current_user, get_db, get_optional_user
 from app.config import settings
 from app.models import AuditLog, Page, PageIdRedirect, User
 from app.schemas import (
@@ -340,9 +342,10 @@ async def serve_page(
 @users_router.get("/{user_id}", response_model=UserProfileResponse)
 async def get_user_profile(
     user_id: str,
+    viewer: Optional[User] = Depends(get_optional_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Get user public profile and published pages."""
+    """Get user public profile and pages. Viewer (self) sees drafts too."""
     result = await db.execute(
         select(User).where(func.lower(User.user_id) == user_id.lower())
     )
@@ -350,15 +353,26 @@ async def get_user_profile(
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
+    is_self = viewer is not None and viewer.id == user.id
+    where = or_(
+        Page.is_published == True,
+        Page.is_saved == True,
+    ) if is_self else (Page.is_published == True)
+
     pages_result = await db.execute(
         select(Page)
-        .where(Page.user_id == user.id, Page.is_published == True, Page.status == "active")
+        .where(Page.user_id == user.id, Page.status == "active", where)
         .order_by(Page.updated_at.desc())
     )
     pages = pages_result.scalars().all()
 
     return UserProfileResponse(
-        user=UserPublicResponse(nickname=user.nickname, user_id=user.user_id),
+        user=UserPublicResponse(
+            nickname=user.nickname,
+            avatar_url=user.avatar_url,
+            bio=user.bio,
+            user_id=user.user_id,
+        ),
         pages=[PageListItem(
             id=str(p.id),
             page_id=p.page_id,

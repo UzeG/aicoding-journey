@@ -2,6 +2,8 @@ export interface User {
   id: string
   phone: string
   nickname: string | null
+  avatar_url: string | null
+  bio: string | null
   user_type: string
   user_id?: string | null
   token_balance: number
@@ -54,6 +56,8 @@ export interface CheckPageIdResponse {
 
 export interface UserPublic {
   nickname: string | null
+  avatar_url: string | null
+  bio: string | null
   user_id: string | null
 }
 

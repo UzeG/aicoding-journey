@@ -1,28 +1,72 @@
-import { useCallback, useEffect, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
-import { FileText, Pencil, Trash2, CheckCircle2, CircleDashed, ExternalLink, CircleAlert, Plus, User } from 'lucide-react'
-import { deletePage, getUserProfile } from '../api/endpoints'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import {
+  FileText, Pencil, Trash2, CheckCircle2, CircleDashed, ExternalLink, CircleAlert, Plus, User, Camera,
+} from 'lucide-react'
+import { deletePage, getUserProfile, updateProfile, uploadAvatar } from '../api/endpoints'
 import { useAuthStore } from '../stores/auth'
 import ConfirmDialog from '../components/common/ConfirmDialog'
 import LoadingSpinner from '../components/common/LoadingSpinner'
+import Avatar from '../components/common/Avatar'
 import { Button } from '../components/ui/button'
 import { Badge } from '../components/ui/badge'
 import { Card, CardContent } from '../components/ui/card'
+import { Input } from '../components/ui/input'
+import { Label } from '../components/ui/label'
+import { Textarea } from '../components/ui/textarea'
+import {
+  Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle,
+} from '../components/ui/dialog'
+import SettingsView from './SettingsView'
+import { cn } from '../lib/utils'
 import type { PageItem, UserProfile } from '../types'
 
 const BACKEND_URL = import.meta.env.VITE_PUBLIC_BASE_URL || 'http://localhost:8000'
 
+type Filter = 'all' | 'published' | 'draft'
+
+const FILTERS: { key: Filter; label: string }[] = [
+  { key: 'all', label: '全部' },
+  { key: 'published', label: '已发布' },
+  { key: 'draft', label: '草稿' },
+]
+
+// Extract readable message from axios error — FastAPI 422 detail is an array
+function getErrorMessage(err: any, fallback: string): string {
+  const detail = err?.response?.data?.detail
+  if (typeof detail === 'string') return detail
+  if (Array.isArray(detail)) {
+    const msgs = detail.map((d: any) => d.msg).filter(Boolean)
+    return msgs.join('；') || fallback
+  }
+  return fallback
+}
+
 export default function UserProfileView() {
   const { userId } = useParams<{ userId: string }>()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const navigate = useNavigate()
+  const currentUser = useAuthStore((s) => s.user)
+  const setUser = useAuthStore((s) => s.setUser)
+
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
+  const [filter, setFilter] = useState<Filter>('all')
   const [deleteTarget, setDeleteTarget] = useState<PageItem | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
-  const navigate = useNavigate()
-  const currentUser = useAuthStore((s) => s.user)
+
+  const [editOpen, setEditOpen] = useState(false)
+  const [editNickname, setEditNickname] = useState('')
+  const [editBio, setEditBio] = useState('')
+  const [savingProfile, setSavingProfile] = useState(false)
+  const [profileError, setProfileError] = useState<string | null>(null)
+  const [previewAvatarUrl, setPreviewAvatarUrl] = useState<string | null>(null)
+  const [pendingAvatarFile, setPendingAvatarFile] = useState<File | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const isOwnProfile = currentUser?.user_id?.toLowerCase() === userId?.toLowerCase()
+  const tab = searchParams.get('tab') === 'settings' ? 'settings' : 'projects'
 
   const fetchProfile = useCallback(async () => {
     if (!userId) return
@@ -38,6 +82,13 @@ export default function UserProfileView() {
 
   useEffect(() => { fetchProfile() }, [fetchProfile])
 
+  const setTab = (t: string) => {
+    const params = new URLSearchParams(searchParams)
+    if (t === 'projects') params.delete('tab')
+    else params.set('tab', t)
+    setSearchParams(params, { replace: true })
+  }
+
   const handleDelete = async () => {
     if (!deleteTarget) return
     setDeleteError(null)
@@ -48,6 +99,47 @@ export default function UserProfileView() {
       setDeleteError(err.response?.data?.detail || '删除失败，请重试')
     } finally {
       setDeleteTarget(null)
+    }
+  }
+
+  const openEdit = () => {
+    setEditNickname(profile?.user.nickname || '')
+    setEditBio(profile?.user.bio || '')
+    setPreviewAvatarUrl(null)
+    setPendingAvatarFile(null)
+    setProfileError(null)
+    setEditOpen(true)
+  }
+
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    // Local preview only — actual upload happens on Save
+    if (previewAvatarUrl) URL.revokeObjectURL(previewAvatarUrl)
+    setPreviewAvatarUrl(URL.createObjectURL(file))
+    setPendingAvatarFile(file)
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }
+
+  const handleSaveProfile = async () => {
+    setSavingProfile(true)
+    setProfileError(null)
+    try {
+      let updated = (await updateProfile({ nickname: editNickname, bio: editBio })).data
+      if (pendingAvatarFile) {
+        const avatarRes = await uploadAvatar(pendingAvatarFile)
+        updated = avatarRes.data // 包含最新 avatar_url
+      }
+      setUser(updated)
+      setProfile((p) => p ? { ...p, user: { ...p.user, nickname: updated.nickname, bio: updated.bio, avatar_url: updated.avatar_url } } : p)
+      if (previewAvatarUrl) URL.revokeObjectURL(previewAvatarUrl)
+      setPreviewAvatarUrl(null)
+      setPendingAvatarFile(null)
+      setEditOpen(false)
+    } catch (err: any) {
+      setProfileError(getErrorMessage(err, '保存失败'))
+    } finally {
+      setSavingProfile(false)
     }
   }
 
@@ -64,107 +156,248 @@ export default function UserProfileView() {
     )
   }
 
+  const pages = profile.pages
+  const publishedCount = pages.filter((p) => p.is_published).length
+  const filtered = pages.filter((p) => {
+    if (filter === 'published') return p.is_published
+    if (filter === 'draft') return !p.is_published
+    return true
+  })
+
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <div className="size-10 rounded-full bg-primary/10 flex items-center justify-center">
-            <User className="size-5 text-primary" />
+    <div className="max-w-6xl mx-auto px-4 py-8">
+      <div className="flex flex-col md:flex-row gap-8">
+        {/* 左侧个人卡片 */}
+        <aside className="md:w-64 shrink-0">
+          <Avatar
+            src={profile.user.avatar_url}
+            name={profile.user.nickname || profile.user.user_id}
+            className="size-24 text-3xl mb-4"
+          />
+          <h1 className="text-xl font-bold text-foreground break-words">{profile.user.nickname || profile.user.user_id}</h1>
+          <p className="text-sm text-muted-foreground mb-4">@{profile.user.user_id}</p>
+          {profile.user.bio && <p className="text-sm text-foreground/80 mb-4 whitespace-pre-wrap">{profile.user.bio}</p>}
+          <p className="text-sm text-muted-foreground mb-5">{publishedCount} 个已发布页面</p>
+          {isOwnProfile && (
+            <div className="space-y-2">
+              <Button variant="outline" className="w-full" onClick={openEdit}>
+                <Pencil className="size-4" />
+                编辑资料
+              </Button>
+              <Button className="w-full" onClick={() => navigate('/')}>
+                <Plus className="size-4" />
+                新建页面
+              </Button>
+            </div>
+          )}
+        </aside>
+
+        {/* 右侧内容区 */}
+        <div className="flex-1 min-w-0">
+          {/* Tab 导航 */}
+          <div className="flex gap-6 border-b border-border mb-6">
+            <button
+              onClick={() => setTab('projects')}
+              className={cn(
+                'pb-3 text-sm font-medium -mb-px border-b-2 transition-colors',
+                tab === 'projects' ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'
+              )}
+            >
+              项目
+            </button>
+            {isOwnProfile && (
+              <button
+                onClick={() => setTab('settings')}
+                className={cn(
+                  'pb-3 text-sm font-medium -mb-px border-b-2 transition-colors',
+                  tab === 'settings' ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'
+                )}
+              >
+                设置
+              </button>
+            )}
           </div>
-          <div>
-            <h1 className="text-xl font-bold text-foreground">{profile.user.nickname || profile.user.user_id}</h1>
-            <p className="text-sm text-muted-foreground">@{profile.user.user_id}</p>
-          </div>
+
+          {tab === 'settings' ? (
+            <SettingsView />
+          ) : (
+            <>
+              {/* 发布/草稿筛选（仅自己） */}
+              {isOwnProfile && (
+                <div className="flex gap-2 mb-4">
+                  {FILTERS.map((f) => (
+                    <button
+                      key={f.key}
+                      onClick={() => setFilter(f.key)}
+                      className={cn(
+                        'px-3 py-1 rounded-full text-sm transition-colors',
+                        filter === f.key ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-accent'
+                      )}
+                    >
+                      {f.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {deleteError && (
+                <div className="mb-4 flex items-center gap-2 px-4 py-2 bg-destructive/10 border border-destructive/20 text-destructive text-sm rounded-lg">
+                  <CircleAlert className="size-4 shrink-0" />
+                  {deleteError}
+                </div>
+              )}
+
+              {filtered.length === 0 ? (
+                <Card>
+                  <CardContent className="flex flex-col items-center justify-center py-20 text-muted-foreground">
+                    <FileText className="size-12 mb-4 opacity-40" />
+                    <p className="text-lg mb-4">
+                      {isOwnProfile ? (filter === 'all' ? '还没有生成过页面' : '没有符合条件的页面') : '还没有发布过页面'}
+                    </p>
+                    {isOwnProfile && filter === 'all' && (
+                      <Button variant="outline" onClick={() => navigate('/')}>
+                        去首页开始创作
+                      </Button>
+                    )}
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="space-y-3">
+                  {filtered.map((page) => (
+                    <Card key={page.id} className="hover:border-primary/40 transition-colors">
+                      <CardContent className="p-4 flex items-center justify-between">
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-medium text-foreground truncate">{page.title || '未命名页面'}</h3>
+                          <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                            <span>{new Date(page.created_at).toLocaleDateString('zh-CN')}</span>
+                            {page.is_published ? (
+                              <Badge variant="success">
+                                <CheckCircle2 className="size-3" />
+                                已发布
+                              </Badge>
+                            ) : (
+                              <Badge variant="muted">
+                                <CircleDashed className="size-3" />
+                                草稿
+                              </Badge>
+                            )}
+                            {page.is_published && page.page_id && (
+                              <a
+                                href={`${BACKEND_URL}/${profile.user.user_id}/${page.page_id}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-primary hover:underline inline-flex items-center gap-0.5"
+                              >
+                                /{profile.user.user_id}/{page.page_id}
+                                <ExternalLink className="size-3" />
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                        {isOwnProfile && (
+                          <div className="flex items-center gap-2 ml-4 shrink-0">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => navigate(`/generator?pageId=${page.id}`)}
+                            >
+                              <Pencil className="size-4" />
+                              编辑
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                              onClick={() => setDeleteTarget(page)}
+                            >
+                              <Trash2 className="size-4" />
+                              删除
+                            </Button>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
         </div>
-        {isOwnProfile && (
-          <Button onClick={() => navigate('/')}>
-            <Plus className="size-4" />
-            新建页面
-          </Button>
-        )}
       </div>
 
-      {deleteError && (
-        <div className="mb-4 flex items-center gap-2 px-4 py-2 bg-destructive/10 border border-destructive/20 text-destructive text-sm rounded-lg">
-          <CircleAlert className="size-4 shrink-0" />
-          {deleteError}
-        </div>
-      )}
+      {/* 编辑资料弹窗 */}
+      <Dialog
+        open={editOpen}
+        onOpenChange={(open) => {
+          setEditOpen(open)
+          if (!open) {
+            if (previewAvatarUrl) URL.revokeObjectURL(previewAvatarUrl)
+            setPreviewAvatarUrl(null)
+            setPendingAvatarFile(null)
+            setProfileError(null)
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>编辑资料</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-5">
+            <div className="flex items-center gap-4">
+              <Avatar
+                src={previewAvatarUrl || profile.user.avatar_url}
+                name={profile.user.nickname || profile.user.user_id}
+                className="size-16 text-xl"
+              />
+              <div>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  hidden
+                  onChange={handleAvatarChange}
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <Camera className="size-4" />
+                  更换头像
+                </Button>
+                <p className="text-xs text-muted-foreground mt-1">支持 JPG/PNG/WebP/GIF，≤2MB</p>
+              </div>
+            </div>
 
-      {profile.pages.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-20 text-muted-foreground">
-            <FileText className="size-12 mb-4 opacity-40" />
-            <p className="text-lg mb-4">
-              {isOwnProfile ? '还没有生成过页面' : '还没有发布过页面'}
-            </p>
-            {isOwnProfile && (
-              <Button variant="outline" onClick={() => navigate('/')}>
-                去首页开始创作
-              </Button>
+            <div className="space-y-2">
+              <Label>名称</Label>
+              <Input value={editNickname} onChange={(e) => setEditNickname(e.target.value)} maxLength={50} placeholder="你的名称" />
+            </div>
+
+            <div className="space-y-2">
+              <Label>简介</Label>
+              <Textarea
+                value={editBio}
+                onChange={(e) => setEditBio(e.target.value)}
+                maxLength={160}
+                rows={3}
+                placeholder="介绍一下自己（可选）"
+              />
+              <p className="text-xs text-muted-foreground text-right">{editBio.length}/160</p>
+            </div>
+
+            {profileError && (
+              <p className="text-destructive text-sm">{profileError}</p>
             )}
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="space-y-3">
-          {profile.pages.map((page) => (
-            <Card key={page.id} className="hover:border-primary/40 transition-colors">
-              <CardContent className="p-4 flex items-center justify-between">
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-medium text-foreground truncate">{page.title || '未命名页面'}</h3>
-                  <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-                    <span>{new Date(page.created_at).toLocaleDateString('zh-CN')}</span>
-                    {page.is_published ? (
-                      <Badge variant="success">
-                        <CheckCircle2 className="size-3" />
-                        已发布
-                      </Badge>
-                    ) : (
-                      <Badge variant="muted">
-                        <CircleDashed className="size-3" />
-                        草稿
-                      </Badge>
-                    )}
-                    {page.is_published && page.page_id && (
-                      <a
-                        href={`${BACKEND_URL}/${profile.user.user_id}/${page.page_id}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-primary hover:underline inline-flex items-center gap-0.5"
-                      >
-                        /{profile.user.user_id}/{page.page_id}
-                        <ExternalLink className="size-3" />
-                      </a>
-                    )}
-                  </div>
-                </div>
-                {isOwnProfile && (
-                  <div className="flex items-center gap-2 ml-4 shrink-0">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => navigate(`/generator?pageId=${page.id}`)}
-                    >
-                      <Pencil className="size-4" />
-                      编辑
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                      onClick={() => setDeleteTarget(page)}
-                    >
-                      <Trash2 className="size-4" />
-                      删除
-                    </Button>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditOpen(false)}>取消</Button>
+            <Button onClick={handleSaveProfile} disabled={savingProfile}>
+              {savingProfile ? '保存中...' : '保存'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <ConfirmDialog
         open={!!deleteTarget}

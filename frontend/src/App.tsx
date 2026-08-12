@@ -5,7 +5,6 @@ import HomeView from './views/HomeView'
 import GeneratorView from './views/GeneratorView'
 import UserProfileView from './views/UserProfileView'
 import LoginView from './views/LoginView'
-import SettingsView from './views/SettingsView'
 
 import { useAuthStore } from './stores/auth'
 
@@ -41,7 +40,6 @@ export default function App() {
             <Route path="/generator" element={<GeneratorView />} />
             <Route path="/home" element={<HomeRedirect />} />
             <Route path="/login" element={<LoginView />} />
-            <Route path="/settings" element={<SettingsView />} />
 
             <Route path="/:userId" element={<UserProfileView />} />
           </Routes>

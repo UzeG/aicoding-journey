@@ -1,26 +1,44 @@
+import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Zap, FileText, Settings, LogOut, LogIn, LayoutGrid } from 'lucide-react'
+import { Zap, LogOut, LogIn, User, FolderOpen, Settings } from 'lucide-react'
 import { useAuthStore } from '../../stores/auth'
 import { Button } from '../ui/button'
-import { cn } from '../../lib/utils'
-
-function useNavItems(userId?: string | null) {
-  return [
-    { to: '/', label: '首页', icon: LayoutGrid },
-    { to: userId ? `/${userId}` : '/login', label: '我的页面', icon: FileText, auth: true },
-    { to: '/settings', label: '设置', icon: Settings },
-  ]
-}
+import Avatar from '../common/Avatar'
 
 export default function AppHeader() {
   const { user, isAuthenticated, logout } = useAuthStore()
   const navigate = useNavigate()
-  const navItems = useNavItems(user?.user_id)
+  const [menuOpen, setMenuOpen] = useState(false)
+  const menuRef = useRef<HTMLDivElement>(null)
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    if (!menuOpen) return
+    const onClick = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', onClick)
+    return () => document.removeEventListener('mousedown', onClick)
+  }, [menuOpen])
 
   const handleLogout = () => {
+    setMenuOpen(false)
     logout()
     navigate('/')
   }
+
+  const goTo = (to: string) => {
+    setMenuOpen(false)
+    navigate(to)
+  }
+
+  const menuItems = [
+    { to: `/${user?.user_id}`, label: '我的主页', icon: User },
+    { to: `/${user?.user_id}?tab=projects`, label: '我的项目', icon: FolderOpen },
+    { to: `/${user?.user_id}?tab=settings`, label: '设置', icon: Settings },
+  ]
 
   return (
     <header className="bg-card border-b border-border sticky top-0 z-50">
@@ -32,33 +50,53 @@ export default function AppHeader() {
           HTML Host
         </Link>
 
-        <nav className="flex items-center gap-1 text-sm">
-          {navItems
-            .filter((item) => !item.auth || isAuthenticated)
-            .map((item) => (
-              <Link
-                key={item.to}
-                to={item.to}
-                className={cn(
-                  'flex items-center gap-1.5 px-3 py-1.5 rounded-md no-underline text-muted-foreground',
-                  'hover:text-foreground hover:bg-accent transition-colors'
-                )}
-              >
-                <item.icon className="size-4" />
-                {item.label}
-              </Link>
-            ))}
-        </nav>
-
-        <div className="flex items-center gap-3">
+        <div className="flex items-center">
           {isAuthenticated ? (
-            <>
-              <span className="text-sm text-muted-foreground">{user?.nickname || user?.phone}</span>
-              <Button variant="ghost" size="sm" onClick={handleLogout}>
-                <LogOut className="size-4" />
-                退出
-              </Button>
-            </>
+            <div className="relative" ref={menuRef}>
+              <button
+                onClick={() => setMenuOpen((o) => !o)}
+                className="flex items-center rounded-full hover:ring-2 hover:ring-primary/30 transition-shadow"
+                aria-label="用户菜单"
+              >
+                <Avatar
+                  src={user?.avatar_url}
+                  name={user?.nickname || user?.phone}
+                  className="size-8 text-sm"
+                />
+              </button>
+
+              {menuOpen && (
+                <div className="absolute right-0 top-full mt-2 w-56 rounded-lg border border-border bg-card shadow-lg overflow-hidden">
+                  <div className="px-3 py-2.5 border-b border-border">
+                    <p className="font-medium text-sm text-foreground truncate">{user?.nickname || user?.phone}</p>
+                    <p className="text-xs text-muted-foreground truncate">@{user?.user_id}</p>
+                  </div>
+
+                  <div className="py-1">
+                    {menuItems.map((item) => (
+                      <button
+                        key={item.label}
+                        onClick={() => goTo(item.to)}
+                        className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-foreground hover:bg-accent transition-colors text-left"
+                      >
+                        <item.icon className="size-4 text-muted-foreground" />
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="border-t border-border py-1">
+                    <button
+                      onClick={handleLogout}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-foreground hover:bg-accent transition-colors text-left"
+                    >
+                      <LogOut className="size-4 text-muted-foreground" />
+                      退出登录
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           ) : (
             <Button size="sm" asChild>
               <Link to="/login">

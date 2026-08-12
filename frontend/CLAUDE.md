@@ -11,7 +11,7 @@ npm run dev        # http://localhost:5173（正式模式，真实 LLM 调用）
 npm run dev:mock   # Mock 模式（跳过 LLM，使用样本 HTML，零 Token 消耗）
 ```
 
-Vite proxy 配置：`/api` 转发到 `http://localhost:8000`。Mock 模式下 `/api/generate` 被 rewrite 为 `/api/mock/generate`。
+Vite proxy 配置：`/api`、`/static` 转发到 `http://localhost:8000`。Mock 模式下 `/api/generate` 被 rewrite 为 `/api/mock/generate`。
 
 ## 目录结构
 
@@ -33,7 +33,7 @@ frontend/src/
 │   └── useSSE.ts                 # SSE 流式消费 (fetch + ReadableStream)
 ├── components/
 │   ├── ui/                       # shadcn/ui 组件 (Button/Input/Textarea/Card/Badge/Dialog/Select/Label)
-│   ├── layout/AppHeader.tsx      # 导航栏 (logo, 菜单, 登录状态)
+│   ├── layout/AppHeader.tsx      # header (logo + 右侧 avatar 下拉菜单)
 │   ├── generator/
 │   │   ├── PromptInput.tsx       # textarea + 发送按钮
 │   │   ├── CodePanel.tsx         # Monaco Editor (readOnly, 流式追加)
@@ -42,14 +42,15 @@ frontend/src/
 │   │   ├── SaveDraftButton.tsx   # 保存草稿 (is_saved=True 后列表可见)
 │   │   └── SavePageDialog.tsx    # 发布/保存表单 (标题 + page_id 实时校验)
 │   └── common/
+│       ├── Avatar.tsx            # 头像组件 (有图显示图，无图显示首字母)
 │       ├── LoadingSpinner.tsx
 │       └── ConfirmDialog.tsx
 └── views/
     ├── HomeView.tsx              # 首页 (Hero + 推荐提示词)
     ├── GeneratorView.tsx         # 分屏生成器 ★核心页面
-    ├── UserProfileView.tsx       # 用户主页（自己=管理，别人=只读）
+    ├── UserProfileView.tsx       # 用户主页（左卡片 + 右 tab：项目/设置）
     ├── LoginView.tsx             # 登录/注册（支持手机号 + user_id）
-    └── SettingsView.tsx          # LLM 配置 (model/api_key/base_url)
+    └── SettingsView.tsx          # LLM 配置（复用为主页设置 tab）
 ```
 
 ## 路由
@@ -61,7 +62,6 @@ frontend/src/
 | `/:userId` | UserProfileView | 用户主页（自己=管理，别人=只读） |
 | `/home` | HomeRedirect | 重定向到 /{当前用户id} |
 | `/login` | LoginView | 登录/注册 |
-| `/settings` | SettingsView | LLM 配置 |
 
 ## 核心数据流（GeneratorView）
 
@@ -107,4 +107,6 @@ UserProfileView 点击编辑 → navigate("/generator?pageId={id}")
 - **Mock 模式**: `npm run dev:mock` 启动，`.env.mock` 设 `VITE_MOCK_LLM=true`。`vite.config.ts` 中 `/api/generate` 被 rewrite 为 `/api/mock/generate`，返回样本 HTML。前端代码无需改动。正式模式用 `npm run dev`
 - **user_id 校验**: 注册页 300ms debounce 实时调用 `/api/auth/check`，大小写不敏感
 - **page_id 校验**: 发布弹窗 300ms debounce 实时调用 `/api/pages/check-id`，大小写不敏感
-- **用户主页**: `UserProfileView` 通过 `:userId` 路由参数 + 当前登录用户判断，自己看是管理模式（编辑/删除按钮），别人看是只读模式
+- **Header**: 无中间导航，右侧未登录显示「登录」按钮，已登录显示 Avatar 下拉菜单（我的主页/我的项目/设置/退出）。菜单点击外部关闭
+- **用户主页 tab**: `?tab=settings` 用 query 驱动（不用路径，避免与 `/{user_id}/{page_id}` 发布页路由冲突）。自己看含草稿 + 设置 tab + 编辑资料，别人看只读已发布项目
+- **头像**: `Avatar` 组件展示 `user.avatar_url`（相对路径 `/static/...`，经 Vite proxy 加载），无头像显示首字母。上传走 `POST /api/auth/me/avatar`

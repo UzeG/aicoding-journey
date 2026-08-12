@@ -45,10 +45,12 @@ cd frontend && npm run dev
 ## 已有功能
 
 - 用户注册/登录（JWT），支持手机号 + 自定义 user_id
+- 个人资料（头像上传/昵称/简介 bio），header 右上角 avatar 下拉菜单
+- 用户主页（GitHub 风格）：左侧资料卡片 + 右侧「项目/设置」tab（query 驱动）
 - 5 个推荐提示词（套餐对比、话费计算器、祝福贺卡、抽奖转盘、流量可视化）
 - SSE 流式生成 + 左右分屏实时预览
 - 一键发布 + `/{user_id}/{page_id}` 短链接
-- 页面管理（列表、编辑、删除）
+- 页面管理（列表、编辑、删除，区分发布/草稿）
 - LLM 配置（platform/user/request 三级优先级）
 - API 代理网关（解决生成页面的 CORS 问题）
 - 内容安全：prompt 过滤 + 发布前 HTML 扫描 + iframe sandbox
@@ -62,5 +64,7 @@ cd frontend && npm run dev
 - **ECharts**：用 `ResizeObserver` 监听容器尺寸（不要用 `window.resize` 事件，首次加载不触发）
 - **LLM 输出过滤**：后端流式输出会缓冲直到检测到 HTML 开始标记（`\`\`\`html` / `<!DOCTYPE` / `<html>`），再转发 token 给前端。流结束后发送 `final` 事件用精确提取的 HTML 替换 Monaco 内容
 - **两步 LLM**：Step 1 理解需求 + 选 CDN 库 → Step 2 根据选中库注入 system prompt 生成 HTML。避免全量 CDN 列表暗示 LLM 添加不必要的图表/3D
-- **URL 方案**：`/{user_id}` 用户主页，`/{user_id}/{page_id}` 已发布页面，支持 page_id 修改后 301 重定向
+- **URL 方案**：`/{user_id}` 用户主页，`/{user_id}/{page_id}` 已发布页面，支持 page_id 修改后 301 重定向。主页 tab 用 query 驱动（`?tab=settings`），避免与发布页路径冲突
 - **user_id / page_id**：大小写不敏感匹配，存储保留原始大小写
+- **头像存储**：后端文件存储（方案 C）——`POST /api/auth/me/avatar` 上传，存 `backend/static/avatars/`，DB 存相对 URL `/static/avatars/xxx.png`。前端经 Vite proxy `/static` 加载。文件格式按 magic bytes 校验（防改扩展名），≤2MB
+- **个人主页**：`GET /api/users/{user_id}` 用 `get_optional_user` 判断是否本人——本人返回含草稿，他人只返回已发布

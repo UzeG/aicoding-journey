@@ -19,7 +19,7 @@ export default function LoginView() {
   const [userIdStatus, setUserIdStatus] = useState<'idle' | 'checking' | 'available' | 'taken' | 'invalid'>('idle')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
-  const { login, register } = useAuthStore()
+  const { login, register, fetchUser } = useAuthStore()
   const navigate = useNavigate()
   const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
@@ -60,6 +60,8 @@ export default function LoginView() {
         if (userIdStatus !== 'available') { setError('请检查用户 ID 是否可用'); setLoading(false); return }
         await register(account, password, userId, nickname || undefined)
       }
+      // Load user data before navigating so header avatar/menu shows correctly
+      await fetchUser()
       navigate('/')
     } catch (err: any) {
       setError(err.response?.data?.detail || '操作失败，请重试')

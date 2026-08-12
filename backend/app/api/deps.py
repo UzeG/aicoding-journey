@@ -34,6 +34,21 @@ async def get_current_user(
     return user
 
 
+async def get_optional_user(
+    request: Request,
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
+    db: AsyncSession = Depends(get_db),
+) -> Optional[User]:
+    """Resolve current User from JWT if present; returns None if absent/invalid."""
+    if credentials is None:
+        return None
+    user_id_str = decode_access_token(credentials.credentials)
+    if user_id_str is None:
+        return None
+    result = await db.execute(select(User).where(User.id == user_id_str))
+    return result.scalar_one_or_none()
+
+
 async def get_client_ip(request: Request) -> str:
     """Extract client IP from request headers or direct client."""
     forwarded = request.headers.get("X-Forwarded-For")

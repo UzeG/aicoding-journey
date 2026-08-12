@@ -1,14 +1,41 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+import os
+import time
+
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user, get_db
 from app.models import User
-from app.schemas import CheckUserIdResponse, LoginRequest, RegisterRequest, TokenResponse, UserResponse
+from app.schemas import (
+    CheckUserIdResponse,
+    LoginRequest,
+    RegisterRequest,
+    TokenResponse,
+    UpdateProfileRequest,
+    UserResponse,
+)
 from app.utils import create_access_token, hash_password, verify_password
 from app.utils.snowflake import generate_id
 
 router = APIRouter()
+
+# ── Avatar file storage (方案 C) ──
+AVATAR_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "static", "avatars")
+_MAX_AVATAR_BYTES = 2 * 1024 * 1024  # 2MB
+
+
+def _sniff_image_type(head: bytes) -> str | None:
+    """Detect actual image type from magic bytes (not extension)."""
+    if head.startswith(b"\xff\xd8\xff"):
+        return "jpg"
+    if head.startswith(b"\x89PNG\r\n\x1a\n"):
+        return "png"
+    if head.startswith(b"GIF87a") or head.startswith(b"GIF89a"):
+        return "gif"
+    if head.startswith(b"RIFF") and head[8:12] == b"WEBP":
+        return "webp"
+    return None
 
 # Reserved user_ids that cannot be registered
 _RESERVED_IDS = frozenset({
@@ -114,4 +141,52 @@ async def login(req: LoginRequest, db: AsyncSession = Depends(get_db)):
 @router.get("/me", response_model=UserResponse)
 async def get_me(user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     await _ensure_user_id(user, db)
+    return user
+
+
+@router.put("/me", response_model=UserResponse)
+async def update_profile(
+    req: UpdateProfileRequest,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Update editable profile fields (nickname, bio)."""
+    if req.nickname is not None:
+        user.nickname = req.nickname.strip()
+    if req.bio is not None:
+        user.bio = req.bio.strip() or None
+    await db.commit()
+    await db.refresh(user)
+    return user
+
+
+@router.post("/me/avatar", response_model=UserResponse)
+async def upload_avatar(
+    file: UploadFile = File(...),
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Upload avatar image. Stored at static/avatars/, DB stores relative URL."""
+    content = await file.read(_MAX_AVATAR_BYTES + 1)
+    if len(content) > _MAX_AVATAR_BYTES:
+        raise HTTPException(status_code=413, detail="Avatar too large (max 2MB)")
+
+    ext = _sniff_image_type(content[:16])
+    if ext is None:
+        raise HTTPException(status_code=400, detail="Unsupported image type (jpg/png/webp/gif)")
+
+    # Remove old avatar file
+    if user.avatar_url and user.avatar_url.startswith("/static/avatars/"):
+        old_path = os.path.join(AVATAR_DIR, os.path.basename(user.avatar_url))
+        if os.path.exists(old_path):
+            os.remove(old_path)
+
+    os.makedirs(AVATAR_DIR, exist_ok=True)
+    filename = f"{user.id}_{int(time.time() * 1000)}.{ext}"
+    with open(os.path.join(AVATAR_DIR, filename), "wb") as f:
+        f.write(content)
+
+    user.avatar_url = f"/static/avatars/{filename}"
+    await db.commit()
+    await db.refresh(user)
     return user

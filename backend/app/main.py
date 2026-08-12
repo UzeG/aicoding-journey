@@ -1,12 +1,18 @@
 import logging
+import os
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from app.api import public_router, router
 from app.database import init_db
 
 logger = logging.getLogger(__name__)
+
+# Static files (avatars etc.) — backend/static, same base as auth.py AVATAR_DIR
+STATIC_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "static")
+os.makedirs(os.path.join(STATIC_DIR, "avatars"), exist_ok=True)
 
 
 async def lifespan(app: FastAPI):
@@ -31,6 +37,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Mount static files
+app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 # Mount API routes
 app.include_router(router)

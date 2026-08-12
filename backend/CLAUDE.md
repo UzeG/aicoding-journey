@@ -20,11 +20,11 @@ backend/
 │   ├── config.py            # pydantic-settings, 读 .env
 │   ├── database.py          # SQLAlchemy async engine + session
 │   ├── seed.py              # 种子数据（推荐提示词 + demo 用户）
-│   ├── models/__init__.py   # User, Page, PageIdRedirect, RecommendedPrompt, AuditLog ORM
+│   ├── models/__init__.py   # User(avatar_url/bio), Page, PageIdRedirect, RecommendedPrompt, AuditLog ORM
 │   ├── schemas/__init__.py  # Pydantic 请求/响应模型
 │   ├── api/                 # 路由层
 │   │   ├── __init__.py      # 路由注册
-│   │   ├── auth.py          # /api/auth/{register,login,me,check}
+│   │   ├── auth.py          # /api/auth/{register,login,me,check,me/avatar}
 │   │   ├── generate.py      # /api/generate (SSE 流式) ★核心
 │   │   ├── pages.py         # /api/pages CRUD + /{user_id}/{page_id} 公开访问
 │   │   ├── prompts.py       # /api/prompts
@@ -45,6 +45,7 @@ backend/
 │   └── utils/
 │       ├── __init__.py      # hash_password, verify_password, JWT
 │       └── snowflake.py     # Snowflake ID → Base62
+├── static/                  # 静态文件（avatars/），main.py mount 到 /static
 ├── .env                     # 实际配置（gitignore）
 ├── .env.example             # 配置模板
 └── requirements.txt
@@ -56,7 +57,9 @@ backend/
 |---|---|---|---|
 | POST | /api/auth/register | No | 注册（需 user_id） |
 | POST | /api/auth/login | No | 登录（手机号或 user_id） |
-| GET | /api/auth/me | JWT | 用户信息 |
+| GET | /api/auth/me | JWT | 用户信息（含 avatar_url/bio） |
+| PUT | /api/auth/me | JWT | 更新资料（nickname/bio） |
+| POST | /api/auth/me/avatar | JWT | 上传头像（multipart，≤2MB） |
 | GET | /api/auth/check?user_id= | No | 检查 user_id 可用性 |
 | POST | /api/generate | JWT | SSE 流式生成 HTML（两步 LLM） |
 | POST | /api/mock/generate | JWT | Mock SSE 流式（开发用，跳过 LLM） |
@@ -86,6 +89,8 @@ backend/
 - **is_saved 机制**: 生成时 `is_saved=False`，页面不会出现在列表（`list_pages` 过滤 `is_published OR is_saved`）。用户主动点击"保存草稿"后 `is_saved=True`，页面才在用户主页中可见
 - **LLM 优先级**: 请求参数 > 用户配置 > `.env` 平台默认
 - **user_id**: 注册必填，大小写不敏感匹配（存储保留原始大小写），保留字禁止注册。支持作为登录凭据
+- **头像存储**: 上传端点 `POST /api/auth/me/avatar`（multipart），格式按 magic bytes 校验（jpg/png/webp/gif），存 `static/avatars/{user_id}_{ts}.{ext}`，换头像删旧文件，DB 存相对 URL。`main.py` mount `/static`
+- **get_optional_user**: 公开端点的可选鉴权依赖（有 token 解析用户，无则 None）。`get_user_profile` 用它判断是否本人，本人返回 `is_published OR is_saved`（含草稿），他人只返回已发布
 - **page_id**: 发布时可自定义，同用户内唯一（大小写不敏感）。修改时旧 page_id 记录到 `page_id_redirects` 表，访问旧链接 301 重定向
 - **passlib/bcrypt**: 需 `bcrypt<4.1.0`（新版不兼容 passlib）
 - **PUBLIC_BASE_URL**: 开发环境配 `http://localhost:8000`（已发布页面由后端直接 serve）

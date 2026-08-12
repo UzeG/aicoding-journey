@@ -60,6 +60,12 @@ def _run_migration_sync(conn):
                 {"uid": auto_uid, "id": uid},
             )
             logger.info(f"Backfilled user_id={auto_uid} for user {uid}")
+    if "avatar_url" not in user_columns:
+        logger.info("Migrating: adding avatar_url column to users")
+        conn.execute(text("ALTER TABLE users ADD COLUMN avatar_url TEXT"))
+    if "bio" not in user_columns:
+        logger.info("Migrating: adding bio column to users")
+        conn.execute(text("ALTER TABLE users ADD COLUMN bio TEXT"))
 
     # ── page_id_redirects table (created by Base.metadata.create_all) ──
     # Ensure composite unique index for (user_id, page_id) on pages

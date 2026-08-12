@@ -12,6 +12,14 @@ export const checkUserId = (user_id: string) =>
   api.get<CheckUserIdResponse>('/auth/check', { params: { user_id } })
 
 export const getMe = () => api.get<User>('/auth/me')
+export const updateProfile = (data: { nickname?: string; bio?: string }) =>
+  api.put<User>('/auth/me', data)
+export const uploadAvatar = (file: File) => {
+  const form = new FormData()
+  form.append('file', file)
+  // Override default JSON Content-Type so axios auto-sets multipart boundary
+  return api.post<User>('/auth/me/avatar', form, { headers: { 'Content-Type': undefined } })
+}
 
 // Generate
 export const generateSSE = (prompt: string, pageId?: string | null, signal?: AbortSignal) =>

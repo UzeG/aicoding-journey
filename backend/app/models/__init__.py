@@ -14,6 +14,8 @@ class User(Base):
     phone: Mapped[str] = mapped_column(String(11), unique=True, nullable=False, index=True)
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     nickname: Mapped[str | None] = mapped_column(String(50), default=None)
+    avatar_url: Mapped[str | None] = mapped_column(String(255), default=None)
+    bio: Mapped[str | None] = mapped_column(String(160), default=None)
     user_type: Mapped[str] = mapped_column(String(20), default="registered")
     user_id: Mapped[str | None] = mapped_column(String(30), unique=True, nullable=True, index=True)
 

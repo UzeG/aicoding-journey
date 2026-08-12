@@ -32,12 +32,19 @@ class UserResponse(BaseModel):
     id: str
     phone: str
     nickname: Optional[str]
+    avatar_url: Optional[str] = None
+    bio: Optional[str] = None
     user_type: str
     user_id: Optional[str] = None
     token_balance: int
     created_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class UpdateProfileRequest(BaseModel):
+    nickname: Optional[str] = Field(default=None, min_length=1, max_length=50)
+    bio: Optional[str] = Field(default=None, max_length=160)
 
 
 # ── Generate ──
@@ -160,6 +167,8 @@ class LLMSettingsUpdate(BaseModel):
 
 class UserPublicResponse(BaseModel):
     nickname: Optional[str]
+    avatar_url: Optional[str] = None
+    bio: Optional[str] = None
     user_id: Optional[str] = None
 
 
