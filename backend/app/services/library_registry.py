@@ -1,8 +1,10 @@
 """CDN library registry — defines available libraries that Step 1 can select from.
 
-Each entry: {key: {name, type, tags, ...}}
+Each entry: {key: {name, type, tags, access, ...}}
 - default=True: always injected into Step 2 (not selectable by LLM)
 - tags: used in Step 1 prompt to help LLM match libraries to user needs
+- access: "global" (loaded via <script src>/<link>, use as global var, DO NOT import)
+         or "importmap" (use bare import in <script type="module">)
 - usage_notes: injected into Step 2 prompt only when selected (avoids polluting context)
 """
 
@@ -14,6 +16,7 @@ LIBRARY_REGISTRY: dict[str, dict] = {
         "url": "https://cdn.jsdelivr.net/npm/@unocss/runtime@0.62.0",
         "type": "script",
         "head": True,
+        "access": "global",
         "tags": ["样式", "CSS", "布局"],
         "description": "原子化 CSS 框架，支持所有 Tailwind 类名",
         "default": True,
@@ -22,19 +25,21 @@ LIBRARY_REGISTRY: dict[str, dict] = {
         "name": "ECharts",
         "url": "https://cdn.jsdelivr.net/npm/echarts@5.6.0/dist/echarts.min.js",
         "type": "script",
+        "access": "global",
         "tags": ["图表", "可视化", "数据", "趋势", "统计", "仪表盘", "折线图", "柱状图", "饼图", "环形图"],
         "description": "功能丰富的数据可视化图表库",
         "usage_notes": (
             "ECharts 使用规范：1) 图表容器必须显式设置 width 和 height（不可依赖 auto）；"
-            "2) 调用 chart.setOption() 后必须立即调用 chart.resize()；"
-            "3) 必须添加 window.addEventListener('resize', () => chart.resize())；"
-            "4) 如容器在 flex/grid 中，用 requestAnimationFrame 延迟初始化"
+            "2) chart.setOption() 之后使用 new ResizeObserver(() => chart.resize()).observe(container) 监听容器尺寸，"
+            "这会在容器首次获得尺寸时自动触发，解决首次加载尺寸为 0 的问题；"
+            "3) 不要使用 window.addEventListener('resize', ...)，页面首次加载不会触发 resize 事件"
         ),
     },
     "dayjs": {
         "name": "Day.js",
         "url": "https://cdn.jsdelivr.net/npm/dayjs@1.11.13/dayjs.min.js",
         "type": "script",
+        "access": "global",
         "tags": ["日期", "时间", "日历", "倒计时", "日期计算"],
         "description": "轻量日期时间处理库",
     },
@@ -42,6 +47,7 @@ LIBRARY_REGISTRY: dict[str, dict] = {
         "name": "Chart.js",
         "url": "https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js",
         "type": "script",
+        "access": "global",
         "tags": ["图表", "可视化", "数据"],
         "description": "简单易用的图表库，渲染为 Canvas",
     },
@@ -49,12 +55,14 @@ LIBRARY_REGISTRY: dict[str, dict] = {
         "name": "Font Awesome",
         "url": "https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.7.0/css/all.min.css",
         "type": "css",
+        "access": "global",
         "tags": ["图标", "icon"],
         "description": "图标字体库，用 CSS class 使用图标",
     },
     "three": {
         "name": "Three.js",
         "type": "importmap",
+        "access": "importmap",
         "importmap": {
             "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
             "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/",
@@ -94,15 +102,42 @@ def build_step2_usage_notes(selected_keys: list[str]) -> str:
 
     Only includes libraries that were selected in Step 1 + always-default ones.
     Returns empty string if no library has usage_notes.
+    Auto-prepends access-mode hints ("global" vs "importmap") for each library.
     """
     all_keys = set(selected_keys) | set(get_default_libraries())
     lines = []
     for key in all_keys:
         lib = LIBRARY_REGISTRY.get(key)
-        if not lib or "usage_notes" not in lib:
+        if not lib:
             continue
-        lines.append(f"### {lib['name']}\n{lib['usage_notes']}")
+
+        access_hint = _build_access_hint(lib)
+        notes_content = lib.get("usage_notes", "")
+
+        if not access_hint and not notes_content:
+            continue
+
+        parts = [f"### {lib['name']}", access_hint, notes_content]
+        lines.append("\n".join(p for p in parts if p))
+
     return "\n\n".join(lines) if lines else ""
+
+
+def _build_access_hint(lib: dict) -> str:
+    """Generate access-mode hint for a library."""
+    access = lib.get("access")
+    if access == "global":
+        return (
+            "⚠️ **全局变量** — 此库已通过 CDN `<script>` 标签加载，"
+            "直接使用全局变量（如 `echarts`、`dayjs`），**不要 import**。"
+        )
+    if access == "importmap":
+        return (
+            "✅ **ES 模块** — 此库已通过 `<script type=\"importmap\">` 配置，"
+            "在 `<script type=\"module\">` 中使用 bare import，"
+            "如 `import * as THREE from 'three'`。"
+        )
+    return ""
 
 
 def build_cdn_includes(selected_keys: list[str]) -> dict:

@@ -73,6 +73,7 @@ Your ENTIRE response must contain exactly these sections in order:
 ```
 
 - The FIRST character you output must be `<` (opening style or body tag)
+- Your entire response will be wrapped in a ```html code block — do NOT include any additional ``` or ```html markers inside your response
 - Do NOT output `<!DOCTYPE>`, `<html>`, `<head>`, or any CDN `<script>`/`<link>` tags — they are added automatically
 - Do NOT write any introduction, description, or conclusion text
 - `<style>`: optional section for CSS animations/keyframes that UnoCSS cannot do

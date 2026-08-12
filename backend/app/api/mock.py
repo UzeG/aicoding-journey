@@ -64,7 +64,6 @@ MOCK_FRAGMENT = """```html
 </body>
 
 <script type="module">
-import * as echarts from 'echarts';
 (function() {
   var el = document.getElementById('chart');
   if (!el) return;
@@ -79,7 +78,7 @@ import * as echarts from 'echarts';
       lineStyle: { color: '#00a650', width: 3 }, itemStyle: { color: '#00a650' }, symbol: 'circle', symbolSize: 6 }]
   });
   c.resize();
-  window.addEventListener('resize', function() { c.resize(); });
+  new ResizeObserver(function() { c.resize(); }).observe(el);
 })();
 </script>
 ```"""

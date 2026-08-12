@@ -255,6 +255,10 @@ def _parse_fragment(html: str) -> dict:
         remaining = _SCRIPT_RE.sub("", remaining)
         result["body"] = remaining.strip()
 
+    # Strip markdown fences that LLM may have incorrectly included in body
+    result["body"] = re.sub(r'^\s*```html?\s*\n?', '', result["body"])
+    result["body"] = re.sub(r'\n?\s*```\s*$', '', result["body"])
+
     return result
 
 
@@ -279,10 +283,10 @@ def _assemble_html(
         head_parts.append(f"  <style>\n{style}\n  </style>")
 
     body_parts = [f"<body>{body}"]
-    if script:
-        body_parts.append(f"  <script type=\"module\">\n{script}\n  </script>")
     if includes["body_end"]:
         body_parts.append(f"  {includes['body_end']}")
+    if script:
+        body_parts.append(f"  <script type=\"module\">\n{script}\n  </script>")
     body_parts.append("</body>")
 
     head = "\n".join(head_parts)
