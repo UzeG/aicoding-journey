@@ -34,6 +34,27 @@ async def get_current_user(
     return user
 
 
+def is_admin_user(user: User) -> bool:
+    """True if the user is listed in ADMIN_USER_IDS (phone or user_id, case-insensitive)."""
+    from app.config import settings
+
+    admins = {s.strip().lower() for s in settings.ADMIN_USER_IDS.split(",") if s.strip()}
+    if not admins:
+        return False
+    if user.phone in admins:
+        return True
+    if user.user_id and user.user_id.lower() in admins:
+        return True
+    return False
+
+
+async def get_current_admin(user: User = Depends(get_current_user)) -> User:
+    """Like get_current_user but requires admin privileges (403 otherwise)."""
+    if not is_admin_user(user):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin privileges required")
+    return user
+
+
 async def get_optional_user(
     request: Request,
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),

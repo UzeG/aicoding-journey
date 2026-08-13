@@ -2,6 +2,7 @@ import asyncio
 import json
 import logging
 import re
+import time
 from typing import AsyncGenerator
 
 from app.services.library_registry import build_cdn_includes
@@ -23,6 +24,10 @@ async def create_two_step_stream(
     user_id: str,
     request=None,
     page_id: int | None = None,
+    *,
+    persist: bool = True,
+    verbose: bool = False,
+    source: str = "generation",
 ) -> AsyncGenerator[dict, None]:
     """Two-step HTML generation pipeline.
 
@@ -30,32 +35,93 @@ async def create_two_step_stream(
     Step 2: Generate HTML fragments, assemble with CDN includes (SSE streaming)
 
     Yields: progress events, token events, final, done, error
+
+    keyword-only args (defaults keep the existing /api/generate caller unchanged):
+      persist=False  skip Page insert + snapshot (admin test console)
+      verbose=True   additionally yield "step1" and "token_raw" events with intermediate outputs
+      source         trace source tag ("generation" | "test")
     """
-    # ── Step 1: Understand ──
-    yield {"type": "progress", "step": "understand", "message": "正在理解需求..."}
-
-    step1 = None
+    trace = _new_trace(prompt, user_id, user_config, source)
     try:
-        step1 = await _run_step1_understand(prompt, user_config)
-        if not step1.get("refined_prompt"):
-            raise ValueError(f"Step 1 returned empty/missing refined_prompt: {step1}")
-        refined_prompt = step1.get("refined_prompt", prompt)
-        libraries = step1.get("libraries", [])
-        logger.info(f"Step 1 result: libraries={libraries}, refined_prompt={refined_prompt[:100]}")
-    except Exception as e:
-        logger.exception("Step 1 failed")
-        yield {"type": "error", "message": "需求分析失败，请重试"}
-        return
+        # ── Step 1: Understand ──
+        yield {"type": "progress", "step": "understand", "message": "正在理解需求..."}
 
-    # ── Step 2: Generate ──
-    yield {"type": "progress", "step": "generate", "message": "正在生成页面..."}
+        step1 = None
+        try:
+            step1 = await _run_step1_understand(prompt, user_config)
+            if not step1.get("refined_prompt"):
+                raise ValueError(f"Step 1 returned empty/missing refined_prompt: {step1}")
+            refined_prompt = step1.get("refined_prompt", prompt)
+            libraries = step1.get("libraries", [])
+            trace["refined_prompt"] = refined_prompt
+            trace["libraries"] = json.dumps(libraries, ensure_ascii=False)
+            trace["step1_output"] = json.dumps(step1, ensure_ascii=False)
+            logger.info(f"Step 1 result: libraries={libraries}, refined_prompt={refined_prompt[:100]}")
+        except Exception as e:
+            trace["status"] = "error"
+            trace["error_message"] = f"需求分析失败: {e}"[:1000]
+            logger.exception("Step 1 failed: %s", e)
+            yield {"type": "error", "message": "需求分析失败，请重试"}
+            return
 
-    step1_output = json.dumps(step1, ensure_ascii=False) if step1 is not None else None
+        if verbose:
+            yield {"type": "step1", "refined_prompt": refined_prompt, "libraries": libraries}
 
-    async for event in _run_step2_generate(
-        refined_prompt, libraries, user_config, user_id, step1_output, request, page_id
-    ):
-        yield event
+        # ── Step 2: Generate ──
+        yield {"type": "progress", "step": "generate", "message": "正在生成页面..."}
+
+        step1_output = json.dumps(step1, ensure_ascii=False) if step1 is not None else None
+
+        async for event in _run_step2_generate(
+            refined_prompt, libraries, user_config, user_id, step1_output, request, page_id,
+            trace=trace, persist=persist, verbose=verbose,
+        ):
+            yield event
+    finally:
+        # Persist trace on every path (success/error/disconnect); never break the stream.
+        try:
+            await _persist_trace(trace)
+        except Exception:
+            logger.warning("Failed to persist generation trace", exc_info=True)
+
+
+def _new_trace(prompt: str, user_id: str, user_config: dict, source: str) -> dict:
+    """Initialize a mutable trace dict for one generation run."""
+    from app.config import settings
+
+    has_user_override = bool(
+        user_config.get("api_key") or user_config.get("model") or user_config.get("base_url")
+    )
+    return {
+        "user_id": user_id,
+        "source": source,
+        "prompt": prompt,
+        "model": user_config.get("model") or settings.LLM_MODEL,
+        "base_url": user_config.get("base_url") or settings.LLM_BASE_URL,
+        "config_source": "user" if has_user_override else "platform",
+        "status": "success",
+        "refined_prompt": None,
+        "libraries": None,
+        "step1_output": None,
+        "step2_raw": None,
+        "final_html": None,
+        "tokens_used": None,
+        "page_fk": None,
+        "error_message": None,
+        "_start": time.perf_counter(),
+    }
+
+
+async def _persist_trace(trace: dict) -> None:
+    """Write a trace dict to generation_traces. Never raises into the caller."""
+    from app.database import async_session
+    from app.models import GenerationTrace
+
+    duration_ms = int((time.perf_counter() - trace.pop("_start")) * 1000)
+    trace["duration_ms"] = duration_ms
+    async with async_session() as db:
+        db.add(GenerationTrace(**trace))
+        await db.commit()
 
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -103,6 +169,10 @@ async def _run_step2_generate(
     step1_output: str | None = None,
     request=None,
     page_id: int | None = None,
+    *,
+    trace: dict,
+    persist: bool = True,
+    verbose: bool = False,
 ) -> AsyncGenerator[dict, None]:
     """SSE streaming HTML fragment generation + assembly with CDN includes."""
     from openai import AsyncOpenAI
@@ -145,6 +215,9 @@ async def _run_step2_generate(
                 full_content += token
                 chunk_count += 1
 
+                if verbose:
+                    yield {"type": "token_raw", "content": token}
+
                 if not html_started:
                     buffer += token
                     if _detect_html_start(buffer):
@@ -163,6 +236,10 @@ async def _run_step2_generate(
 
         if not full_content.strip():
             logger.warning("Step 2 LLM returned empty content — aborting without saving")
+            trace["status"] = "error"
+            trace["error_message"] = "模型返回内容为空"
+            trace["step2_raw"] = full_content
+            trace["tokens_used"] = total_tokens
             yield {"type": "error", "message": "模型返回内容为空，请重试"}
             return
 
@@ -170,6 +247,10 @@ async def _run_step2_generate(
         parsed = _parse_fragment(raw)
         if not parsed["body"] and not parsed["script"] and not parsed["style"]:
             logger.warning(f"Parsed to empty result from {len(full_content)} chars of LLM output: {full_content[:200]!r}")
+            trace["status"] = "error"
+            trace["error_message"] = "页面内容解析失败"
+            trace["step2_raw"] = full_content
+            trace["tokens_used"] = total_tokens
             yield {"type": "error", "message": "页面内容解析失败，请重试"}
             return
 
@@ -185,60 +266,74 @@ async def _run_step2_generate(
             title=llm_title,
         )
 
-        # Persist page record
-        from app.database import async_session
-        from app.models import Page
-        from app.utils.snowflake import generate_id
+        trace["refined_prompt"] = refined_prompt
+        trace["libraries"] = json.dumps(libraries, ensure_ascii=False)
+        trace["step1_output"] = step1_output
+        trace["step2_raw"] = full_content
+        trace["tokens_used"] = total_tokens
+        trace["final_html"] = assembled
 
+        # Persist page record (skipped for admin test runs)
         final_page_id = None
-        async with async_session() as db:
-            existing_page = None
-            if page_id is not None:
-                from sqlalchemy import select as _select
-                result = await db.execute(
-                    _select(Page).where(
-                        Page.id == page_id,
-                        Page.user_id == user_id,
-                        Page.is_published == False,
+        if persist:
+            from app.database import async_session
+            from app.models import Page
+            from app.utils.snowflake import generate_id
+
+            async with async_session() as db:
+                existing_page = None
+                if page_id is not None:
+                    from sqlalchemy import select as _select
+                    result = await db.execute(
+                        _select(Page).where(
+                            Page.id == page_id,
+                            Page.user_id == user_id,
+                            Page.is_published == False,
+                        )
                     )
-                )
-                existing_page = result.scalar_one_or_none()
+                    existing_page = result.scalar_one_or_none()
 
-            if existing_page is not None:
-                existing_page.title = llm_title
-                existing_page.html_content = assembled
-                existing_page.prompt = refined_prompt
-                existing_page.step1_output = step1_output
-                existing_page.file_size = len(assembled.encode("utf-8"))
-                final_page_id = existing_page.id
-            else:
-                new_id = generate_id()
-                page = Page(
-                    id=new_id,
-                    user_id=user_id,
-                    title=llm_title,
-                    html_content=assembled,
-                    prompt=refined_prompt,
-                    step1_output=step1_output,
-                    file_size=len(assembled.encode("utf-8")),
-                )
-                db.add(page)
-                final_page_id = new_id
+                if existing_page is not None:
+                    existing_page.title = llm_title
+                    existing_page.html_content = assembled
+                    existing_page.prompt = refined_prompt
+                    existing_page.step1_output = step1_output
+                    existing_page.file_size = len(assembled.encode("utf-8"))
+                    final_page_id = existing_page.id
+                else:
+                    new_id = generate_id()
+                    page = Page(
+                        id=new_id,
+                        user_id=user_id,
+                        title=llm_title,
+                        html_content=assembled,
+                        prompt=refined_prompt,
+                        step1_output=step1_output,
+                        file_size=len(assembled.encode("utf-8")),
+                    )
+                    db.add(page)
+                    final_page_id = new_id
 
-            await db.commit()
+                await db.commit()
 
-            # 异步生成页面封面快照（不阻塞 SSE 流式响应）
-            try:
-                from app.services.snapshot import capture_snapshot
-                asyncio.get_running_loop().create_task(capture_snapshot(final_page_id, user_id))
-            except Exception:
-                logger.warning("Failed to schedule snapshot", exc_info=True)
+                # 异步生成页面封面快照（不阻塞 SSE 流式响应）
+                try:
+                    from app.services.snapshot import capture_snapshot
+                    asyncio.get_running_loop().create_task(capture_snapshot(final_page_id, user_id))
+                except Exception:
+                    logger.warning("Failed to schedule snapshot", exc_info=True)
+
+            trace["page_fk"] = final_page_id
 
         yield {"type": "final", "content": assembled}
         yield {"type": "done", "page_id": str(final_page_id), "tokens_used": total_tokens, "title": llm_title}
 
     except Exception as e:
         logger.exception("Step 2 LLM call failed")
+        trace["status"] = "error"
+        trace["error_message"] = str(e)
+        trace["step2_raw"] = full_content
+        trace["tokens_used"] = total_tokens
         yield {"type": "error", "message": str(e)}
 
 

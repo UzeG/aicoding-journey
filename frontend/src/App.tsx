@@ -5,6 +5,18 @@ import HomeView from './views/HomeView'
 import GeneratorView from './views/GeneratorView'
 import UserProfileView from './views/UserProfileView'
 import LoginView from './views/LoginView'
+import AdminLayout from './views/admin/AdminLayout'
+import AdminOverviewView from './views/admin/AdminOverviewView'
+import AdminUsersView from './views/admin/AdminUsersView'
+import AdminUserDetailView from './views/admin/AdminUserDetailView'
+import AdminPagesView from './views/admin/AdminPagesView'
+import AdminPageDetailView from './views/admin/AdminPageDetailView'
+import AdminTracesView from './views/admin/AdminTracesView'
+import AdminTraceDetailView from './views/admin/AdminTraceDetailView'
+import AdminAuditLogsView from './views/admin/AdminAuditLogsView'
+import AdminLLMConfigsView from './views/admin/AdminLLMConfigsView'
+import AdminSystemPromptsView from './views/admin/AdminSystemPromptsView'
+import AdminTestBenchView from './views/admin/AdminTestBenchView'
 
 import { useAuthStore } from './stores/auth'
 
@@ -40,6 +52,20 @@ export default function App() {
             <Route path="/generator" element={<GeneratorView />} />
             <Route path="/home" element={<HomeRedirect />} />
             <Route path="/login" element={<LoginView />} />
+
+            <Route path="/admin" element={<AdminLayout />}>
+              <Route index element={<AdminOverviewView />} />
+              <Route path="users" element={<AdminUsersView />} />
+              <Route path="users/:id" element={<AdminUserDetailView />} />
+              <Route path="pages" element={<AdminPagesView />} />
+              <Route path="pages/:pk" element={<AdminPageDetailView />} />
+              <Route path="traces" element={<AdminTracesView />} />
+              <Route path="traces/:id" element={<AdminTraceDetailView />} />
+              <Route path="audit-logs" element={<AdminAuditLogsView />} />
+              <Route path="llm-configs" element={<AdminLLMConfigsView />} />
+              <Route path="system-prompts" element={<AdminSystemPromptsView />} />
+              <Route path="test-bench" element={<AdminTestBenchView />} />
+            </Route>
 
             <Route path="/:userId" element={<UserProfileView />} />
           </Routes>

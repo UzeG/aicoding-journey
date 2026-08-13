@@ -79,3 +79,33 @@ class AuditLog(Base):
     result: Mapped[str | None] = mapped_column(String(20), default=None)
     client_ip: Mapped[str | None] = mapped_column(String(45), default=None)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
+class GenerationTrace(Base):
+    """Per-generation record of LLM intermediate outputs (Step1 JSON, Step2 raw stream).
+
+    Written for every real generation (`source="generation"`) and admin test run
+    (`source="test"`). `page_fk` intentionally has no FK constraint to avoid coupling
+    with soft-deleted pages.
+    """
+
+    __tablename__ = "generation_traces"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id: Mapped[str | None] = mapped_column(String(36), ForeignKey("users.id"), nullable=True, index=True)
+    page_fk: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    source: Mapped[str] = mapped_column(String(20), default="generation")  # generation | test
+    prompt: Mapped[str] = mapped_column(Text, nullable=False)
+    refined_prompt: Mapped[str | None] = mapped_column(Text, default=None)
+    libraries: Mapped[str | None] = mapped_column(Text, default=None)  # JSON array string
+    step1_output: Mapped[str | None] = mapped_column(Text, default=None)  # Step1 raw JSON string
+    step2_raw: Mapped[str | None] = mapped_column(Text, default=None)  # full stream before HTML filter
+    final_html: Mapped[str | None] = mapped_column(Text, default=None)
+    tokens_used: Mapped[int | None] = mapped_column(Integer, default=None)
+    model: Mapped[str | None] = mapped_column(String(100), default=None)
+    base_url: Mapped[str | None] = mapped_column(String(255), default=None)
+    config_source: Mapped[str | None] = mapped_column(String(20), default=None)  # platform | user
+    status: Mapped[str] = mapped_column(String(20), default="success")  # success | error
+    error_message: Mapped[str | None] = mapped_column(Text, default=None)
+    duration_ms: Mapped[int | None] = mapped_column(Integer, default=None)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), index=True)

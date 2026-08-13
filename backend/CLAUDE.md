@@ -77,6 +77,17 @@ backend/
 | GET / PUT | /api/settings/llm | JWT | LLM 配置 |
 | GET | /{user_id} | No | 用户主页 HTML |
 | GET | /{user_id}/{page_id} | No | 已发布页面（含 301 重定向支持） |
+| GET | /api/admin/stats | Admin | 概览计数（用户/页面/轨迹/审计等） |
+| GET | /api/admin/users | Admin | 用户列表（search/page/page_size，含 pages_count） |
+| GET | /api/admin/users/{id} | Admin | 用户详情（LLM 配置只返回 has_api_key） |
+| GET | /api/admin/pages | Admin | 页面列表（含 user_nickname） |
+| GET | /api/admin/pages/{pk} | Admin | 页面详情（含 step1_output + html_content） |
+| GET | /api/admin/traces | Admin | 生成轨迹列表（不返回大字段，可 source/status 过滤） |
+| GET | /api/admin/traces/{id} | Admin | 轨迹详情（含 step2_raw / final_html） |
+| GET | /api/admin/audit-logs | Admin | 审计日志列表 |
+| GET | /api/admin/llm-configs | Admin | 平台默认 + 用户自定义 LLM 配置（key 脱敏） |
+| GET | /api/admin/system-prompts | Admin | 当前 Step 1/2 System Prompt 现文 |
+| POST | /api/admin/test-generate | Admin | SSE 测试台：verbose 流，不走 content filter、不落 Page，记录 source=test 轨迹 |
 
 ## 关键设计决策
 
@@ -102,3 +113,5 @@ backend/
 - **System Prompt**: UnoCSS runtime CDN（非 Tailwind！后者 npm 包无预编译 CSS），ECharts 强制 `ResizeObserver` 监听容器
 - **Mock API**: `/api/mock/generate`（`app/api/mock.py`）返回硬编码样本 HTML，与正式端点 SSE 协议一致，同样创建 DB 记录。前端通过 `npm run dev:mock` 启用（Vite proxy rewrite `/api/generate` → `/api/mock/generate`）。Mock 端点跳过 content filter
 - **ENVIRONMENT**: `config.py` 新增 `ENVIRONMENT` 字段（默认 `"development"`），附带 `is_development()` / `is_production()` 便捷方法
+- **管理员**: `config.py` 的 `ADMIN_USER_IDS`（逗号分隔 phone 或 user_id，大小写不敏感）。`deps.py` 的 `is_admin_user(user)` / `get_current_admin` 判断；`GET /api/auth/me` 返回 `is_admin`。空配置 → 全员无后台权限（安全默认）
+- **生成轨迹**: `create_two_step_stream` 每次运行自动写 `generation_traces`（Step1 JSON / Step2 原始流 / token / 耗时 / 生效 model·base_url·config_source / status / error）。通过 `try/finally` 落库，写失败仅 log 不打断生成。kwargs：`persist=False`（测试台不落 Page）、`verbose=True`（额外 yield `step1`/`token_raw` 事件）、`source`（`generation`|`test`）。mock 路径不产生 trace

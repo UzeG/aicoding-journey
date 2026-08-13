@@ -7,6 +7,7 @@ export interface User {
   user_type: string
   user_id?: string | null
   token_balance: number
+  is_admin?: boolean
   created_at: string
 }
 

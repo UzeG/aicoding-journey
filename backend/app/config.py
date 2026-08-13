@@ -26,6 +26,9 @@ class Settings(BaseSettings):
     LLM_API_KEY: str = ""
     LLM_BASE_URL: str = "https://api.deepseek.com"
 
+    # Admin accounts: comma-separated phone numbers or user_ids with admin privileges
+    ADMIN_USER_IDS: str = ""
+
     # API Proxy
     PROXY_ALLOWED_DOMAINS: str = "api.openweathermap.org,api.github.com,restapi.amap.com"
     PROXY_WHITELIST_MODE: str = "open"  # "open" or "strict"

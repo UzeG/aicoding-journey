@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_current_user, get_db
+from app.api.deps import get_current_user, get_db, is_admin_user
 from app.models import User
 from app.schemas import (
     CheckUserIdResponse,
@@ -47,6 +47,13 @@ _RESERVED_IDS = frozenset({
 def _normalize_user_id(raw: str) -> str:
     """Lowercase for uniqueness checks; storage preserves original casing."""
     return raw.lower()
+
+
+def _user_response(user: User) -> UserResponse:
+    """Serialize a User for /me with the computed is_admin flag (not on the ORM)."""
+    resp = UserResponse.model_validate(user)
+    resp.is_admin = is_admin_user(user)
+    return resp
 
 
 @router.get("/check", response_model=CheckUserIdResponse)
@@ -141,7 +148,7 @@ async def login(req: LoginRequest, db: AsyncSession = Depends(get_db)):
 @router.get("/me", response_model=UserResponse)
 async def get_me(user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     await _ensure_user_id(user, db)
-    return user
+    return _user_response(user)
 
 
 @router.put("/me", response_model=UserResponse)
@@ -157,7 +164,7 @@ async def update_profile(
         user.bio = req.bio.strip() or None
     await db.commit()
     await db.refresh(user)
-    return user
+    return _user_response(user)
 
 
 @router.post("/me/avatar", response_model=UserResponse)
@@ -189,4 +196,4 @@ async def upload_avatar(
     user.avatar_url = f"/static/avatars/{filename}"
     await db.commit()
     await db.refresh(user)
-    return user
+    return _user_response(user)

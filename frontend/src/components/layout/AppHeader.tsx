@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Zap, LogOut, LogIn, User, FolderOpen, Settings } from 'lucide-react'
+import { Zap, LogOut, LogIn, User, FolderOpen, Settings, Shield } from 'lucide-react'
 import { useAuthStore } from '../../stores/auth'
 import { Button } from '../ui/button'
 import Avatar from '../common/Avatar'
@@ -35,6 +35,7 @@ export default function AppHeader() {
   }
 
   const menuItems = [
+    ...(user?.is_admin ? [{ to: '/admin', label: '后台管理', icon: Shield }] : []),
     { to: `/${user?.user_id}`, label: '我的主页', icon: User },
     { to: `/${user?.user_id}?tab=projects`, label: '我的项目', icon: FolderOpen },
     { to: `/${user?.user_id}?tab=settings`, label: '设置', icon: Settings },
