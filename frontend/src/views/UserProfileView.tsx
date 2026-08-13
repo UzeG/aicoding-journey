@@ -167,8 +167,8 @@ export default function UserProfileView() {
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
       <div className="flex flex-col md:flex-row gap-8">
-        {/* 左侧个人卡片 */}
-        <aside className="md:w-64 shrink-0">
+        {/* 左侧个人卡片（滚动时固定——吸附位置 = header 高度 + 页面顶部 py-8 padding，即初始位置） */}
+        <aside className="md:w-64 shrink-0 md:self-start md:sticky md:top-[calc(var(--header-height)+2rem)]">
           <Avatar
             src={profile.user.avatar_url}
             name={profile.user.nickname || profile.user.user_id}

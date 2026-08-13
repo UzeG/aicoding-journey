@@ -4,6 +4,9 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
+  /* Header 高度 —— UserProfileView 的 sticky top 基于此计算（calc(+0.5rem) 间距） */
+  --header-height: 3.5rem;
+
   --radius: 0.625rem;
 
   --background: oklch(0.98 0.01 160);
@@ -71,6 +74,37 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+}
+
+@theme {
+  /* 首页 Hero 背景光晕慢速漂浮。用 scale/translate 属性而非 transform，避免与 Tailwind transform 工具互相覆盖 */
+  --animate-glow-float: glow-float 14s ease-in-out infinite;
+
+  @keyframes glow-float {
+    0%,
+    100% {
+      scale: 1;
+      translate: 0 0;
+    }
+    50% {
+      scale: 1.06;
+      translate: 0 -14px;
+    }
+  }
+
+  /* 首页 Hero 内容入场 */
+  --animate-fade-up: fade-up 0.6s ease-out both;
+
+  @keyframes fade-up {
+    from {
+      opacity: 0;
+      translate: 0 16px;
+    }
+    to {
+      opacity: 1;
+      translate: 0 0;
+    }
+  }
 }
 
 body {

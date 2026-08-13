@@ -24,8 +24,11 @@ frontend/src/
 ├── api/
 │   ├── client.ts                 # axios 实例 (baseURL, JWT 拦截器, 401 处理)
 │   └── endpoints.ts              # 所有 API 函数
+├── data/
+│   └── showcase.ts               # 首页示例作品静态假数据（TODO 接入真实发布数据）
 ├── lib/
-│   └── utils.ts                  # cn() 工具函数 (clsx + tailwind-merge, shadcn 依赖)
+│   ├── utils.ts                  # cn() 工具函数 (clsx + tailwind-merge, shadcn 依赖)
+│   └── promptMeta.ts             # 推荐提示词关键词 → icon/accent/label 映射
 ├── stores/                       # Zustand
 │   ├── auth.ts                   # 登录状态, user, fetchUser, logout
 │   └── generation.ts             # 生成状态: isStreaming, codeContent, pageId, isSaved, progressStep
@@ -34,6 +37,14 @@ frontend/src/
 ├── components/
 │   ├── ui/                       # shadcn/ui 组件 (Button/Input/Textarea/Card/Badge/Dialog/Select/Label)
 │   ├── layout/AppHeader.tsx      # header (logo + 右侧 avatar 下拉菜单)
+│   ├── home/                     # 首页区块组件
+│   │   ├── PromptCard.tsx         # 推荐提示词卡片（图标 + 分类标签）
+│   │   ├── PromptCardSkeleton.tsx # 推荐提示词加载骨架屏
+│   │   ├── ShowcaseSection.tsx    # 示例作品展示区（静态假数据）
+│   │   ├── MockThumbnail.tsx      # CSS 手绘页面骨架缩略图
+│   │   ├── HowItWorks.tsx         # 三步流程区块
+│   │   ├── FeaturesSection.tsx    # 平台特性区块
+│   │   └── HomeFooter.tsx         # 首页 CTA + footer
 │   ├── generator/
 │   │   ├── PromptInput.tsx       # textarea + 发送按钮
 │   │   ├── CodePanel.tsx         # Monaco Editor (readOnly, 流式追加)
@@ -101,7 +112,7 @@ UserProfileView 点击编辑 → navigate("/generator?pageId={id}")
 - **401 处理**: axios 拦截器自动清除 token 并跳转 /login
 - **TailwindCSS 4**: 使用 `@tailwindcss/vite` 插件，CSS-first 配置
 - **shadcn/ui**: CSS-first 配置，`index.css` 的 `:root` 定义 CSS 变量 + `@theme inline` 映射到 Tailwind token（主色 emerald）。组件手写维护在 `src/components/ui/`（未用 shadcn CLI）
-- **图标**: 所有 UI 一律用 lucide-react 图标，禁用 emoji。`HomeView` 内置推荐提示词图标映射
+- **图标**: 所有 UI 一律用 lucide-react 图标，禁用 emoji。推荐提示词图标映射见 `src/lib/promptMeta.ts`（关键词 → icon/accent/label，未命中回落 Sparkles）
 - **Radix Select 哨兵值**: SelectItem 的 value 不允许空字符串，"自定义..." 选项用 `__custom__` 哨兵，选中后映射回 `''` 再渲染自定义 Input（见 SettingsView）
 - **ID 类型**: 所有 Page ID 为 `string`（不是 `number`），禁止 `parseInt()`——Snowflake ID 超 JS 安全整数
 - **Mock 模式**: `npm run dev:mock` 启动，`.env.mock` 设 `VITE_MOCK_LLM=true`。`vite.config.ts` 中 `/api/generate` 被 rewrite 为 `/api/mock/generate`，返回样本 HTML。前端代码无需改动。正式模式用 `npm run dev`
@@ -111,3 +122,9 @@ UserProfileView 点击编辑 → navigate("/generator?pageId={id}")
 - **用户主页 tab**: `?tab=settings` 用 query 驱动（不用路径，避免与 `/{user_id}/{page_id}` 发布页路由冲突）。自己看含草稿 + 设置 tab + 编辑资料，别人看只读已发布项目
 - **头像**: `Avatar` 组件展示 `user.avatar_url`（相对路径 `/static/...`，经 Vite proxy 加载），无头像显示首字母。上传走 `POST /api/auth/me/avatar`
 - **页面封面**: `PageItem.cover_url`（相对路径 `/static/snapshots/...`，经 Vite proxy 加载）。项目卡片顶部 `aspect-video`（16:9）显示封面，无封面显示占位图标
+
+## 首页 TODO（静态展示数据待接入后端）
+
+- [ ] **示例作品展示区**：当前为静态假数据（`src/data/showcase.ts` + `MockThumbnail` CSS 手绘骨架）。
+      后续接入真实发布数据：后端新增 `GET /api/showcase` 返回精选已发布作品（`cover_url`/`title`/`tags`），
+      前端把 `<MockThumbnail>` 替换为 `<img src={cover_url}>`，字段对齐后删除 `showcase.ts` 与 `MockThumbnail` 的 variant 分支。

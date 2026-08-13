@@ -42,7 +42,7 @@ export default function AppHeader() {
 
   return (
     <header className="bg-card border-b border-border sticky top-0 z-50">
-      <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
+      <div className="max-w-7xl mx-auto px-4 h-(--header-height) flex items-center justify-between">
         <Link to="/" className="flex items-center gap-2 text-lg font-bold text-foreground no-underline">
           <span className="flex items-center justify-center size-8 rounded-lg bg-primary text-primary-foreground">
             <Zap className="size-4" fill="currentColor" />
