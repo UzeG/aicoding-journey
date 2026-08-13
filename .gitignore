@@ -15,3 +15,7 @@ dist/
 .idea/
 
 reports/
+
+# === User-generated assets (avatars, page snapshots) — not tracked in git ===
+backend/static/avatars/
+backend/static/snapshots/
