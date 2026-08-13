@@ -265,32 +265,33 @@ export default function UserProfileView() {
                 <div className="space-y-3">
                   {filtered.map((page) => (
                     <Card key={page.id} className="hover:border-primary/40 transition-colors overflow-hidden">
-                      {/* 封面快照 */}
-                      <div className="aspect-video bg-muted relative overflow-hidden">
-                        {page.cover_url ? (
-                          <img
-                            src={page.cover_url}
-                            alt={page.title || '页面封面'}
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-muted-foreground bg-gradient-to-br from-muted to-muted/40">
-                            <FileText className="size-10 opacity-40" />
-                          </div>
-                        )}
-                        {page.is_published ? (
-                          <Badge variant="success" className="absolute top-2 left-2">
-                            <CheckCircle2 className="size-3" />
-                            已发布
-                          </Badge>
-                        ) : (
-                          <Badge variant="muted" className="absolute top-2 left-2">
-                            <CircleDashed className="size-3" />
-                            草稿
-                          </Badge>
-                        )}
-                      </div>
-                      <CardContent className="p-4 flex items-center justify-between">
+                      <div className="flex items-center">
+                        {/* 左侧预览图（16:9） */}
+                        <div className="w-32 sm:w-44 shrink-0 aspect-video relative bg-muted">
+                          {page.cover_url ? (
+                            <img
+                              src={page.cover_url}
+                              alt={page.title || '页面封面'}
+                              className="absolute inset-0 w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="absolute inset-0 flex items-center justify-center text-muted-foreground bg-gradient-to-br from-muted to-muted/40">
+                              <FileText className="size-8 opacity-40" />
+                            </div>
+                          )}
+                          {page.is_published ? (
+                            <Badge variant="success" className="absolute top-2 left-2">
+                              <CheckCircle2 className="size-3" />
+                              已发布
+                            </Badge>
+                          ) : (
+                            <Badge variant="muted" className="absolute top-2 left-2">
+                              <CircleDashed className="size-3" />
+                              草稿
+                            </Badge>
+                          )}
+                        </div>
+                      <CardContent className="flex-1 min-w-0 p-4 flex items-center justify-between">
                         <div className="flex-1 min-w-0">
                           <h3 className="font-medium text-foreground truncate">{page.title || '未命名页面'}</h3>
                           <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
@@ -330,6 +331,7 @@ export default function UserProfileView() {
                           </div>
                         )}
                       </CardContent>
+                      </div>
                     </Card>
                   ))}
                 </div>
