@@ -66,7 +66,7 @@ Your ENTIRE response must contain exactly these sections in order:
 ...page content using UnoCSS classes for all styling...
 </body>
 
-<script type="module">
+<script>
 // JS logic using libraries below
 // Omit this section entirely if you don't need JavaScript
 </script>
@@ -78,7 +78,7 @@ Your ENTIRE response must contain exactly these sections in order:
 - Do NOT write any introduction, description, or conclusion text
 - `<style>`: optional section for CSS animations/keyframes that UnoCSS cannot do
 - `<body>`: REQUIRED. Must start with `<!-- TITLE: xxx -->` comment. All elements use UnoCSS utility classes
-- `<script type="module">`: optional section for JS logic. Importmap is already set up — use bare imports
+- `<script>`: optional section for JS logic. Use `<script>` or `<script type="module">` — the backend handles both automatically. Only use bare imports (`import ... from 'three'`) if you're importing a CDN library; otherwise a plain `<script>` is fine. Interactive pages MUST include their JS here — never rely on inline `onclick` attributes alone for core behavior
 
 ## CRITICAL RULES — FOLLOW EXACTLY
 1. Your ENTIRE response must be the three-fragment structure above inside a ```html code block

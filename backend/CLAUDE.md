@@ -85,6 +85,7 @@ backend/
 - **SSE 事件协议**: `progress`（Step 1/2 进度） → `token`（流式代码） → `final`（精确提取的 HTML，替换 Monaco 内容） → `done`（page_id + title + tokens_used） → 可选 `error`
 - **流式过滤**: `create_llm_stream` 会缓冲 token 直到检测到 HTML 开始标记（`\`\`\`html` / `<!DOCTYPE` / `<html>`），才转发给前端。防止 LLM 输出的中文描述文字混入 Monaco 编辑器
 - **两步 LLM**: Step 1 理解需求 + 从注册表选 CDN 库 → Step 2 根据选中库注入对应的 system prompt（含 CDN 链接 + 使用规范）。避免全量库列表暗示 LLM 添加不必要的图表/3D
+- **片段解析**: `_parse_fragment` 用 BeautifulSoup 提取 LLM 输出的 `<style>`/`<body>`/`<script>`（不用正则，避免脚本被静默丢弃）。支持普通 `<script>` 与 `<script type="module">`、多个 script、script 在 body 内；组装时统一包成 `<script type="module">`。若检测到交互痕迹（`<script>`/`onclick`/`addEventListener`）但提取不到 JS，记 warning
 - **Page 复用**: `GenerateRequest.page_id` 可选字段——前端重新生成时传入已有 pageId，后端在 `create_llm_stream` 中检查：若页面存在、属于当前用户且 `is_published=False`，则 UPDATE 该记录而非 INSERT 新记录；已发布的页面不会被覆盖（会创建新 Page）
 - **is_saved 机制**: 生成时 `is_saved=False`，页面不会出现在列表（`list_pages` 过滤 `is_published OR is_saved`）。用户主动点击"保存草稿"后 `is_saved=True`，页面才在用户主页中可见
 - **LLM 优先级**: 用户配置 > `.env` 平台默认（api_key 由 `_build_client` 统一解密，仅一处）

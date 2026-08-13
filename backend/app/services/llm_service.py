@@ -9,12 +9,6 @@ from app.services.system_prompt import get_step1_prompt, get_step2_prompt
 logger = logging.getLogger(__name__)
 
 _TITLE_REGEX = re.compile(r'<!--\s*TITLE:\s*(.+?)\s*-->')
-_STYLE_RE = re.compile(r'<style[^>]*>(.*?)</style>', re.DOTALL | re.IGNORECASE)
-_BODY_RE = re.compile(r'<body[^>]*>(.*?)</body>', re.DOTALL | re.IGNORECASE)
-_SCRIPT_RE = re.compile(
-    r'<script[^>]*type=["\']module["\'][^>]*>(.*?)</script>',
-    re.DOTALL | re.IGNORECASE,
-)
 
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -164,8 +158,20 @@ async def _run_step2_generate(
                 total_tokens = chunk.usage.total_tokens
 
         # ── Extract fragments, assemble complete HTML ──
+        logger.info(f"Step 2 stream complete: full_content={len(full_content)} chars, tokens={total_tokens}")
+
+        if not full_content.strip():
+            logger.warning("Step 2 LLM returned empty content — aborting without saving")
+            yield {"type": "error", "message": "模型返回内容为空，请重试"}
+            return
+
         raw = _extract_html(full_content)
         parsed = _parse_fragment(raw)
+        if not parsed["body"] and not parsed["script"] and not parsed["style"]:
+            logger.warning(f"Parsed to empty result from {len(full_content)} chars of LLM output: {full_content[:200]!r}")
+            yield {"type": "error", "message": "页面内容解析失败，请重试"}
+            return
+
         llm_title, body_content = _extract_llm_title(parsed["body"])
         if not llm_title:
             llm_title = _distill_title(refined_prompt)
@@ -234,30 +240,54 @@ async def _run_step2_generate(
 
 
 def _parse_fragment(html: str) -> dict:
-    """Parse LLM output into {style, body, script} fragments."""
+    """Parse LLM output into {style, body, script} fragments using BeautifulSoup.
+
+    Robust parsing: accepts both plain <script> and <script type="module">, multiple
+    script/style blocks, and script/style nested inside <body>. Replaces brittle
+    regex parsing which silently dropped JS when the LLM didn't emit type="module".
+    """
+    from bs4 import BeautifulSoup
+
     result = {"style": "", "body": "", "script": ""}
+    soup = BeautifulSoup(html, "html.parser")
 
-    m = _STYLE_RE.search(html)
-    if m:
-        result["style"] = m.group(1).strip()
+    # ── Style: merge all <style> blocks ──
+    style_tags = soup.find_all("style")
+    result["style"] = "\n".join(t.get_text() for t in style_tags).strip()
 
-    m = _BODY_RE.search(html)
-    if m:
-        result["body"] = m.group(1).strip()
+    # ── Script: all non-src <script> blocks, merged ──
+    script_tags = soup.find_all("script")
+    scripts = []
+    for tag in script_tags:
+        if tag.get("src"):
+            logger.warning("LLM output contains external <script src=...>, skipped (CDN managed by registry)")
+            continue
+        text = tag.get_text()
+        if text.strip():
+            scripts.append(text)
+    result["script"] = "\n\n".join(scripts).strip()
 
-    m = _SCRIPT_RE.search(html)
-    if m:
-        result["script"] = m.group(1).strip()
-
-    # Fallback: if no <body> tag found, treat remaining content as body
-    if not result["body"]:
-        remaining = _STYLE_RE.sub("", html)
-        remaining = _SCRIPT_RE.sub("", remaining)
-        result["body"] = remaining.strip()
+    # ── Body: strip style/script first so they aren't duplicated in body ──
+    for tag in style_tags + script_tags:
+        tag.decompose()
+    body_tag = soup.body
+    if body_tag is not None:
+        result["body"] = body_tag.decode_contents().strip()
+    else:
+        result["body"] = soup.decode_contents().strip()
 
     # Strip markdown fences that LLM may have incorrectly included in body
     result["body"] = re.sub(r'^\s*```html?\s*\n?', '', result["body"])
     result["body"] = re.sub(r'\n?\s*```\s*$', '', result["body"])
+
+    # ── Guard: surface silent JS loss instead of shipping a broken page ──
+    if not result["script"]:
+        lower = html.lower()
+        if ("<script" in lower) or ("addeventlistener" in lower) or ("onclick" in lower) or ("onload" in lower):
+            logger.warning(
+                "LLM output appears to contain JS but no <script> extracted — "
+                f"page may lack interactivity (style={len(result['style'])} chars, body={len(result['body'])} chars)"
+            )
 
     return result
 
