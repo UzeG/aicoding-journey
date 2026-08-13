@@ -16,6 +16,7 @@ interface GenerationState {
   setCode: (content: string) => void
   loadPage: (pageId: string, codeContent: string, prompt: string, isSaved?: boolean, title?: string) => void
   finishStreaming: (pageId: string, title?: string) => void
+  setPageId: (pageId: string) => void
   setTitle: (title: string) => void
   setProgress: (step: string, message: string) => void
   setSaved: () => void
@@ -48,6 +49,9 @@ export const useGenerationStore = create<GenerationState>((set) => ({
 
   finishStreaming: (pageId, title = '') =>
     set({ isStreaming: false, pageId, title, progressStep: null, progressMessage: '' }),
+
+  setPageId: (pageId) =>
+    set({ pageId }),
 
   setTitle: (title) =>
     set({ title }),

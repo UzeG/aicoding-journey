@@ -45,7 +45,7 @@ export const checkPageId = (page_id: string) =>
 export const updatePageId = (id: string, page_id: string) =>
   api.put<{ page_id: string; url: string }>(`/pages/${id}/page-id`, { page_id })
 export const saveDraft = (id: string, title?: string) =>
-  api.post(`/pages/${id}/save-draft`, { title })
+  api.post<{ ok: boolean; page_id?: string; derived?: boolean }>(`/pages/${id}/save-draft`, { title })
 export const deletePage = (id: string) => api.delete(`/pages/${id}`)
 
 // Users

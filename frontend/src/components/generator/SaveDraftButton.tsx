@@ -18,6 +18,7 @@ export default function SaveDraftButton({ pageId, disabled }: Props) {
   const title = useGenerationStore((s) => s.title)
   const setSaved = useGenerationStore((s) => s.setSaved)
   const setTitle = useGenerationStore((s) => s.setTitle)
+  const setPageId = useGenerationStore((s) => s.setPageId)
 
   const handleClick = () => {
     if (!pageId || isSaved) return
@@ -29,7 +30,11 @@ export default function SaveDraftButton({ pageId, disabled }: Props) {
     setSaving(true)
     setError(null)
     try {
-      await saveDraft(pageId, values.title)
+      const res = await saveDraft(pageId, values.title)
+      // 已发布页面编辑存草稿 → 后端派生新草稿副本，pageId 切换到副本（后续发布/再保存针对副本）
+      if (res.data.page_id && res.data.page_id !== pageId) {
+        setPageId(res.data.page_id)
+      }
       setTitle(values.title)
       setSaved()
       setDialogOpen(false)

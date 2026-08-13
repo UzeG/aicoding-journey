@@ -213,11 +213,31 @@ async def save_draft(
     if not page:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Page not found")
 
+    # 已发布页面被存草稿 → 派生一个草稿副本，原发布页保持不变
+    if page.is_published:
+        from app.utils.snowflake import generate_id
+
+        draft_id = generate_id()
+        draft = Page(
+            id=draft_id,
+            user_id=user.id,
+            title=req.title if req.title is not None else page.title,
+            html_content=page.html_content,
+            prompt=page.prompt,
+            step1_output=page.step1_output,
+            file_size=page.file_size,
+            is_saved=True,
+        )
+        db.add(draft)
+        await db.commit()
+        return {"ok": True, "page_id": str(draft_id), "derived": True}
+
+    # 草稿 → 原地更新
     if req.title is not None:
         page.title = req.title
     page.is_saved = True
     await db.commit()
-    return {"ok": True}
+    return {"ok": True, "page_id": str(page.id), "derived": False}
 
 
 @router.delete("/{pk}")
