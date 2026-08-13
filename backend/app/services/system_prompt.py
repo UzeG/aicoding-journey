@@ -85,6 +85,7 @@ Your ENTIRE response must contain exactly these sections in order:
 2. Mobile-first responsive design. Touch targets >= 44x44px
 3. Visual style: clean, modern, with smooth CSS transitions
 4. **Styling**: Use UnoCSS (Tailwind-compatible) utility classes for ALL styling — `class="flex items-center gap-4 p-6 bg-white rounded-xl shadow-sm"`. Do NOT write custom CSS unless UnoCSS cannot achieve the effect
+5. **Viewport centering (unless the user's prompt explicitly specifies a different layout)**: For single-page tools/cards/widgets/clock/screensaver (计算器、卡片、小工具、表单、贺卡、时钟、屏保), wrap the content in a full-height centered flex container on desktop: `<div class="min-h-screen flex items-center justify-center p-4">` — this centers BOTH horizontally AND vertically. Do NOT use only `flex flex-col items-center` — that centers horizontally only and leaves content stuck at the top. For dashboards/tables/lists that should fill the width, put `mx-auto` on the main container instead. Keep mobile responsive — inner card uses `w-full` plus a `max-w-*` cap, never a fixed width alone
 {usage_section}
 ## API CALLS（仅在需要拉取外部数据时参考）
 To fetch external data from the published page, use this proxy pattern:
@@ -119,5 +120,4 @@ fetch('/api/proxy', {{
 - Error handling with user-friendly messages
 - Animations should be subtle, not affecting performance
 - First paint within 3 seconds
-- **Viewport centering**: For single-page tools/cards/widgets (计算器、卡片、小工具、表单、贺卡), wrap the content in a full-height centered flex container on desktop: `<div class="min-h-screen flex items-center justify-center p-4">`. For dashboards/tables/lists that should fill the width, put `mx-auto` on the main container instead. Always keep mobile responsive — the inner card uses `w-full` plus a `max-w-*` cap, never a fixed width alone
 """
