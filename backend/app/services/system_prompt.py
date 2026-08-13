@@ -32,7 +32,7 @@ Respond with ONLY this JSON (no other text):
 
 {{"refined_prompt": "the clarified and detailed prompt in Chinese", "libraries": ["key1", "key2"]}}
 
-- refined_prompt: 200-400 characters in Chinese, add layout/style details the user omitted. Only add interactive behaviors if the user EXPLICITLY asked for them (e.g. "可点击", "可拖拽", "抽奖", "计算器", "筛选"). For display-only requests like "日历" or "表格", describe visual layout only — do NOT invent click handlers or input controls
+- refined_prompt: 200-400 characters in Chinese, add layout/style details the user omitted
 - libraries: array of library keys from the list above. Empty array [] if none needed
 """
 
