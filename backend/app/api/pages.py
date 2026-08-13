@@ -23,6 +23,7 @@ from app.schemas import (
 from app.services.page_id import generate_page_id, validate_page_id_format
 from app.services.publish_scanner import scan_html
 from app.services.sdk_injector import inject_sdk
+from app.services.snapshot import remove_snapshot_file
 
 router = APIRouter()
 public_router = APIRouter()
@@ -230,9 +231,32 @@ async def delete_page(
     if not page:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Page not found")
 
+    # Clean up snapshot cover file (soft-delete the record)
+    if page.cover_url:
+        remove_snapshot_file(page.cover_url)
+    page.cover_url = None
+
     page.status = "deleted"
     await db.commit()
     return {"ok": True}
+
+
+@router.get("/{pk}/render", response_class=HTMLResponse)
+async def render_page(
+    pk: str,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Internal render endpoint — returns full page HTML for snapshot capture.
+
+    Auth-protected (owner only) so draft pages without a public URL can still
+    be rendered by the headless Chrome snapshot service.
+    """
+    result = await db.execute(select(Page).where(Page.id == int(pk), Page.user_id == user.id))
+    page = result.scalar_one_or_none()
+    if not page:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Page not found")
+    return HTMLResponse(content=page.html_content, status_code=200)
 
 
 # ── Public routes ──
@@ -377,6 +401,7 @@ async def get_user_profile(
             id=str(p.id),
             page_id=p.page_id,
             title=p.title,
+            cover_url=p.cover_url,
             is_published=p.is_published,
             is_saved=p.is_saved,
             visibility=p.visibility,

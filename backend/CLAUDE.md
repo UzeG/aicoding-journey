@@ -20,7 +20,7 @@ backend/
 │   ├── config.py            # pydantic-settings, 读 .env
 │   ├── database.py          # SQLAlchemy async engine + session
 │   ├── seed.py              # 种子数据（推荐提示词 + demo 用户）
-│   ├── models/__init__.py   # User(avatar_url/bio), Page, PageIdRedirect, RecommendedPrompt, AuditLog ORM
+│   ├── models/__init__.py   # User(avatar_url/bio), Page(cover_url), PageIdRedirect, RecommendedPrompt, AuditLog ORM
 │   ├── schemas/__init__.py  # Pydantic 请求/响应模型
 │   ├── api/                 # 路由层
 │   │   ├── __init__.py      # 路由注册
@@ -37,6 +37,7 @@ backend/
 │   │   ├── system_prompt.py # Step 1/2 System Prompt
 │   │   ├── library_registry.py # CDN 库注册表
 │   │   ├── page_id.py       # page_id 生成与校验
+│   │   ├── snapshot.py      # 页面封面快照（Playwright + headless Chrome）
 │   │   ├── sdk_injector.py  # Platform SDK 注入
 │   │   ├── publish_scanner.py # 发布前 HTML 安全扫描
 │   │   ├── content_filter.py  # Prompt 敏感词过滤
@@ -67,6 +68,7 @@ backend/
 | GET / PUT / DELETE | /api/pages/{pk} | JWT | 页面 CRUD（pk 为 DB 主键） |
 | POST | /api/pages/{pk}/publish | JWT | 发布（可选自定义 page_id） |
 | POST | /api/pages/{pk}/save-draft | JWT | 保存草稿（is_saved=True） |
+| GET | /api/pages/{pk}/render | JWT | 内部渲染端点（返回完整 HTML，快照截图用，仅本人） |
 | GET | /api/pages/check-id?page_id= | JWT | 检查 page_id 可用性 |
 | PUT | /api/pages/{pk}/page-id | JWT | 修改 page_id（旧→新 301 重定向） |
 | GET | /api/prompts | No | 推荐提示词列表 |
@@ -86,6 +88,7 @@ backend/
 - **流式过滤**: `create_llm_stream` 会缓冲 token 直到检测到 HTML 开始标记（`\`\`\`html` / `<!DOCTYPE` / `<html>`），才转发给前端。防止 LLM 输出的中文描述文字混入 Monaco 编辑器
 - **两步 LLM**: Step 1 理解需求 + 从注册表选 CDN 库 → Step 2 根据选中库注入对应的 system prompt（含 CDN 链接 + 使用规范）。避免全量库列表暗示 LLM 添加不必要的图表/3D
 - **片段解析**: `_parse_fragment` 用 BeautifulSoup 提取 LLM 输出的 `<style>`/`<body>`/`<script>`（不用正则，避免脚本被静默丢弃）。支持普通 `<script>` 与 `<script type="module">`、多个 script、script 在 body 内；组装时统一包成 `<script type="module">`。若检测到交互痕迹（`<script>`/`onclick`/`addEventListener`）但提取不到 JS，记 warning
+- **封面快照**: 生成完成后 `asyncio.create_task(capture_snapshot(...))` 异步截图（不阻塞 SSE）。用 Playwright 复用系统 Chrome（`executable_path`，headless），JWT 通过 context `extra_http_headers` 传给内部渲染端点。**陷阱**：`get_current_user` 只读 Authorization header 不读 query；`page.goto` 无 headers 参数必须用 `new_context(extra_http_headers=...)`；等待用 `load` + sleep 而非 `networkidle`（无限动画页面永不空闲）。依赖 `playwright` 包 + 系统 Chrome，缺失时快照自动禁用
 - **Page 复用**: `GenerateRequest.page_id` 可选字段——前端重新生成时传入已有 pageId，后端在 `create_llm_stream` 中检查：若页面存在、属于当前用户且 `is_published=False`，则 UPDATE 该记录而非 INSERT 新记录；已发布的页面不会被覆盖（会创建新 Page）
 - **is_saved 机制**: 生成时 `is_saved=False`，页面不会出现在列表（`list_pages` 过滤 `is_published OR is_saved`）。用户主动点击"保存草稿"后 `is_saved=True`，页面才在用户主页中可见
 - **LLM 优先级**: 用户配置 > `.env` 平台默认（api_key 由 `_build_client` 统一解密，仅一处）

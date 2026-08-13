@@ -72,6 +72,7 @@ class PageResponse(BaseModel):
     id: str
     page_id: Optional[str]
     title: Optional[str]
+    cover_url: Optional[str] = None
     html_content: str = ""
     prompt: Optional[str]
     file_size: Optional[int]
@@ -94,6 +95,7 @@ class PageListItem(BaseModel):
     id: str
     page_id: Optional[str]
     title: Optional[str]
+    cover_url: Optional[str] = None
     is_published: bool
     is_saved: bool
     visibility: str

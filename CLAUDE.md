@@ -50,7 +50,7 @@ cd frontend && npm run dev
 - 5 个推荐提示词（套餐对比、话费计算器、祝福贺卡、抽奖转盘、流量可视化）
 - SSE 流式生成 + 左右分屏实时预览
 - 一键发布 + `/{user_id}/{page_id}` 短链接
-- 页面管理（列表、编辑、删除，区分发布/草稿）
+- 页面管理（列表、编辑、删除，区分发布/草稿），自动生成页面封面快照
 - LLM 配置（platform/user 两级优先级）
 - API 代理网关（解决生成页面的 CORS 问题）
 - 内容安全：prompt 过滤 + 发布前 HTML 扫描 + iframe sandbox
@@ -68,3 +68,4 @@ cd frontend && npm run dev
 - **user_id / page_id**：大小写不敏感匹配，存储保留原始大小写
 - **头像存储**：后端文件存储（方案 C）——`POST /api/auth/me/avatar` 上传，存 `backend/static/avatars/`，DB 存相对 URL `/static/avatars/xxx.png`。前端经 Vite proxy `/static` 加载。文件格式按 magic bytes 校验（防改扩展名），≤2MB
 - **个人主页**：`GET /api/users/{user_id}` 用 `get_optional_user` 判断是否本人——本人返回含草稿，他人只返回已发布
+- **页面封面快照**：生成完成后异步用 Playwright + 系统 Chrome 打开内部渲染端点 `GET /api/pages/{pk}/render`（JWT header 鉴权，仅本人）截图，存 `backend/static/snapshots/{page_pk}.png`，写回 `page.cover_url`。视口 1280×720（16:9），等 load + 2.5s（不能用 networkidle，无限动画页面永不结束），并发信号量 2，失败降级保留旧封面

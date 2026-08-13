@@ -36,6 +36,7 @@ class Page(Base):
     user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id"), nullable=False, index=True)
     page_id: Mapped[str | None] = mapped_column(String(50), unique=True, nullable=True, index=True)
     title: Mapped[str | None] = mapped_column(String(200), default=None)
+    cover_url: Mapped[str | None] = mapped_column(String(255), default=None)
     html_content: Mapped[str] = mapped_column(Text, nullable=False, default="")
     prompt: Mapped[str | None] = mapped_column(Text, default=None)
     step1_output: Mapped[str | None] = mapped_column(Text, default=None)

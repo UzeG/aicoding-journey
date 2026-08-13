@@ -48,7 +48,7 @@ frontend/src/
 └── views/
     ├── HomeView.tsx              # 首页 (Hero + 推荐提示词)
     ├── GeneratorView.tsx         # 分屏生成器 ★核心页面
-    ├── UserProfileView.tsx       # 用户主页（左卡片 + 右 tab：项目/设置）
+    ├── UserProfileView.tsx       # 用户主页（左卡片 + 右 tab：项目/设置；项目卡片 16:9 封面）
     ├── LoginView.tsx             # 登录/注册（支持手机号 + user_id）
     └── SettingsView.tsx          # LLM 配置（复用为主页设置 tab）
 ```
@@ -110,3 +110,4 @@ UserProfileView 点击编辑 → navigate("/generator?pageId={id}")
 - **Header**: 无中间导航，右侧未登录显示「登录」按钮，已登录显示 Avatar 下拉菜单（我的主页/我的项目/设置/退出）。菜单点击外部关闭
 - **用户主页 tab**: `?tab=settings` 用 query 驱动（不用路径，避免与 `/{user_id}/{page_id}` 发布页路由冲突）。自己看含草稿 + 设置 tab + 编辑资料，别人看只读已发布项目
 - **头像**: `Avatar` 组件展示 `user.avatar_url`（相对路径 `/static/...`，经 Vite proxy 加载），无头像显示首字母。上传走 `POST /api/auth/me/avatar`
+- **页面封面**: `PageItem.cover_url`（相对路径 `/static/snapshots/...`，经 Vite proxy 加载）。项目卡片顶部 `aspect-video`（16:9）显示封面，无封面显示占位图标

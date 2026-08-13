@@ -67,6 +67,11 @@ def _run_migration_sync(conn):
         logger.info("Migrating: adding bio column to users")
         conn.execute(text("ALTER TABLE users ADD COLUMN bio TEXT"))
 
+    # ── pages: cover_url (snapshot/cover image) ──
+    if "cover_url" not in columns:
+        logger.info("Migrating: adding cover_url column to pages")
+        conn.execute(text("ALTER TABLE pages ADD COLUMN cover_url TEXT"))
+
     # ── page_id_redirects table (created by Base.metadata.create_all) ──
     # Ensure composite unique index for (user_id, page_id) on pages
     conn.execute(text(

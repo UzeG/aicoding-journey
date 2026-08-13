@@ -14,6 +14,7 @@ export interface PageItem {
   id: string
   page_id: string | null
   title: string | null
+  cover_url: string | null
   is_published: boolean
   is_saved: boolean
   visibility: string

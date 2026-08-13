@@ -1,3 +1,4 @@
+import asyncio
 import json
 import logging
 import re
@@ -225,6 +226,13 @@ async def _run_step2_generate(
                 final_page_id = new_id
 
             await db.commit()
+
+            # 异步生成页面封面快照（不阻塞 SSE 流式响应）
+            try:
+                from app.services.snapshot import capture_snapshot
+                asyncio.get_running_loop().create_task(capture_snapshot(final_page_id, user_id))
+            except Exception:
+                logger.warning("Failed to schedule snapshot", exc_info=True)
 
         yield {"type": "final", "content": assembled}
         yield {"type": "done", "page_id": str(final_page_id), "tokens_used": total_tokens, "title": llm_title}
