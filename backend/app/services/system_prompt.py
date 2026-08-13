@@ -119,4 +119,5 @@ fetch('/api/proxy', {{
 - Error handling with user-friendly messages
 - Animations should be subtle, not affecting performance
 - First paint within 3 seconds
+- **Viewport centering**: For single-page tools/cards/widgets (计算器、卡片、小工具、表单、贺卡), wrap the content in a full-height centered flex container on desktop: `<div class="min-h-screen flex items-center justify-center p-4">`. For dashboards/tables/lists that should fill the width, put `mx-auto` on the main container instead. Always keep mobile responsive — the inner card uses `w-full` plus a `max-w-*` cap, never a fixed width alone
 """
