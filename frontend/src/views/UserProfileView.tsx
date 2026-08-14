@@ -9,6 +9,7 @@ import ConfirmDialog from '../components/common/ConfirmDialog'
 import LoadingSpinner from '../components/common/LoadingSpinner'
 import Avatar from '../components/common/Avatar'
 import DownloadButton from '../components/common/DownloadButton'
+import UploadHtmlButton from '../components/common/UploadHtmlButton'
 import { Button } from '../components/ui/button'
 import { Badge } from '../components/ui/badge'
 import { Card, CardContent } from '../components/ui/card'
@@ -223,21 +224,24 @@ export default function UserProfileView() {
             <SettingsView />
           ) : (
             <>
-              {/* 发布/草稿筛选（仅自己） */}
+              {/* 发布/草稿筛选 + 上传 HTML（仅自己） */}
               {isOwnProfile && (
-                <div className="flex gap-2 mb-4">
-                  {FILTERS.map((f) => (
-                    <button
-                      key={f.key}
-                      onClick={() => setFilter(f.key)}
-                      className={cn(
-                        'px-3 py-1 rounded-full text-sm transition-colors',
-                        filter === f.key ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-accent'
-                      )}
-                    >
-                      {f.label}
-                    </button>
-                  ))}
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex gap-2">
+                    {FILTERS.map((f) => (
+                      <button
+                        key={f.key}
+                        onClick={() => setFilter(f.key)}
+                        className={cn(
+                          'px-3 py-1 rounded-full text-sm transition-colors',
+                          filter === f.key ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-accent'
+                        )}
+                      >
+                        {f.label}
+                      </button>
+                    ))}
+                  </div>
+                  <UploadHtmlButton onUploaded={fetchProfile} />
                 </div>
               )}
 
@@ -256,9 +260,12 @@ export default function UserProfileView() {
                       {isOwnProfile ? (filter === 'all' ? '还没有生成过页面' : '没有符合条件的页面') : '还没有发布过页面'}
                     </p>
                     {isOwnProfile && filter === 'all' && (
-                      <Button variant="outline" onClick={() => navigate('/')}>
-                        去首页开始创作
-                      </Button>
+                      <div className="flex flex-col items-center gap-3">
+                        <Button variant="outline" onClick={() => navigate('/')}>
+                          去首页开始创作
+                        </Button>
+                        <UploadHtmlButton onUploaded={fetchProfile} className="items-center" />
+                      </div>
                     )}
                   </CardContent>
                 </Card>

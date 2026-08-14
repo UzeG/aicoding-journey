@@ -1,6 +1,9 @@
+import asyncio
+import logging
+import os
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile, status
 from fastapi.responses import HTMLResponse, RedirectResponse
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -25,9 +28,14 @@ from app.services.publish_scanner import scan_html
 from app.services.sdk_injector import inject_sdk
 from app.services.snapshot import remove_snapshot_file
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter()
 public_router = APIRouter()
 users_router = APIRouter()
+
+_MAX_UPLOAD_HTML_BYTES = 5 * 1024 * 1024  # 5MB
+_UPLOAD_EXTS = {".html", ".htm"}
 
 
 # ── Authenticated routes ──
@@ -64,6 +72,56 @@ async def check_page_id(
     )
     existing = result.scalar_one_or_none()
     return CheckPageIdResponse(available=existing is None)
+
+
+@router.post("/upload", response_model=PageResponse)
+async def upload_page(
+    file: UploadFile = File(...),
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Import a standalone .html/.htm file as a draft page (is_saved=True).
+
+    Content is stored directly in pages.html_content (text, not a static file).
+    Safety is gated by the existing publish-time scan_html; drafts stay private.
+    """
+    name = file.filename or ""
+    if os.path.splitext(name)[1].lower() not in _UPLOAD_EXTS:
+        raise HTTPException(status_code=400, detail="Only a single .html or .htm file is supported")
+
+    content = await file.read(_MAX_UPLOAD_HTML_BYTES + 1)
+    if len(content) > _MAX_UPLOAD_HTML_BYTES:
+        raise HTTPException(status_code=413, detail="HTML file too large (max 5MB)")
+
+    html = content.decode("utf-8", errors="replace").strip()
+    head = html[:1024].lower()
+    if not (head.startswith("<!doctype html") or "<html" in head):
+        raise HTTPException(status_code=400, detail="File does not look like an HTML document")
+
+    from app.utils.snowflake import generate_id
+
+    title = os.path.splitext(os.path.basename(name))[0][:200] or None
+    page = Page(
+        id=generate_id(),
+        user_id=user.id,
+        title=title,
+        html_content=html,
+        file_size=len(html.encode("utf-8")),
+        is_saved=True,
+    )
+    db.add(page)
+    await db.commit()
+    await db.refresh(page)
+
+    # Async cover snapshot — same chain as generated pages, failures degrade gracefully
+    try:
+        from app.services.snapshot import capture_snapshot
+
+        asyncio.get_running_loop().create_task(capture_snapshot(page.id, user.id))
+    except Exception:
+        logger.warning("Failed to schedule snapshot for uploaded page", exc_info=True)
+
+    return page
 
 
 @router.get("/{pk}", response_model=PageResponse)

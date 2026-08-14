@@ -47,6 +47,12 @@ export const updatePageId = (id: string, page_id: string) =>
 export const saveDraft = (id: string, title?: string) =>
   api.post<{ ok: boolean; page_id?: string; derived?: boolean }>(`/pages/${id}/save-draft`, { title })
 export const deletePage = (id: string) => api.delete(`/pages/${id}`)
+export const uploadHtml = (file: File) => {
+  const form = new FormData()
+  form.append('file', file)
+  // Override default JSON Content-Type so axios auto-sets multipart boundary
+  return api.post<PageDetail>('/pages/upload', form, { headers: { 'Content-Type': undefined } })
+}
 
 // Users
 export const getUserProfile = (user_id: string) => api.get<UserProfile>(`/users/${user_id}`)
