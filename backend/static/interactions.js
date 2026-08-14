@@ -122,9 +122,12 @@ html.pi-open #pi-trigger{right:calc(min(88vw,360px) - 18px);opacity:.9;}
 #pi-panel .pi-comments-list{flex:1;overflow-y:auto;padding:1rem 1.1rem;touch-action:auto;overscroll-behavior:contain;}
 #pi-panel .pi-comment{position:relative;display:flex;align-items:flex-start;gap:.6rem;padding:.6rem .8rem;border:1px solid rgba(255,255,255,.15);border-radius:10px;margin-bottom:.6rem;background:rgba(255,255,255,.12);}
 #pi-panel .pi-comment-avatar{width:32px;height:32px;border-radius:50%;object-fit:cover;flex-shrink:0;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-weight:600;font-size:.85rem;color:#fff;}
+#pi-panel .pi-comment-avatar-link{display:flex;flex-shrink:0;border-radius:50%;}
 #pi-panel .pi-comment-main{flex:1;min-width:0;}
 #pi-panel .pi-comment-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:.25rem;}
 #pi-panel .pi-comment-name{font-weight:600;font-size:.82rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+#pi-panel .pi-comment-name[href]{color:inherit;text-decoration:none;cursor:pointer;}
+#pi-panel .pi-comment-name[href]:hover{text-decoration:underline;}
 #pi-panel .pi-comment-time{color:rgba(255,255,255,.6);font-size:.72rem;margin-left:.5rem;}
 #pi-panel .pi-comment-del{display:inline-flex;align-items:center;justify-content:center;align-self:center;flex-shrink:0;width:24px;height:24px;padding:0;background:none;border:none;border-radius:6px;color:rgba(255,255,255,.85);cursor:pointer;}
 #pi-panel .pi-comment-del:hover{background:rgba(255,255,255,.15);color:#fff;}
@@ -460,7 +463,7 @@ html.pi-open #pi-trigger{right:calc(min(88vw,360px) - 18px);opacity:.9;}
       var displayName = user.nickname || user.user_id || '匿名'
       var item = document.createElement('div')
       item.className = 'pi-comment'
-      // 左侧头像（无头像用首字母）
+      // 左侧头像（无头像用首字母；有 user_id 时可点击进入主页）
       var avatar = document.createElement('span')
       avatar.className = 'pi-comment-avatar'
       if (user.avatar_url) {
@@ -471,13 +474,23 @@ html.pi-open #pi-trigger{right:calc(min(88vw,360px) - 18px);opacity:.9;}
       } else {
         avatar.textContent = displayName.slice(0, 1).toUpperCase()
       }
-      // 右侧：上 = 用户名，下 = 内容
+      if (user.user_id) {
+        var avatarLink = document.createElement('a')
+        avatarLink.className = 'pi-comment-avatar-link'
+        avatarLink.href = '/' + encodeURIComponent(user.user_id)
+        avatarLink.title = '查看 ' + displayName + ' 的主页'
+        avatarLink.setAttribute('aria-label', displayName + ' 的主页')
+        avatarLink.appendChild(avatar)
+        avatar = avatarLink
+      }
+      // 右侧：上 = 用户名（可点击进主页），下 = 内容
       var main = document.createElement('div')
       main.className = 'pi-comment-main'
       var headRow = document.createElement('div')
       headRow.className = 'pi-comment-head'
-      var name = document.createElement('span')
+      var name = document.createElement(user.user_id ? 'a' : 'span')
       name.className = 'pi-comment-name'
+      if (user.user_id) name.href = '/' + encodeURIComponent(user.user_id)
       name.textContent = displayName
       var right = document.createElement('span')
       right.style.cssText = 'display:flex;align-items:center;flex-shrink:0;'
