@@ -15,6 +15,17 @@
   if (!pk) return
 
   var TOKEN_KEY = 'access_token'
+  var HEX_RE = /^#[0-9a-fA-F]{6}$/
+
+  // 抽屉跟随「当前用户」的主题（与应用 UI 一致）——读 App 缓存在 localStorage 的 manifest.theme
+  function applyTheme(hex) {
+    if (hex && HEX_RE.test(hex)) {
+      document.documentElement.style.setProperty('--pi-theme', hex)
+    }
+  }
+  var cachedTheme = null
+  try { cachedTheme = localStorage.getItem('manifest.theme') } catch (e) { cachedTheme = null }
+  applyTheme(cachedTheme)
   var OPEN = false
   var state = { liked: false, favorited: false, likeCount: 0, favCount: 0, comments: [], page: null }
 
@@ -62,7 +73,7 @@
   style.textContent = `
 :root{--pi-theme:#0E7A6C;}
 #pi-trigger{position:fixed;right:0;top:50%;transform:translateY(-50%);z-index:2147483004;width:30px;height:76px;border:none;background:var(--pi-theme);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;border-radius:12px 0 0 12px;box-shadow:-2px 0 10px rgba(0,0,0,.22);}
-#pi-trigger:hover{background:#0b6a5e;}
+#pi-trigger:hover{filter:brightness(.9);}
 #pi-panel{position:fixed;right:0;top:50%;transform:translate(100%,-50%);z-index:2147483002;width:min(90vw,400px);height:min(88vh,880px);background:var(--pi-theme);border-radius:1rem 0 0 1rem;box-shadow:-8px 0 30px rgba(0,0,0,.25);display:flex;flex-direction:column;overflow:hidden;font-family:system-ui,-apple-system,sans-serif;color:#fff;transition:transform .3s ease;}
 #pi-panel.open{transform:translate(0,-50%);}
 #pi-panel .pi-head{display:flex;align-items:center;gap:.8rem;padding:.8rem 1.1rem;border-bottom:1px solid rgba(255,255,255,.15);flex-shrink:0;}
