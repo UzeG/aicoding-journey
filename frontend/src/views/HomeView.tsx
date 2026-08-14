@@ -4,6 +4,7 @@ import { Sparkles, Upload, Rocket, type LucideIcon } from 'lucide-react'
 import { listPrompts } from '../api/endpoints'
 import HeroInput, { type HeroMode } from '../components/home/HeroInput'
 import HeroPreview from '../components/home/HeroPreview'
+import Reveal from '../components/common/Reveal'
 import PromptCard from '../components/home/PromptCard'
 import PromptCardSkeleton from '../components/home/PromptCardSkeleton'
 import ShowcaseSection from '../components/home/ShowcaseSection'
@@ -109,15 +110,15 @@ export default function HomeView() {
       {/* 推荐提示词 */}
       <section className="py-16 md:py-20 bg-muted/40">
         <div className="max-w-5xl mx-auto px-4">
-          <div className="text-center mb-12">
+          <Reveal className="text-center mb-12">
             <h2 className="text-2xl md:text-3xl font-bold tracking-tight">不知道造什么？从这些开始</h2>
             <p className="mt-3 text-muted-foreground">点击卡片，让 AI 按需求生成一个</p>
-          </div>
+          </Reveal>
           {loading ? (
             <PromptCardSkeleton />
           ) : (
             prompts.length > 0 && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <Reveal className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {prompts.map((p) => (
                   <PromptCard
                     key={p.id}
@@ -126,7 +127,7 @@ export default function HomeView() {
                     {...resolvePromptMeta(p.prompt)}
                   />
                 ))}
-              </div>
+              </Reveal>
             )
           )}
         </div>

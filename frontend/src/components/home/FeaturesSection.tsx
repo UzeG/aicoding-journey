@@ -1,4 +1,5 @@
 import { Rocket, Upload, Sparkles, User, type LucideIcon } from 'lucide-react'
+import Reveal from '../common/Reveal'
 
 interface Feature {
   icon: LucideIcon
@@ -17,11 +18,11 @@ export default function FeaturesSection() {
   return (
     <section className="py-16 md:py-20 bg-muted/40">
       <div className="max-w-5xl mx-auto px-4">
-        <div className="text-center mb-12">
+        <Reveal className="text-center mb-12">
           <h2 className="text-2xl md:text-3xl font-bold tracking-tight">一个 HTML 部署平台，不止于生成</h2>
           <p className="mt-3 text-muted-foreground">上传、生成、部署、分享，一站式完成</p>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        </Reveal>
+        <Reveal className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {FEATURES.map((f) => (
             <div
               key={f.title}
@@ -34,7 +35,7 @@ export default function FeaturesSection() {
               <p className="mt-1.5 text-sm text-muted-foreground leading-relaxed">{f.desc}</p>
             </div>
           ))}
-        </div>
+        </Reveal>
       </div>
     </section>
   )

@@ -1,4 +1,5 @@
 import { Upload, Rocket, Share2, type LucideIcon } from 'lucide-react'
+import Reveal from '../common/Reveal'
 
 interface Step {
   icon: LucideIcon
@@ -16,11 +17,11 @@ export default function HowItWorks() {
   return (
     <section className="py-16 md:py-20">
       <div className="max-w-5xl mx-auto px-4">
-        <div className="text-center mb-12">
+        <Reveal className="text-center mb-12">
           <h2 className="text-2xl md:text-3xl font-bold tracking-tight">三步，从文件到上线</h2>
           <p className="mt-3 text-muted-foreground">上传或生成，都能快速部署</p>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        </Reveal>
+        <Reveal className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {STEPS.map((s, i) => (
             <div
               key={s.title}
@@ -36,7 +37,7 @@ export default function HowItWorks() {
               <p className="mt-1.5 text-sm text-muted-foreground leading-relaxed">{s.desc}</p>
             </div>
           ))}
-        </div>
+        </Reveal>
       </div>
     </section>
   )

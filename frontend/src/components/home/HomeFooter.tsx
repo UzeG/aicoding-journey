@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { Sparkles } from 'lucide-react'
 import { Button } from '../ui/button'
+import Reveal from '../common/Reveal'
 
 /** 首页专属 CTA + Footer。仅在此组件内渲染，不放进 App.tsx 全局（避免与 /generator 全屏页冲突） */
 export default function HomeFooter() {
@@ -9,7 +10,8 @@ export default function HomeFooter() {
       {/* CTA */}
       <section className="py-16 md:py-20">
         <div className="max-w-3xl mx-auto px-4">
-          <div className="rounded-lg border border-primary/20 bg-primary/5 p-10 md:p-14 text-center">
+          <Reveal>
+            <div className="rounded-lg border border-primary/20 bg-primary/5 p-10 md:p-14 text-center">
             <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground">
               想部署一个能用的页面？
             </h2>
@@ -21,7 +23,8 @@ export default function HomeFooter() {
                 <Sparkles className="size-4" /> 开始部署
               </Link>
             </Button>
-          </div>
+            </div>
+          </Reveal>
         </div>
       </section>
 
