@@ -12,7 +12,7 @@ export const checkUserId = (user_id: string) =>
   api.get<CheckUserIdResponse>('/auth/check', { params: { user_id } })
 
 export const getMe = () => api.get<User>('/auth/me')
-export const updateProfile = (data: { nickname?: string; bio?: string; readme?: string }) =>
+export const updateProfile = (data: { nickname?: string; bio?: string; readme?: string; theme?: string }) =>
   api.put<User>('/auth/me', data)
 export const uploadAvatar = (file: File) => {
   const form = new FormData()

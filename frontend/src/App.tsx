@@ -19,6 +19,7 @@ import AdminSystemPromptsView from './views/admin/AdminSystemPromptsView'
 import AdminTestBenchView from './views/admin/AdminTestBenchView'
 
 import { useAuthStore } from './stores/auth'
+import { applyTheme, cacheTheme, getCachedTheme } from './lib/theme'
 
 function HomeRedirect() {
   const user = useAuthStore((s) => s.user)
@@ -35,12 +36,30 @@ function HomeRedirect() {
 
 export default function App() {
   const { fetchUser, isAuthenticated } = useAuthStore()
+  const user = useAuthStore((s) => s.user)
+
+  // 首帧用缓存主题色，避免刷新时闪一下默认色
+  useEffect(() => {
+    const cached = getCachedTheme()
+    if (cached) applyTheme(cached)
+  }, [])
 
   useEffect(() => {
     if (isAuthenticated) {
       fetchUser()
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 用户加载后以服务端主题为准；登出（user 变 null）则回落到平台默认
+  useEffect(() => {
+    if (user?.theme) {
+      applyTheme(user.theme)
+      cacheTheme(user.theme)
+    } else if (!isAuthenticated) {
+      applyTheme(null)
+      cacheTheme(null)
+    }
+  }, [user?.theme, isAuthenticated])
 
   return (
     <BrowserRouter>

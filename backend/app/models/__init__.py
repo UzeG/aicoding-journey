@@ -17,6 +17,7 @@ class User(Base):
     avatar_url: Mapped[str | None] = mapped_column(String(255), default=None)
     bio: Mapped[str | None] = mapped_column(String(160), default=None)
     readme: Mapped[str | None] = mapped_column(Text, default=None)
+    theme: Mapped[str | None] = mapped_column(String(7), default=None)
     user_type: Mapped[str] = mapped_column(String(20), default="registered")
     user_id: Mapped[str | None] = mapped_column(String(30), unique=True, nullable=True, index=True)
 

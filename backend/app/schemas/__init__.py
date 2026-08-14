@@ -34,6 +34,7 @@ class UserResponse(BaseModel):
     nickname: Optional[str]
     avatar_url: Optional[str] = None
     bio: Optional[str] = None
+    theme: Optional[str] = None
     user_type: str
     user_id: Optional[str] = None
     token_balance: int
@@ -47,6 +48,8 @@ class UpdateProfileRequest(BaseModel):
     nickname: Optional[str] = Field(default=None, min_length=1, max_length=50)
     bio: Optional[str] = Field(default=None, max_length=160)
     readme: Optional[str] = Field(default=None, max_length=20000)
+    # 个人主题色：仅接受前端色卡里的 #RRGGBB
+    theme: Optional[str] = Field(default=None, max_length=7, pattern=r"^#[0-9a-fA-F]{6}$")
 
 
 # ── Generate ──

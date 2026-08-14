@@ -4,6 +4,8 @@ export interface User {
   nickname: string | null
   avatar_url: string | null
   bio: string | null
+  /** 个人主题色（#RRGGBB），空则用平台默认标签红 */
+  theme?: string | null
   user_type: string
   user_id?: string | null
   token_balance: number

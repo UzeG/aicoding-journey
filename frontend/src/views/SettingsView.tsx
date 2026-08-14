@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
-import { Settings, Save, Loader2, Lightbulb, CheckCircle2, CircleAlert } from 'lucide-react'
-import { getLLMSettings, updateLLMSettings } from '../api/endpoints'
+import { Settings, Save, Loader2, Lightbulb, CheckCircle2, CircleAlert, Palette, Check } from 'lucide-react'
+import { getLLMSettings, updateLLMSettings, updateProfile } from '../api/endpoints'
 import { useAuthStore } from '../stores/auth'
+import { THEME_ACCENTS, DEFAULT_THEME, applyTheme, cacheTheme } from '../lib/theme'
 import { Button } from '../components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
 import { Input } from '../components/ui/input'
@@ -37,7 +38,7 @@ const BASE_URL_OPTIONS = [
 ]
 
 export default function SettingsView() {
-  const { isAuthenticated } = useAuthStore()
+  const { isAuthenticated, user } = useAuthStore()
   const [settings, setSettings] = useState<LLMSettings | null>(null)
   const [model, setModel] = useState('')
   const [apiKey, setApiKey] = useState('')
@@ -77,12 +78,67 @@ export default function SettingsView() {
     }
   }
 
+  /** 切换主题色：乐观应用 → 持久化 → 失败回滚 */
+  const handleThemeChange = async (hex: string) => {
+    const current = useAuthStore.getState().user
+    if (!current) return
+    const prev = current.theme ?? DEFAULT_THEME
+    useAuthStore.setState({ user: { ...current, theme: hex } })
+    applyTheme(hex)
+    cacheTheme(hex)
+    try {
+      await updateProfile({ theme: hex })
+    } catch {
+      useAuthStore.setState({ user: { ...current, theme: prev } })
+      applyTheme(prev)
+      cacheTheme(prev)
+    }
+  }
+
+  const currentTheme = user?.theme ?? DEFAULT_THEME
+
   return (
     <div className="max-w-lg mx-auto px-4 py-8">
       <div className="flex items-center gap-2 mb-6">
         <Settings className="size-6 text-primary" />
-        <h1 className="text-2xl font-bold text-foreground">LLM 配置</h1>
+        <h1 className="text-2xl font-bold text-foreground">设置</h1>
       </div>
+
+      {/* 个人主题色：只换主色，纸面/墨色保持统一；看别人主页仍用自己的色 */}
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Palette className="size-4 text-primary" />
+            主题色
+          </CardTitle>
+          <CardDescription>
+            选一个个人主题色，整个界面会跟随改变。浏览他人主页时仍使用你自己的主题色。
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-wrap gap-3">
+            {THEME_ACCENTS.map((a) => {
+              // 后端存小写，比较时忽略大小写
+              const active = currentTheme.toLowerCase() === a.hex.toLowerCase()
+              return (
+                <button
+                  key={a.key}
+                  type="button"
+                  onClick={() => handleThemeChange(a.hex)}
+                  title={a.label}
+                  aria-label={`主题色：${a.label}`}
+                  aria-pressed={active}
+                  className="relative size-10 rounded-full border-2 border-border shadow-sm transition-transform hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  style={{ backgroundColor: a.hex }}
+                >
+                  {active && <Check className="absolute inset-0 m-auto size-5 text-white" strokeWidth={3} />}
+                </button>
+              )
+            })}
+          </div>
+          <p className="mt-3 text-xs text-muted-foreground">只换主色（标签色），纸面与墨色保持平台统一。</p>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
