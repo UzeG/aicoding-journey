@@ -86,7 +86,7 @@
 #pi-panel .pi-body{flex:1;overflow-y:auto;padding:1rem 1.1rem;}
 #pi-panel .pi-body[hidden]{display:none;}
 /* author tab */
-#pi-panel .pi-author{display:flex;align-items:center;gap:.8rem;padding-bottom:.9rem;border-bottom:1px solid rgba(255,255,255,.15);margin-bottom:1rem;}
+#pi-panel .pi-author{display:flex;align-items:center;gap:.8rem;padding-bottom:.9rem;border-bottom:1px solid rgba(255,255,255,.15);margin-bottom:1rem;cursor:pointer;}
 #pi-panel .pi-avatar{width:56px;height:56px;border-radius:50%;object-fit:cover;flex-shrink:0;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-weight:600;font-size:1.3rem;color:#fff;}
 #pi-panel .pi-author-meta{min-width:0;}
 #pi-panel .pi-name{font-weight:600;font-size:1.05rem;}
@@ -168,6 +168,7 @@
   authorBody.id = 'pi-body-author'
   var authorCard = document.createElement('div')
   authorCard.className = 'pi-author'
+  var authorUserId = null
   var avatarBox = document.createElement('span')
   avatarBox.className = 'pi-avatar'
   var authorMeta = document.createElement('div')
@@ -183,6 +184,10 @@
   authorMeta.appendChild(bioEl)
   authorCard.appendChild(avatarBox)
   authorCard.appendChild(authorMeta)
+  // 点击作者信息栏 → 打开作者个人主页
+  authorCard.addEventListener('click', function () {
+    if (authorUserId) window.location.href = '/' + encodeURIComponent(authorUserId)
+  })
   var worksTitle = document.createElement('div')
   worksTitle.className = 'pi-works-title'
   worksTitle.textContent = 'TA 的其他作品'
@@ -284,6 +289,7 @@
     var displayName = author.nickname || author.user_id || '匿名'
     nameEl.textContent = displayName
     idEl.textContent = '@' + (author.user_id || '')
+    authorUserId = author.user_id || null
     if (author.avatar_url) {
       if (avatarBox.tagName !== 'IMG') {
         var img = document.createElement('img')
