@@ -115,7 +115,7 @@ export default function SavePageDialog({
                   onKeyDown={(e) => { if (e.key === 'Enter' && canSubmit) onConfirm(values) }}
                 />
                 {pageIdStatus === 'checking' && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 size-4 animate-spin text-muted-foreground" />}
-                {pageIdStatus === 'available' && <Check className="absolute right-3 top-1/2 -translate-y-1/2 size-4 text-emerald-500" />}
+                {pageIdStatus === 'available' && <Check className="absolute right-3 top-1/2 -translate-y-1/2 size-4 text-success" />}
                 {pageIdStatus === 'taken' && <X className="absolute right-3 top-1/2 -translate-y-1/2 size-4 text-destructive" />}
               </div>
               <p className="text-xs text-muted-foreground">

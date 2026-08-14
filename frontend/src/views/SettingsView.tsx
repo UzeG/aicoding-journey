@@ -121,7 +121,7 @@ export default function SettingsView() {
             <Label>
               API Key
               {settings?.has_api_key && (
-                <span className="inline-flex items-center gap-0.5 text-emerald-600 ml-2 text-xs font-normal">
+                <span className="inline-flex items-center gap-0.5 text-success ml-2 text-xs font-normal">
                   <CheckCircle2 className="size-3" />
                   已设置
                 </span>
@@ -169,7 +169,7 @@ export default function SettingsView() {
           </div>
 
           {message && (
-            <p className={`text-sm flex items-center gap-1.5 ${message.type === 'success' ? 'text-emerald-600' : 'text-destructive'}`}>
+            <p className={`text-sm flex items-center gap-1.5 ${message.type === 'success' ? 'text-success' : 'text-destructive'}`}>
               {message.type === 'success' ? <CheckCircle2 className="size-4" /> : <CircleAlert className="size-4" />}
               {message.text}
             </p>

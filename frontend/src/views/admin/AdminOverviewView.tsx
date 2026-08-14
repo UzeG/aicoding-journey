@@ -24,8 +24,8 @@ export default function AdminOverviewView() {
     { label: '页面（含草稿）', value: stats.pages_count, icon: Files, tone: '' },
     { label: '已发布页面', value: stats.published_pages_count, icon: Globe, tone: '' },
     { label: '生成轨迹', value: stats.traces_count, icon: History, tone: '' },
-    { label: '成功轨迹', value: stats.success_traces, icon: CheckCircle2, tone: 'text-emerald-600' },
-    { label: '失败轨迹', value: stats.error_traces, icon: CircleAlert, tone: 'text-rose-600' },
+    { label: '成功轨迹', value: stats.success_traces, icon: CheckCircle2, tone: 'text-success' },
+    { label: '失败轨迹', value: stats.error_traces, icon: CircleAlert, tone: 'text-destructive' },
     { label: '审计日志', value: stats.audit_count, icon: ScrollText, tone: '' },
     { label: '有 LLM 配置的用户', value: stats.users_with_llm_config, icon: Users, tone: '' },
   ]

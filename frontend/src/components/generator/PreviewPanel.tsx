@@ -9,7 +9,7 @@ export default function PreviewPanel({ htmlContent, isStreaming }: Props) {
   return (
     <div className="h-full w-full relative bg-white">
       <div className="absolute top-0 left-0 right-0 z-10 flex items-center px-4 py-2 bg-white border-b border-border text-xs text-muted-foreground">
-        <span className="flex items-center gap-1.5">
+        <span className="flex items-center gap-1.5 font-mono">
           <Eye className="size-3.5" />
           预览
         </span>

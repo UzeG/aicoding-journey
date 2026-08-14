@@ -34,7 +34,7 @@ export default function PromptInput({ onGenerate, disabled, initialValue = '', t
         value={value}
         onChange={(e) => setValue(e.target.value)}
         onKeyDown={handleKeyDown}
-        placeholder="描述你想要生成的网页，例如：做一个南京天气预报页面..."
+        placeholder="描述你想造的工具，例如：做一个话费计算器..."
         rows={2}
         disabled={disabled}
         className={cn('flex-1 resize-none bg-background', textareaClassName)}

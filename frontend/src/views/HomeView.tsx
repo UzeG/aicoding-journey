@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Sparkles, Lightbulb, Rocket, Wand2, type LucideIcon } from 'lucide-react'
-import { Badge } from '../components/ui/badge'
+import { Sparkles, Upload, Rocket, type LucideIcon } from 'lucide-react'
 import { listPrompts } from '../api/endpoints'
 import PromptInput from '../components/generator/PromptInput'
 import PromptCard from '../components/home/PromptCard'
@@ -21,8 +20,8 @@ interface HeroFeature {
 }
 
 const HERO_FEATURES: HeroFeature[] = [
-  { icon: Sparkles, title: '流式生成', desc: '逐字渲染实时可见' },
-  { icon: Lightbulb, title: '推荐提示词', desc: '不知道写啥有模板' },
+  { icon: Sparkles, title: 'AI 流式生成', desc: '逐字渲染，实时可见' },
+  { icon: Upload, title: '上传 HTML', desc: '本地文件直接上架' },
   { icon: Rocket, title: '一键发布', desc: '秒变公网链接' },
 ]
 
@@ -49,42 +48,66 @@ export default function HomeView() {
 
   return (
     <div>
-      {/* Hero：渐变光晕背景 + 渐变标题 + 卡片化输入框 + 特性 mini 卡片 */}
+      {/* Hero：源码纹理背景（像还没编译完的页面）+ 注释眉题 + 标签式标题 + <form> 输入标注 */}
       <section className="relative overflow-hidden pt-16 pb-20 md:pt-24 md:pb-28">
         <div aria-hidden className="absolute inset-0 overflow-hidden">
-          <div className="absolute -top-32 left-1/2 -translate-x-1/2 size-152 rounded-full bg-primary/20 blur-3xl animate-glow-float" />
-          <div className="absolute -top-24 right-[8%] size-104 rounded-full bg-emerald-300/25 blur-3xl" />
-          <div className="absolute -bottom-32 left-[2%] size-88 rounded-full bg-teal-300/20 blur-3xl" />
+          <div className="absolute -top-40 left-1/2 -translate-x-1/2 size-168 rounded-full bg-primary/10 blur-3xl animate-glow-float" />
+          <div className="absolute inset-x-0 top-0 h-px bg-border" />
+          {/* 源码纹理（大屏展示，5% 透明度） */}
+          <pre className="hidden lg:block absolute left-6 top-24 font-mono text-[11px] leading-[1.9] text-foreground/5 select-none">
+{`<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <title>你的工具</title>
+  </head>
+  <body>
+    <!-- 一句话 → HTML → 链接 -->
+  </body>
+</html>`}
+          </pre>
+          <pre className="hidden lg:block absolute right-8 bottom-16 text-right font-mono text-[11px] leading-[1.9] text-foreground/5 select-none">
+{`<div class="tool">
+  <h1>能用</h1>
+</div>`}
+          </pre>
         </div>
 
         <div className="relative z-10 max-w-5xl mx-auto px-4 text-center animate-fade-up">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium border border-primary/20 backdrop-blur mb-6">
-            <Wand2 className="size-3.5" />
-            AI 驱动的 HTML 一键生成
-          </div>
+          <p className="font-mono text-xs text-muted-foreground mb-6">
+            &lt;!-- 把一句话编译成网页，一键发布成链接 --&gt;
+          </p>
 
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight mb-5">
-            用自然语言
-            <span className="block mt-1 bg-linear-to-r from-emerald-500 via-primary to-teal-500 bg-clip-text text-transparent">
-              创造网页
+          <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight mb-6">
+            一句话，
+            <span className="block mt-1.5">
+              <span className="font-mono text-primary">&lt;/</span>
+              把网页造出来
+              <span className="font-mono text-primary">&gt;</span>
             </span>
           </h1>
 
-          <p className="text-lg text-muted-foreground mb-10 max-w-2xl mx-auto">
-            描述你想要什么，AI 帮你生成完整的 HTML 页面，一键发布为公网链接
+          <p className="text-lg text-muted-foreground mb-10 max-w-2xl mx-auto leading-relaxed">
+            描述你想要的工具，AI 实时生成完整 HTML；也可以直接上传本地文件，
+            一键发布为公网链接，任何人都能直接用。
           </p>
 
-          <div className="max-w-2xl mx-auto rounded-2xl border border-border bg-card/80 backdrop-blur shadow-lg shadow-primary/10 p-3">
-            <PromptInput onGenerate={handleGenerate} disabled={false} textareaClassName="bg-transparent" />
+          <div className="max-w-2xl mx-auto">
+            <p className="mb-2 px-1 text-left font-mono text-xs text-muted-foreground">
+              &lt;form&gt; 描述你想造的工具
+              <span aria-hidden className="inline-block w-[0.55em] h-[1.1em] translate-y-[0.18em] bg-primary animate-caret-blink" />
+            </p>
+            <div className="rounded-lg border border-border bg-card shadow-sm p-3">
+              <PromptInput onGenerate={handleGenerate} disabled={false} textareaClassName="bg-transparent" />
+            </div>
           </div>
 
           <div className="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-3 max-w-2xl mx-auto">
             {HERO_FEATURES.map((f) => (
               <div
                 key={f.title}
-                className="flex items-center gap-3 rounded-xl border border-border bg-card p-3 text-left shadow-sm hover:shadow-md hover:border-primary/30 transition-all"
+                className="flex items-center gap-3 rounded-lg border border-border bg-card p-3 text-left shadow-sm hover:shadow-md hover:border-primary/30 transition-all"
               >
-                <span className="flex items-center justify-center size-9 rounded-lg bg-primary/10 text-primary shrink-0">
+                <span className="flex items-center justify-center size-9 rounded-md bg-primary/10 text-primary shrink-0">
                   <f.icon className="size-4" />
                 </span>
                 <div className="min-w-0">
@@ -104,9 +127,9 @@ export default function HomeView() {
       <section className="py-16 md:py-20 bg-muted/40">
         <div className="max-w-5xl mx-auto px-4">
           <div className="text-center mb-10">
-            <Badge variant="secondary">推荐提示词</Badge>
-            <h2 className="mt-3 text-2xl md:text-3xl font-bold">不知道说什么？试试这些</h2>
-            <p className="mt-2 text-muted-foreground">点击卡片即可用该描述开始生成</p>
+            <p className="font-mono text-xs text-muted-foreground mb-3">&lt;section&gt;</p>
+            <h2 className="text-2xl md:text-3xl font-bold tracking-tight">不知道想做什么？从这些开始</h2>
+            <p className="mt-2 text-muted-foreground">点击卡片，用该描述开始生成</p>
           </div>
           {loading ? (
             <PromptCardSkeleton />

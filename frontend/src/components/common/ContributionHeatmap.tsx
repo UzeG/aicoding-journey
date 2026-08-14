@@ -1,8 +1,8 @@
 import { useMemo, useRef, useState } from 'react'
 import type { ActivityResponse } from '../../types'
 
-// Level 0 = no activity; 1-4 scale relative to the busiest day.
-const COLORS = ['bg-muted', 'bg-emerald-100', 'bg-emerald-300', 'bg-emerald-500', 'bg-emerald-700']
+// Level 0 = no activity; 1-4 scale relative to the busiest day（与主色标签红同族）
+const COLORS = ['bg-muted', 'bg-primary/20', 'bg-primary/40', 'bg-primary/70', 'bg-primary']
 const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 const MONTHS_FULL = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
 

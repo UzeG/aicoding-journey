@@ -122,7 +122,7 @@ export default function LoginView() {
                       className="pl-9"
                     />
                     {userIdStatus === 'checking' && <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 size-4 animate-spin text-muted-foreground" />}
-                    {userIdStatus === 'available' && <Check className="absolute right-3 top-1/2 -translate-y-1/2 size-4 text-emerald-500" />}
+                    {userIdStatus === 'available' && <Check className="absolute right-3 top-1/2 -translate-y-1/2 size-4 text-success" />}
                     {userIdStatus === 'taken' && <X className="absolute right-3 top-1/2 -translate-y-1/2 size-4 text-destructive" />}
                   </div>
                   <p className="text-xs text-muted-foreground">

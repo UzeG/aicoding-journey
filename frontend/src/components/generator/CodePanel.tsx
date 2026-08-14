@@ -32,12 +32,12 @@ export default function CodePanel({ code, isStreaming }: Props) {
   return (
     <div className="h-full w-full relative">
       <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between px-4 py-2 bg-gray-900 text-gray-300 text-xs border-b border-gray-800">
-        <span className="flex items-center gap-1.5">
+        <span className="flex items-center gap-1.5 font-mono">
           <Code2 className="size-3.5" />
-          代码
+          源码
         </span>
         {isStreaming && (
-          <span className="flex items-center gap-1.5 text-emerald-400">
+          <span className="flex items-center gap-1.5 text-live">
             <Loader2 className="size-3 animate-spin" />
             生成中...
           </span>

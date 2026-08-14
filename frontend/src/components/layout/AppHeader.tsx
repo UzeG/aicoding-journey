@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Zap, LogOut, LogIn, User, FolderOpen, Settings, Shield } from 'lucide-react'
+import { LogOut, LogIn, User, FolderOpen, Settings, Shield } from 'lucide-react'
 import { useAuthStore } from '../../stores/auth'
 import { Button } from '../ui/button'
 import Avatar from '../common/Avatar'
@@ -44,11 +44,13 @@ export default function AppHeader() {
   return (
     <header className="bg-card border-b border-border sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 h-(--header-height) flex items-center justify-between">
-        <Link to="/" className="flex items-center gap-2 text-lg font-bold text-foreground no-underline">
-          <span className="flex items-center justify-center size-8 rounded-lg bg-primary text-primary-foreground">
-            <Zap className="size-4" fill="currentColor" />
+        <Link to="/" className="flex items-center gap-2.5 text-foreground no-underline group">
+          <span className="flex items-center justify-center size-8 rounded-md bg-primary text-primary-foreground font-mono text-[0.7rem] font-semibold select-none">
+            &lt;/&gt;
           </span>
-          HTML Host
+          <span className="font-mono text-sm font-semibold tracking-tight text-foreground">
+            HTML<span className="text-primary">_</span>HOST
+          </span>
         </Link>
 
         <div className="flex items-center">

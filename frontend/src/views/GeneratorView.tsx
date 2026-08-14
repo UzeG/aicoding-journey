@@ -76,12 +76,12 @@ export default function GeneratorView() {
         </div>
       )}
 
-      {/* Progress indicator */}
+      {/* Progress indicator（运行中态 = 标签色，强调此刻正在产生标记） */}
       {isStreaming && progressStep && (
-        <div className="flex items-center gap-3 px-4 py-2.5 bg-emerald-50/50 border-b border-emerald-100 text-sm text-emerald-700">
+        <div className="flex items-center gap-3 px-4 py-2.5 bg-live/10 border-b border-live/20 text-sm text-live">
           <Loader2 className="size-4 animate-spin shrink-0" />
           <span>{progressMessage}</span>
-          <span className="text-emerald-400 text-xs ml-auto">
+          <span className="font-mono text-xs text-live/70 ml-auto">
             {progressStep === 'understand' ? '步骤 1/2' : '步骤 2/2'}
           </span>
         </div>

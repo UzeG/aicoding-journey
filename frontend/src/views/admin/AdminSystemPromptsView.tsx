@@ -29,7 +29,7 @@ function PromptBlock({ title, description, code }: { title: string; description:
           <p className="text-xs text-muted-foreground">{description}</p>
         </div>
         <Button size="sm" variant="outline" onClick={copy}>
-          {copied ? <Check className="size-4 text-emerald-600" /> : <Copy className="size-4" />}
+          {copied ? <Check className="size-4 text-success" /> : <Copy className="size-4" />}
           {copied ? '已复制' : '复制'}
         </Button>
       </div>
