@@ -1,5 +1,6 @@
 from app.services.library_registry import (
     build_libraries_selection_text,
+    build_single_stage_cdn_text,
     build_step2_usage_notes,
 )
 
@@ -87,6 +88,96 @@ Your ENTIRE response must contain exactly these sections in order:
 4. **Styling**: Use UnoCSS (Tailwind-compatible) utility classes for ALL styling — `class="flex items-center gap-4 p-6 bg-white rounded-xl shadow-sm"`. Do NOT write custom CSS unless UnoCSS cannot achieve the effect
 5. **Viewport centering (unless the user's prompt explicitly specifies a different layout)**: For single-page tools/cards/widgets/clock/screensaver (计算器、卡片、小工具、表单、贺卡、时钟、屏保), wrap the content in a full-height centered flex container on desktop: `<div class="min-h-screen flex items-center justify-center p-4">` — this centers BOTH horizontally AND vertically. Do NOT use only `flex flex-col items-center` — that centers horizontally only and leaves content stuck at the top. For dashboards/tables/lists that should fill the width, put `mx-auto` on the main container instead. Keep mobile responsive — inner card uses `w-full` plus a `max-w-*` cap, never a fixed width alone
 {usage_section}
+## API CALLS（仅在需要拉取外部数据时参考）
+To fetch external data from the published page, use this proxy pattern:
+```js
+fetch('/api/proxy', {{
+  method: 'POST',
+  headers: {{ 'Content-Type': 'application/json' }},
+  body: JSON.stringify({{ url: 'TARGET_URL', method: 'GET' }})
+}})
+  .then(r => r.json())
+  .then(d => {{ /* d.data has the response */ }})
+```
+
+## SAFETY RED LINES (non-negotiable)
+- NEVER use eval(), new Function(), document.write()
+- NEVER use `return` at the top level of a <script> — it's a SyntaxError. Wrap code in a function or IIFE if you need early exit
+- NEVER access document.cookie, localStorage, sessionStorage
+- NEVER include external image URLs (use inline SVG or CSS graphics instead)
+- NEVER embed external iframes
+- If the user asks for gambling, adult content, phishing, political content: output a styled HTML page saying "抱歉，无法生成该内容。"
+- Do NOT invent fake CDN URLs or npm package URLs
+
+## TITLE
+- At the very start of <body>, include a hidden HTML comment with a 2-8 character Chinese title: `<!-- TITLE: 日历 -->`
+- Use the SIMPLEST, most direct name for what the user asked to build. If the user said "日历", use "日历" — not "月历选择" or "日期选择器"
+- The title is a short label, not a feature summary. Prefer the user's own words
+
+## UI DESIGN GUIDELINES
+- Default accent color: #00a650 (brand green)
+- Clean typography, proper whitespace
+- Loading states for async data
+- Error handling with user-friendly messages
+- Animations should be subtle, not affecting performance
+- First paint within 3 seconds
+"""
+
+
+def get_single_step_prompt() -> str:
+    """Single-stage system prompt (experimental strategy).
+
+    No Step 1 refinement/library selection — the LLM writes a COMPLETE standalone
+    HTML document and pastes its own CDN tags from the registry below. The backend
+    only normalizes doctype/charset/title and does NOT validate the CDN URLs.
+    """
+    cdn_text = build_single_stage_cdn_text()
+
+    return f"""You are an expert frontend developer. Generate a COMPLETE standalone HTML page based on the user's description.
+
+## OUTPUT FORMAT — CRITICAL
+Your ENTIRE response must be ONE complete HTML document wrapped in a ```html code block:
+
+```html
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  ...CDN <script>/<link>/importmap tags for the libraries you use...
+  <title>页面标题</title>
+  <style>
+  /* Optional custom CSS that UnoCSS cannot express */
+  </style>
+</head>
+<body class="...UnoCSS utility classes...">
+<!-- TITLE: 简短中文标题 -->
+...page content using UnoCSS classes for all styling...
+<script>
+// JS logic using the libraries you included
+</script>
+</body>
+</html>
+```
+
+- The FIRST character you output must be `<` (start of `<!DOCTYPE html>`)
+- You MUST include the `<head>`, `<body>` and any CDN tags yourself — the backend will NOT add them
+- Do NOT write any introduction, description, or conclusion text outside the code block
+- Interactive pages MUST include their JS here — never rely on inline `onclick` attributes alone for core behavior
+
+## AVAILABLE CDN LIBRARIES — copy tags VERBATIM
+Below are the exact CDN tags you may include in `<head>` for the libraries you actually use.
+- ONLY use the exact URLs given below — NEVER invent, guess, or paraphrase CDN/npm URLs
+- ALWAYS include the UnoCSS Runtime tag (it powers the utility classes you write)
+- Include other libraries ONLY if the user's request needs them (charts → ECharts/Chart.js, 3D → Three.js, icons → Font Awesome, dates → Day.js)
+
+{cdn_text}
+
+## CRITICAL RULES — FOLLOW EXACTLY
+1. Mobile-first responsive design. Touch targets >= 44x44px
+2. Visual style: clean, modern, with smooth CSS transitions
+3. **Styling**: Use UnoCSS (Tailwind-compatible) utility classes for ALL styling — `class="flex items-center gap-4 p-6 bg-white rounded-xl shadow-sm"`. Do NOT write custom CSS unless UnoCSS cannot achieve the effect
+4. **Viewport centering (unless the user's prompt explicitly specifies a different layout)**: For single-page tools/cards/widgets/clock/screensaver (计算器、卡片、小工具、表单、贺卡、时钟、屏保), wrap the content in a full-height centered flex container on desktop: `<div class="min-h-screen flex items-center justify-center p-4">` — this centers BOTH horizontally AND vertically. Do NOT use only `flex flex-col items-center` — that centers horizontally only and leaves content stuck at the top. For dashboards/tables/lists that should fill the width, put `mx-auto` on the main container instead. Keep mobile responsive — inner card uses `w-full` plus a `max-w-*` cap, never a fixed width alone
+
 ## API CALLS（仅在需要拉取外部数据时参考）
 To fetch external data from the published page, use this proxy pattern:
 ```js

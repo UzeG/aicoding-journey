@@ -6,10 +6,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.responses import StreamingResponse
 
 from app.api.deps import get_client_ip, get_current_user, get_db
+from app.config import settings
 from app.models import AuditLog, User
 from app.schemas import GenerateRequest
 from app.services.content_filter import check_prompt
-from app.services.llm_service import create_two_step_stream
+from app.services.llm_service import create_generation_stream
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -22,10 +23,11 @@ async def generate(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Two-step SSE streaming HTML generation.
+    """SSE streaming HTML generation.
 
-    Step 1: Understand intent + select CDN libraries
-    Step 2: Generate HTML with library-filtered system prompt
+    Strategy dispatches on settings.GENERATION_STRATEGY:
+      two_step (default): Step 1 understand + select CDN libraries → Step 2 generate
+      single_step: one LLM call, LLM writes the full page incl. its own CDN
     """
     # 1. Content filter
     filter_result = await check_prompt(req.prompt)
@@ -47,11 +49,11 @@ async def generate(
         "base_url": user.llm_base_url,
     }
 
-    # 4. Two-step SSE stream
+    # 4. SSE stream (strategy from env)
     async def event_stream():
         try:
-            async for event in create_two_step_stream(
-                req.prompt, user_config, str(user.id), request,
+            async for event in create_generation_stream(
+                settings.GENERATION_STRATEGY, req.prompt, user_config, str(user.id), request,
                 page_id=req.page_id,
             ):
                 yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"

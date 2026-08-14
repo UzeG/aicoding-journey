@@ -26,6 +26,9 @@ class Settings(BaseSettings):
     LLM_API_KEY: str = ""
     LLM_BASE_URL: str = "https://api.deepseek.com"
 
+    # HTML generation strategy — "two_step" (Step1 refine+select libs → Step2) | "single_step" (LLM writes full page incl. CDN)
+    GENERATION_STRATEGY: str = "two_step"
+
     # Admin accounts: comma-separated phone numbers or user_ids with admin privileges
     ADMIN_USER_IDS: str = ""
 

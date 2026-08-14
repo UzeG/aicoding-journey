@@ -63,6 +63,7 @@ export interface AdminPageDetail extends AdminPageListItem {
 export interface AdminTraceListItem {
   id: string
   source: string
+  strategy: string
   status: string
   user_id: string | null
   page_fk: string | null

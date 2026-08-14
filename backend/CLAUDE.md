@@ -62,7 +62,7 @@ backend/
 | PUT | /api/auth/me | JWT | 更新资料（nickname/bio/readme） |
 | POST | /api/auth/me/avatar | JWT | 上传头像（multipart，≤2MB） |
 | GET | /api/auth/check?user_id= | No | 检查 user_id 可用性 |
-| POST | /api/generate | JWT | SSE 流式生成 HTML（两步 LLM） |
+| POST | /api/generate | JWT | SSE 流式生成 HTML（策略按 GENERATION_STRATEGY：two_step 默认 / single_step 实验） |
 | POST | /api/mock/generate | JWT | Mock SSE 流式（开发用，跳过 LLM） |
 | GET | /api/pages | JWT | 页面列表 |
 | GET / PUT / DELETE | /api/pages/{pk} | JWT | 页面 CRUD（pk 为 DB 主键） |
@@ -93,7 +93,7 @@ backend/
 | GET | /api/admin/audit-logs | Admin | 审计日志列表 |
 | GET | /api/admin/llm-configs | Admin | 平台默认 + 用户自定义 LLM 配置（key 脱敏） |
 | GET | /api/admin/system-prompts | Admin | 当前 Step 1/2 System Prompt 现文 |
-| POST | /api/admin/test-generate | Admin | SSE 测试台：verbose 流，不走 content filter、不落 Page，记录 source=test 轨迹 |
+| POST | /api/admin/test-generate | Admin | SSE 测试台：verbose 流，不走 content filter、不落 Page，记录 source=test 轨迹；`strategy` 字段可选 two_step/single_step 按次切换 |
 
 ## 关键设计决策
 
@@ -104,6 +104,7 @@ backend/
 - **SSE 事件协议**: `progress`（Step 1/2 进度） → `token`（流式代码） → `final`（精确提取的 HTML，替换 Monaco 内容） → `done`（page_id + title + tokens_used） → 可选 `error`
 - **流式过滤**: `create_llm_stream` 会缓冲 token 直到检测到 HTML 开始标记（`\`\`\`html` / `<!DOCTYPE` / `<html>`），才转发给前端。防止 LLM 输出的中文描述文字混入 Monaco 编辑器
 - **两步 LLM**: Step 1 理解需求 + 从注册表选 CDN 库 → Step 2 根据选中库注入对应的 system prompt（含 CDN 链接 + 使用规范）。避免全量库列表暗示 LLM 添加不必要的图表/3D
+- **单阶段策略（实验）**: `GENERATION_STRATEGY=single_step` 时跳过 Step 1——`get_single_step_prompt()` 内嵌 `build_single_stage_cdn_text()`（全库 exact CDN 标签+用法），LLM 直出完整 HTML 文档并自行照抄所需 CDN 标签进 `<head>`；`_assemble_single_step` 仅规范化 doctype/charset/title，**不校验/不剔除 CDN**（实验口径）。主链路与测试台共用 `create_generation_stream(strategy, ...)` 分发（[llm_service.py](app/services/llm_service.py)），改一处生成代码两处生效
 - **片段解析**: `_parse_fragment` 用 BeautifulSoup 提取 LLM 输出的 `<style>`/`<body>`/`<script>`（不用正则，避免脚本被静默丢弃）。支持普通 `<script>` 与 `<script type="module">`、多个 script、script 在 body 内；组装时统一包成 `<script type="module">`。若检测到交互痕迹（`<script>`/`onclick`/`addEventListener`）但提取不到 JS，记 warning
 - **封面快照**: 生成完成后 `asyncio.create_task(capture_snapshot(...))` 异步截图（不阻塞 SSE）。用 Playwright 复用系统 Chrome（`executable_path`，headless），JWT 通过 context `extra_http_headers` 传给内部渲染端点。**陷阱**：`get_current_user` 只读 Authorization header 不读 query；`page.goto` 无 headers 参数必须用 `new_context(extra_http_headers=...)`；等待用 `load` + sleep 而非 `networkidle`（无限动画页面永不空闲）。依赖 `playwright` 包 + 系统 Chrome，缺失时快照自动禁用
 - **Page 复用**: `GenerateRequest.page_id` 可选字段——前端重新生成时传入已有 pageId，后端在 `create_llm_stream` 中检查：若页面存在、属于当前用户且 `is_published=False`，则 UPDATE 该记录而非 INSERT 新记录；已发布的页面不会被覆盖（会创建新 Page）
@@ -123,4 +124,4 @@ backend/
 - **Mock API**: `/api/mock/generate`（`app/api/mock.py`）返回硬编码样本 HTML，与正式端点 SSE 协议一致，同样创建 DB 记录。前端通过 `npm run dev:mock` 启用（Vite proxy rewrite `/api/generate` → `/api/mock/generate`）。Mock 端点跳过 content filter
 - **ENVIRONMENT**: `config.py` 新增 `ENVIRONMENT` 字段（默认 `"development"`），附带 `is_development()` / `is_production()` 便捷方法
 - **管理员**: `config.py` 的 `ADMIN_USER_IDS`（逗号分隔 phone 或 user_id，大小写不敏感）。`deps.py` 的 `is_admin_user(user)` / `get_current_admin` 判断；`GET /api/auth/me` 返回 `is_admin`。空配置 → 全员无后台权限（安全默认）
-- **生成轨迹**: `create_two_step_stream` 每次运行自动写 `generation_traces`（Step1 JSON / Step2 原始流 / token / 耗时 / 生效 model·base_url·config_source / status / error）。通过 `try/finally` 落库，写失败仅 log 不打断生成。kwargs：`persist=False`（测试台不落 Page）、`verbose=True`（额外 yield `step1`/`token_raw` 事件）、`source`（`generation`|`test`）。mock 路径不产生 trace
+- **生成轨迹**: 生成流程自动写 `generation_traces`（Step1 JSON / Step2 原始流 / token / 耗时 / 生效 model·base_url·config_source / **strategy**（two_step|single_step）/ status / error）。通过 `try/finally` 落库，写失败仅 log 不打断生成。kwargs：`persist=False`（测试台不落 Page）、`verbose=True`（额外 yield `step1`/`token_raw` 事件，single_step 无 `step1`）、`source`（`generation`|`test`）。mock 路径不产生 trace

@@ -24,6 +24,10 @@ function SourceBadge({ source }: { source: string }) {
   return source === 'test' ? <Badge variant="secondary">测试</Badge> : <Badge>生成</Badge>
 }
 
+function StrategyBadge({ strategy }: { strategy: string }) {
+  return strategy === 'single_step' ? <Badge variant="secondary">单步</Badge> : <Badge>两步</Badge>
+}
+
 function StatusBadge({ status }: { status: string }) {
   return status === 'success' ? <Badge variant="success">成功</Badge> : <Badge variant="destructive">失败</Badge>
 }
@@ -121,6 +125,7 @@ export default function AdminTracesView() {
                 render: (t) => <span className="text-xs text-muted-foreground whitespace-nowrap">{formatDateTime(t.created_at)}</span>,
               },
               { key: 'source', header: '来源', render: (t) => <SourceBadge source={t.source} /> },
+              { key: 'strategy', header: '策略', render: (t) => <StrategyBadge strategy={t.strategy} /> },
               { key: 'status', header: '状态', render: (t) => <StatusBadge status={t.status} /> },
               {
                 key: 'prompt',

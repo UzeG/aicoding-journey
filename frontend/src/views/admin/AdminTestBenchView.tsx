@@ -25,6 +25,7 @@ interface Step1Result {
 
 export default function AdminTestBenchView() {
   const [prompt, setPrompt] = useState('')
+  const [strategy, setStrategy] = useState<string>('two_step')
   const [configMode, setConfigMode] = useState<string>('platform')
   const [model, setModel] = useState('')
   const [baseUrl, setBaseUrl] = useState('')
@@ -85,7 +86,7 @@ export default function AdminTestBenchView() {
       : undefined
 
     try {
-      const response = await testGenerateSSE({ prompt, config }, abortController.signal)
+      const response = await testGenerateSSE({ prompt, strategy, config }, abortController.signal)
       if (!response.ok) {
         const data = await response.json().catch(() => null)
         setError(data?.detail || `请求失败（${response.status}）`)
@@ -178,17 +179,31 @@ export default function AdminTestBenchView() {
             />
           </div>
 
-          <div className="space-y-2">
-            <Label>配置</Label>
-            <Select value={configMode} onValueChange={setConfigMode}>
-              <SelectTrigger className="w-52">
-                <SelectValue placeholder="选择配置" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="platform">平台默认</SelectItem>
-                <SelectItem value={CUSTOM}>自定义</SelectItem>
-              </SelectContent>
-            </Select>
+          <div className="flex flex-wrap items-end gap-4">
+            <div className="space-y-2">
+              <Label>配置</Label>
+              <Select value={configMode} onValueChange={setConfigMode}>
+                <SelectTrigger className="w-52">
+                  <SelectValue placeholder="选择配置" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="platform">平台默认</SelectItem>
+                  <SelectItem value={CUSTOM}>自定义</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>生成策略</Label>
+              <Select value={strategy} onValueChange={setStrategy}>
+                <SelectTrigger className="w-52">
+                  <SelectValue placeholder="选择策略" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="two_step">两步（Step1 选库 + Step2 生成）</SelectItem>
+                  <SelectItem value="single_step">单步（LLM 直出完整 HTML）</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           {configMode === CUSTOM && (

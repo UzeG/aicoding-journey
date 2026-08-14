@@ -140,6 +140,36 @@ def _build_access_hint(lib: dict) -> str:
     return ""
 
 
+def _lib_cdn_tags(lib: dict) -> str:
+    """Render the exact CDN tag(s) for one library (mirrors build_cdn_includes per-lib)."""
+    if lib["type"] == "importmap":
+        return f'<script type="importmap">{json.dumps({"imports": lib["importmap"]})}</script>'
+    if lib["type"] == "css":
+        return f'<link rel="stylesheet" href="{lib["url"]}">'
+    return f'<script src="{lib["url"]}"></script>'
+
+
+def build_single_stage_cdn_text() -> str:
+    """Render ALL libraries (incl. default unocss) as exact CDN tags + usage notes.
+
+    Embedded in the single-stage prompt so the LLM copies the tags verbatim —
+    the LLM decides which libraries it needs and pastes those tags itself.
+    """
+    lines = []
+    for key, lib in LIBRARY_REGISTRY.items():
+        lines.append(f"### {lib['name']} (`{key}`)")
+        lines.append("```html")
+        lines.append(_lib_cdn_tags(lib))
+        lines.append("```")
+        hint = _build_access_hint(lib)
+        if hint:
+            lines.append(hint)
+        notes = lib.get("usage_notes")
+        if notes:
+            lines.append(notes)
+    return "\n\n".join(lines)
+
+
 def build_cdn_includes(selected_keys: list[str]) -> dict:
     """Build CDN HTML tags for injection into the page skeleton.
 

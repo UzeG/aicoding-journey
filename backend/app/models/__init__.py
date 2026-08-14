@@ -108,6 +108,7 @@ class GenerationTrace(Base):
     user_id: Mapped[str | None] = mapped_column(String(36), ForeignKey("users.id"), nullable=True, index=True)
     page_fk: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     source: Mapped[str] = mapped_column(String(20), default="generation")  # generation | test
+    strategy: Mapped[str] = mapped_column(String(20), default="two_step")  # two_step | single_step
     prompt: Mapped[str] = mapped_column(Text, nullable=False)
     refined_prompt: Mapped[str | None] = mapped_column(Text, default=None)
     libraries: Mapped[str | None] = mapped_column(Text, default=None)  # JSON array string

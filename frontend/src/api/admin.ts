@@ -41,7 +41,7 @@ export const getAdminSystemPrompts = () => api.get<AdminSystemPrompts>('/admin/s
 
 // Test console (SSE via native fetch, mirrors generateSSE)
 export const testGenerateSSE = (
-  body: { prompt: string; config?: { model?: string; base_url?: string; api_key?: string } },
+  body: { prompt: string; strategy?: string; config?: { model?: string; base_url?: string; api_key?: string } },
   signal?: AbortSignal,
 ) =>
   fetch('/api/admin/test-generate', {

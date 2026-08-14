@@ -6,7 +6,7 @@ import time
 from typing import AsyncGenerator
 
 from app.services.library_registry import build_cdn_includes
-from app.services.system_prompt import get_step1_prompt, get_step2_prompt
+from app.services.system_prompt import get_single_step_prompt, get_step1_prompt, get_step2_prompt
 
 logger = logging.getLogger(__name__)
 
@@ -85,7 +85,79 @@ async def create_two_step_stream(
             logger.warning("Failed to persist generation trace", exc_info=True)
 
 
-def _new_trace(prompt: str, user_id: str, user_config: dict, source: str) -> dict:
+async def create_single_step_stream(
+    prompt: str,
+    user_config: dict,
+    user_id: str,
+    request=None,
+    page_id: int | None = None,
+    *,
+    persist: bool = True,
+    verbose: bool = False,
+    source: str = "generation",
+) -> AsyncGenerator[dict, None]:
+    """Single-step HTML generation pipeline (experimental strategy).
+
+    No Step 1 refinement or library selection — the LLM writes a complete standalone
+    HTML document, pasting its own CDN tags from the registry embedded in the prompt.
+    The backend only normalizes doctype/charset/title (no CDN validation).
+
+    Same SSE event protocol as two-step: progress → token → final → done → error.
+    """
+    trace = _new_trace(prompt, user_id, user_config, source, strategy="single_step")
+    try:
+        yield {"type": "progress", "step": "generate", "message": "正在生成页面..."}
+        async for event in _run_single_step_generate(
+            prompt, user_config, user_id, request, page_id,
+            trace=trace, persist=persist, verbose=verbose,
+        ):
+            yield event
+    finally:
+        # Persist trace on every path (success/error/disconnect); never break the stream.
+        try:
+            await _persist_trace(trace)
+        except Exception:
+            logger.warning("Failed to persist generation trace", exc_info=True)
+
+
+async def create_generation_stream(
+    strategy: str,
+    prompt: str,
+    user_config: dict,
+    user_id: str,
+    request=None,
+    page_id: int | None = None,
+    *,
+    persist: bool = True,
+    verbose: bool = False,
+    source: str = "generation",
+) -> AsyncGenerator[dict, None]:
+    """Dispatch to the configured generation strategy (two-step default / single-step).
+
+    Both the main /api/generate path and the admin test bench go through here, so
+    changing the generation code in one place affects both entry points.
+    """
+    if strategy == "single_step":
+        async for event in create_single_step_stream(
+            prompt, user_config, user_id, request, page_id,
+            persist=persist, verbose=verbose, source=source,
+        ):
+            yield event
+    else:
+        async for event in create_two_step_stream(
+            prompt, user_config, user_id, request, page_id,
+            persist=persist, verbose=verbose, source=source,
+        ):
+            yield event
+
+
+def _new_trace(
+    prompt: str,
+    user_id: str,
+    user_config: dict,
+    source: str,
+    strategy: str = "two_step",
+) -> dict:
     """Initialize a mutable trace dict for one generation run."""
     from app.config import settings
 
@@ -95,6 +167,7 @@ def _new_trace(prompt: str, user_id: str, user_config: dict, source: str) -> dic
     return {
         "user_id": user_id,
         "source": source,
+        "strategy": strategy,
         "prompt": prompt,
         "model": user_config.get("model") or settings.LLM_MODEL,
         "base_url": user_config.get("base_url") or settings.LLM_BASE_URL,
@@ -276,54 +349,8 @@ async def _run_step2_generate(
         # Persist page record (skipped for admin test runs)
         final_page_id = None
         if persist:
-            from app.database import async_session
-            from app.models import Page
-            from app.utils.snowflake import generate_id
-
-            async with async_session() as db:
-                existing_page = None
-                if page_id is not None:
-                    from sqlalchemy import select as _select
-                    result = await db.execute(
-                        _select(Page).where(
-                            Page.id == page_id,
-                            Page.user_id == user_id,
-                            Page.is_published == False,
-                        )
-                    )
-                    existing_page = result.scalar_one_or_none()
-
-                if existing_page is not None:
-                    existing_page.title = llm_title
-                    existing_page.html_content = assembled
-                    existing_page.prompt = refined_prompt
-                    existing_page.step1_output = step1_output
-                    existing_page.file_size = len(assembled.encode("utf-8"))
-                    final_page_id = existing_page.id
-                else:
-                    new_id = generate_id()
-                    page = Page(
-                        id=new_id,
-                        user_id=user_id,
-                        title=llm_title,
-                        html_content=assembled,
-                        prompt=refined_prompt,
-                        step1_output=step1_output,
-                        file_size=len(assembled.encode("utf-8")),
-                    )
-                    db.add(page)
-                    final_page_id = new_id
-
-                await db.commit()
-
-                # 异步生成页面封面快照（不阻塞 SSE 流式响应）
-                try:
-                    from app.services.snapshot import capture_snapshot
-                    asyncio.get_running_loop().create_task(capture_snapshot(final_page_id, user_id))
-                except Exception:
-                    logger.warning("Failed to schedule snapshot", exc_info=True)
-
-            trace["page_fk"] = final_page_id
+            final_page_id = await _persist_page(assembled, refined_prompt, step1_output, user_id, page_id, llm_title)
+        trace["page_fk"] = final_page_id
 
         yield {"type": "final", "content": assembled}
         yield {"type": "done", "page_id": str(final_page_id), "tokens_used": total_tokens, "title": llm_title}
@@ -335,6 +362,226 @@ async def _run_step2_generate(
         trace["step2_raw"] = full_content
         trace["tokens_used"] = total_tokens
         yield {"type": "error", "message": str(e)}
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# Single-stage generation (experimental)
+# ═══════════════════════════════════════════════════════════════════════
+
+
+async def _run_single_step_generate(
+    prompt: str,
+    user_config: dict,
+    user_id: str,
+    request=None,
+    page_id: int | None = None,
+    *,
+    trace: dict,
+    persist: bool = True,
+    verbose: bool = False,
+) -> AsyncGenerator[dict, None]:
+    """SSE streaming single-stage generation: LLM writes a complete HTML page incl. its own CDN."""
+    from openai import AsyncOpenAI
+
+    client = _build_client(user_config)
+    model = user_config.get("model") or _get_default("LLM_MODEL")
+    system_prompt = get_single_step_prompt()
+
+    messages = [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": prompt},
+    ]
+
+    total_tokens = 0
+    full_content = ""
+    html_started = False
+    buffer = ""
+
+    try:
+        stream = await client.chat.completions.create(
+            model=model,
+            messages=messages,
+            temperature=0.3,
+            max_tokens=32768,
+            stream=True,
+            stream_options={"include_usage": True},
+        )
+
+        chunk_count = 0
+        async for chunk in stream:
+            if request is not None and chunk_count % 20 == 0:
+                if await request.is_disconnected():
+                    logger.info(f"Client disconnected (user={user_id})")
+                    await stream.close()
+                    return
+
+            if chunk.choices and chunk.choices[0].delta.content:
+                token = chunk.choices[0].delta.content
+                full_content += token
+                chunk_count += 1
+
+                if verbose:
+                    yield {"type": "token_raw", "content": token}
+
+                if not html_started:
+                    buffer += token
+                    if _detect_html_start(buffer):
+                        clean = _trim_to_html_start(buffer)
+                        html_started = True
+                        if clean:
+                            yield {"type": "token", "content": clean}
+                else:
+                    yield {"type": "token", "content": token}
+
+            if chunk.usage:
+                total_tokens = chunk.usage.total_tokens
+
+        logger.info(f"Single-stage stream complete: full_content={len(full_content)} chars, tokens={total_tokens}")
+
+        if not full_content.strip():
+            logger.warning("Single-stage LLM returned empty content — aborting without saving")
+            trace["status"] = "error"
+            trace["error_message"] = "模型返回内容为空"
+            trace["step2_raw"] = full_content
+            trace["tokens_used"] = total_tokens
+            yield {"type": "error", "message": "模型返回内容为空，请重试"}
+            return
+
+        assembled, llm_title = _assemble_single_step(full_content, prompt)
+        if not assembled:
+            logger.warning(f"Single-stage parse produced empty page from {len(full_content)} chars: {full_content[:200]!r}")
+            trace["status"] = "error"
+            trace["error_message"] = "页面内容解析失败"
+            trace["step2_raw"] = full_content
+            trace["tokens_used"] = total_tokens
+            yield {"type": "error", "message": "页面内容解析失败，请重试"}
+            return
+
+        trace["refined_prompt"] = None
+        trace["libraries"] = "[]"
+        trace["step1_output"] = None
+        trace["step2_raw"] = full_content
+        trace["tokens_used"] = total_tokens
+        trace["final_html"] = assembled
+
+        # Persist page record (skipped for admin test runs)
+        final_page_id = None
+        if persist:
+            final_page_id = await _persist_page(assembled, prompt, None, user_id, page_id, llm_title)
+        trace["page_fk"] = final_page_id
+
+        yield {"type": "final", "content": assembled}
+        yield {"type": "done", "page_id": str(final_page_id), "tokens_used": total_tokens, "title": llm_title}
+
+    except Exception as e:
+        logger.exception("Single-stage LLM call failed")
+        trace["status"] = "error"
+        trace["error_message"] = str(e)
+        trace["step2_raw"] = full_content
+        trace["tokens_used"] = total_tokens
+        yield {"type": "error", "message": str(e)}
+
+
+async def _persist_page(
+    assembled: str,
+    prompt_text: str,
+    step1_output: str | None,
+    user_id: str,
+    page_id: int | None,
+    llm_title: str,
+) -> int | None:
+    """Insert or update a Page record from a generated page + schedule its cover snapshot.
+
+    Shared by two-step and single-step pipelines. Returns the page pk.
+    """
+    from app.database import async_session
+    from app.models import Page
+    from app.utils.snowflake import generate_id
+
+    async with async_session() as db:
+        existing_page = None
+        if page_id is not None:
+            from sqlalchemy import select as _select
+            result = await db.execute(
+                _select(Page).where(
+                    Page.id == page_id,
+                    Page.user_id == user_id,
+                    Page.is_published == False,
+                )
+            )
+            existing_page = result.scalar_one_or_none()
+
+        if existing_page is not None:
+            existing_page.title = llm_title
+            existing_page.html_content = assembled
+            existing_page.prompt = prompt_text
+            existing_page.step1_output = step1_output
+            existing_page.file_size = len(assembled.encode("utf-8"))
+            final_page_id = existing_page.id
+        else:
+            new_id = generate_id()
+            page = Page(
+                id=new_id,
+                user_id=user_id,
+                title=llm_title,
+                html_content=assembled,
+                prompt=prompt_text,
+                step1_output=step1_output,
+                file_size=len(assembled.encode("utf-8")),
+            )
+            db.add(page)
+            final_page_id = new_id
+
+        await db.commit()
+
+        # 异步生成页面封面快照（不阻塞 SSE 流式响应）
+        try:
+            from app.services.snapshot import capture_snapshot
+            asyncio.get_running_loop().create_task(capture_snapshot(final_page_id, user_id))
+        except Exception:
+            logger.warning("Failed to schedule snapshot", exc_info=True)
+
+    return final_page_id
+
+
+def _assemble_single_step(raw: str, prompt: str) -> tuple[str, str]:
+    """Normalize a complete HTML doc produced by the single-stage LLM.
+
+    The LLM owns its CDN tags — we only ensure a canonical doctype/charset/title
+    and extract the title for the DB record. No CDN validation (experimental knob).
+    Returns (html, title), or ("", title) when there is no body content.
+    Title priority: <!-- TITLE: --> comment → <title> tag → _distill_title(prompt).
+    """
+    from bs4 import BeautifulSoup
+
+    html = _extract_html(raw)
+    soup = BeautifulSoup(html, "html.parser")
+
+    title = _distill_title(prompt)
+    body_tag = soup.body
+    body_html = body_tag.decode_contents().strip() if body_tag is not None else ""
+    m = _TITLE_REGEX.search(body_html)
+    if m:
+        title = m.group(1).strip()
+        body_html = _TITLE_REGEX.sub("", body_html, count=1).strip()
+
+    if not body_html.strip():
+        return "", title
+
+    head_tag = soup.find("head")
+    head_inner = head_tag.decode_contents().strip() if head_tag is not None else ""
+    # ensure charset meta
+    if "<meta charset" not in head_inner.lower():
+        head_inner = f'  <meta charset="UTF-8">\n{head_inner}'
+    # ensure a single <title> (LLM may have written one — replace it)
+    head_inner = re.sub(r"<title[^>]*>.*?</title>", "", head_inner, flags=re.S | re.I).strip()
+    head_inner = f"  <title>{title}</title>\n{head_inner}"
+
+    return (
+        f'<!DOCTYPE html>\n<html lang="zh-CN">\n<head>\n{head_inner}\n</head>\n'
+        f'<body>{body_html}</body>\n</html>',
+        title,
+    )
 
 
 # ═══════════════════════════════════════════════════════════════════════

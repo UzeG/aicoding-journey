@@ -242,6 +242,7 @@ class TestConfig(BaseModel):
 class TestGenerateRequest(BaseModel):
     prompt: str = Field(..., min_length=1, max_length=10000)
     config: Optional[TestConfig] = None
+    strategy: str = "two_step"  # "two_step" | "single_step"
 
 
 class AdminUserListItem(BaseModel):
@@ -293,6 +294,7 @@ class AdminPageDetail(AdminPageListItem):
 class AdminTraceListItem(BaseModel):
     id: str
     source: str
+    strategy: str = "two_step"
     status: str
     user_id: Optional[str] = None
     page_fk: Optional[str] = None

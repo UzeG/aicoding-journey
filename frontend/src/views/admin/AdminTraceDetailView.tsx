@@ -96,6 +96,7 @@ export default function AdminTraceDetailView() {
             </CardHeader>
             <CardContent className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <Field label="来源" value={trace.source === 'test' ? <Badge variant="secondary">测试</Badge> : <Badge>生成</Badge>} />
+              <Field label="策略" value={trace.strategy === 'single_step' ? <Badge variant="secondary">单步</Badge> : <Badge>两步</Badge>} />
               <Field
                 label="状态"
                 value={trace.status === 'success' ? <Badge variant="success">成功</Badge> : <Badge variant="destructive">失败</Badge>}

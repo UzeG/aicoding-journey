@@ -75,6 +75,13 @@ def _run_migration_sync(conn):
         logger.info("Migrating: adding cover_url column to pages")
         conn.execute(text("ALTER TABLE pages ADD COLUMN cover_url TEXT"))
 
+    # ── generation_traces: strategy (single_step / two_step) ──
+    result = conn.execute(text("PRAGMA table_info('generation_traces')"))
+    gt_columns = {row[1] for row in result.fetchall()}
+    if "strategy" not in gt_columns:
+        logger.info("Migrating: adding strategy column to generation_traces")
+        conn.execute(text("ALTER TABLE generation_traces ADD COLUMN strategy TEXT DEFAULT 'two_step'"))
+
     # ── page_id_redirects table (created by Base.metadata.create_all) ──
     # Ensure composite unique index for (user_id, page_id) on pages
     conn.execute(text(

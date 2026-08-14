@@ -36,8 +36,9 @@ cd frontend && npm run dev
 
 ```
 用户输入 prompt → POST /api/generate (SSE)
-  → Step 1 LLM: 理解需求 + 选择 CDN 库
-  → Step 2 LLM: 流式返回 HTML token
+  → 生成策略 GENERATION_STRATEGY（env）分发：
+    two_step（默认）: Step 1 LLM 理解需求+选 CDN 库 → Step 2 流式返回 HTML token
+    single_step（实验）: 单次 LLM 直出完整 HTML（含自写 CDN 标签），后端仅规范化 doctype/title，不校验 CDN
   → 前端 Monaco 实时追加 + iframe 防抖预览
   → 用户点击发布 → 安全扫描 → SDK 注入 → 生成 page_id → /{user_id}/{page_id} 公开访问
 ```
@@ -65,6 +66,7 @@ cd frontend && npm run dev
 - **ECharts**：用 `ResizeObserver` 监听容器尺寸（不要用 `window.resize` 事件，首次加载不触发）
 - **LLM 输出过滤**：后端流式输出会缓冲直到检测到 HTML 开始标记（`\`\`\`html` / `<!DOCTYPE` / `<html>`），再转发 token 给前端。流结束后发送 `final` 事件用精确提取的 HTML 替换 Monaco 内容
 - **两步 LLM**：Step 1 理解需求 + 选 CDN 库 → Step 2 根据选中库注入 system prompt 生成 HTML。避免全量 CDN 列表暗示 LLM 添加不必要的图表/3D
+- **单阶段策略（实验）**：`GENERATION_STRATEGY=single_step` 时跳过 Step 1，`get_single_step_prompt()` 把 `LIBRARY_REGISTRY` 全部 CDN 规则内嵌进单阶段 prompt，LLM 直出完整 HTML 文档（自行照抄 CDN 标签放进 `<head>`）；`_assemble_single_step` 仅规范化 doctype/charset/title，**不校验/剔除 CDN**。主链路读 env、测试台按次传 `strategy`，共用 `create_generation_stream` 分发；`generation_traces.strategy` 记录用于 A/B 对比
 - **URL 方案**：`/{user_id}` 用户主页，`/{user_id}/{page_id}` 已发布页面，支持 page_id 修改后 301 重定向。主页 tab 用 query 驱动（`?tab=overview|projects|settings`，默认 overview），避免与发布页路径冲突；粉丝/关注列表不在 tab，走左侧卡片计数触发的弹窗
 - **关注体系**：`follows` 表（follower_id/following_id 唯一约束、禁自关注）。`GET /api/users/{user_id}` 返回 `follower_count`/`following_count`/`is_following`（viewer 依赖，`get_optional_user`）。关注/取关返回最新 `follower_count`，前端乐观更新 + 失败回滚
 - **README**：存 `users.readme`（TEXT，≤20000 字符，编辑资料弹窗录入）。渲染用 `react-markdown` + `remark-gfm`（默认禁 raw HTML，防 XSS）——**禁止 dangerouslySetInnerHTML**

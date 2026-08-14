@@ -24,7 +24,7 @@ from app.schemas import (
     PaginatedResponse,
     TestGenerateRequest,
 )
-from app.services.llm_service import create_two_step_stream
+from app.services.llm_service import create_generation_stream
 from app.services.system_prompt import get_step1_prompt, get_step2_prompt
 
 router = APIRouter(dependencies=[Depends(get_current_admin)])
@@ -426,11 +426,12 @@ async def admin_test_generate(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_admin),
 ):
-    """Stream a two-step generation with intermediate outputs for prompt iteration.
+    """Stream a generation (two-step or single-step) with intermediate outputs for prompt iteration.
 
     Unlike /api/generate: admin-only, skips content filter, does not persist a Page,
-    yields extra "step1" / "token_raw" events, records a trace with source="test".
-    api_key (if provided) lives only in this request — never stored, logged or traced.
+    yields extra "step1" (two-step only) / "token_raw" events, records a trace with
+    source="test". api_key (if provided) lives only in this request — never stored,
+    logged or traced.
     """
     cfg = req.config
     user_config = {
@@ -444,7 +445,8 @@ async def admin_test_generate(
 
     async def event_stream():
         try:
-            async for event in create_two_step_stream(
+            async for event in create_generation_stream(
+                req.strategy,
                 req.prompt,
                 user_config,
                 str(user.id),
