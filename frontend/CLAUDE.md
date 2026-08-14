@@ -28,7 +28,8 @@ frontend/src/
 │   └── showcase.ts               # 首页示例作品静态假数据（TODO 接入真实发布数据）
 ├── lib/
 │   ├── utils.ts                  # cn() 工具函数 (clsx + tailwind-merge, shadcn 依赖)
-│   └── promptMeta.ts             # 推荐提示词关键词 → icon/accent/label 映射
+│   ├── promptMeta.ts             # 推荐提示词关键词 → icon/accent/label 映射
+│   └── download.ts               # downloadHtml / sanitizeFilename（Blob 下载，中文文件名安全）
 ├── stores/                       # Zustand
 │   ├── auth.ts                   # 登录状态, user, fetchUser, logout
 │   └── generation.ts             # 生成状态: isStreaming, codeContent, pageId, isSaved, progressStep
@@ -52,14 +53,22 @@ frontend/src/
 │   │   ├── PublishButton.tsx     # 发布 + 新窗口打开 + 跳转用户主页
 │   │   ├── SaveDraftButton.tsx   # 保存草稿 (is_saved=True 后列表可见)
 │   │   └── SavePageDialog.tsx    # 发布/保存表单 (标题 + page_id 实时校验)
+│   ├── user/                     # 个人主页专属组件
+│   │   ├── ProjectCard.tsx        # 项目卡片（16:9 封面 + 下载/编辑/删除）
+│   │   └── FollowList.tsx         # 关注者/正在关注列表（可回关）
 │   └── common/
 │       ├── Avatar.tsx            # 头像组件 (有图显示图，无图显示首字母)
 │       ├── LoadingSpinner.tsx
-│       └── ConfirmDialog.tsx
+│       ├── ConfirmDialog.tsx
+│       ├── DownloadButton.tsx    # 下载 HTML（同步/异步 getContent，自带 loading）
+│       ├── UploadHtmlButton.tsx  # 上传 .html/.htm 为草稿（提示"仅支持单个 html/htm 文件"）
+│       ├── FollowButton.tsx      # 关注/取关（乐观更新 + 未登录跳 /login）
+│       ├── ContributionHeatmap.tsx # 活跃度贡献热力图（纯 CSS，52×7 格）
+│       └── Markdown.tsx          # react-markdown + remark-gfm 封装（.markdown-body 样式）
 └── views/
     ├── HomeView.tsx              # 首页 (Hero + 推荐提示词)
     ├── GeneratorView.tsx         # 分屏生成器 ★核心页面
-    ├── UserProfileView.tsx       # 用户主页（左卡片 + 右 tab：项目/设置；项目卡片 16:9 封面）
+    ├── UserProfileView.tsx       # 用户主页（tab 栏下移 header；首页/项目/设置）
     ├── LoginView.tsx             # 登录/注册（支持手机号 + user_id）
     └── SettingsView.tsx          # LLM 配置（复用为主页设置 tab）
 ```
@@ -129,9 +138,12 @@ UserProfileView 点击编辑 → navigate("/generator?pageId={id}")
 - **user_id 校验**: 注册页 300ms debounce 实时调用 `/api/auth/check`，大小写不敏感
 - **page_id 校验**: 发布弹窗 300ms debounce 实时调用 `/api/pages/check-id`，大小写不敏感
 - **Header**: 无中间导航，右侧未登录显示「登录」按钮，已登录显示 Avatar 下拉菜单（我的主页/我的项目/设置/退出）。菜单点击外部关闭
-- **用户主页 tab**: `?tab=settings` 用 query 驱动（不用路径，避免与 `/{user_id}/{page_id}` 发布页路由冲突）。自己看含草稿 + 设置 tab + 编辑资料，别人看只读已发布项目
+- **用户主页 tab**: `?tab=overview|projects|settings` 用 query 驱动（不用路径，避免与 `/{user_id}/{page_id}` 发布页路由冲突），默认 overview。tab 栏 `sticky top-[var(--header-height)] z-40` 置于系统 header 下方，全宽；左侧卡片 sticky 需再加 `--profile-tab-height`（index.css 定义）。自己看含草稿 + 设置 tab + 编辑资料，别人看只读
+- **Overview 首页**: README.md（有则渲染）+ 4 条最新项目（`pages.slice(0,4)`）+ 活跃度贡献热力图（`getUserActivity` 365 天，纯 CSS 52×7 格，零依赖）。README 用 `Markdown` 组件（react-markdown + remark-gfm），样式 `.markdown-body` 在 index.css，默认禁 raw HTML 防 XSS
+- **关注体系**: `FollowButton` 乐观更新（点击立即翻转 is_following/计数，失败回滚）；未登录点击跳 /login。粉丝/正在关注计数在左卡片可点击，打开 `FollowList` 弹窗（`followDialog` state，Radix Dialog 关闭卸载内容、每次打开重新拉取）；列表项内嵌 FollowButton 支持回关（`u.id !== currentUser?.id` 才显示）
 - **头像**: `Avatar` 组件展示 `user.avatar_url`（相对路径 `/static/...`，经 Vite proxy 加载），无头像显示首字母。上传走 `POST /api/auth/me/avatar`
-- **页面封面**: `PageItem.cover_url`（相对路径 `/static/snapshots/...`，经 Vite proxy 加载）。项目卡片顶部 `aspect-video`（16:9）显示封面，无封面显示占位图标
+- **页面封面**: `PageItem.cover_url`（相对路径 `/static/snapshots/...`，经 Vite proxy 加载）。项目卡片左侧 `aspect-video`（16:9）显示封面，无封面显示占位图标
+- **下载/上传闭环**: `DownloadButton` + `lib/download.ts`（Blob + `<a download>`，中文文件名安全）；`UploadHtmlButton`（`accept=".html,.htm"` 单选 + 提示文案，上传即草稿 `is_saved=True`，成功回调刷新列表）
 
 ## 首页 TODO（静态展示数据待接入后端）
 

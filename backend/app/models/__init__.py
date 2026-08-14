@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import BigInteger, Boolean, DateTime, ForeignKey, Integer, String, Text, func
+from sqlalchemy import BigInteger, Boolean, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -16,6 +16,7 @@ class User(Base):
     nickname: Mapped[str | None] = mapped_column(String(50), default=None)
     avatar_url: Mapped[str | None] = mapped_column(String(255), default=None)
     bio: Mapped[str | None] = mapped_column(String(160), default=None)
+    readme: Mapped[str | None] = mapped_column(Text, default=None)
     user_type: Mapped[str] = mapped_column(String(20), default="registered")
     user_id: Mapped[str | None] = mapped_column(String(30), unique=True, nullable=True, index=True)
 
@@ -57,6 +58,18 @@ class PageIdRedirect(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     page_fk: Mapped[int] = mapped_column(BigInteger, ForeignKey("pages.id"), nullable=False)
     old_page_id: Mapped[str] = mapped_column(String(50), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
+class Follow(Base):
+    """User follows user (GitHub-style). follower_id follows following_id."""
+
+    __tablename__ = "follows"
+    __table_args__ = (UniqueConstraint("follower_id", "following_id", name="uq_follow_pair"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    follower_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id"), nullable=False, index=True)
+    following_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id"), nullable=False, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
 

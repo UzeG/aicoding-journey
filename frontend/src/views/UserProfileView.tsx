@@ -1,29 +1,30 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import {
-  FileText, Pencil, Trash2, CheckCircle2, CircleDashed, ExternalLink, CircleAlert, Plus, User, Camera,
+  Activity, BookOpen, Camera, CircleAlert, FileText, Pencil, Plus, User,
 } from 'lucide-react'
-import { deletePage, getPage, getUserProfile, updateProfile, uploadAvatar } from '../api/endpoints'
+import { deletePage, getUserActivity, getUserProfile, updateProfile, uploadAvatar } from '../api/endpoints'
 import { useAuthStore } from '../stores/auth'
 import ConfirmDialog from '../components/common/ConfirmDialog'
 import LoadingSpinner from '../components/common/LoadingSpinner'
 import Avatar from '../components/common/Avatar'
-import DownloadButton from '../components/common/DownloadButton'
+import FollowButton from '../components/common/FollowButton'
+import ContributionHeatmap from '../components/common/ContributionHeatmap'
+import Markdown from '../components/common/Markdown'
 import UploadHtmlButton from '../components/common/UploadHtmlButton'
+import FollowList from '../components/user/FollowList'
+import ProjectCard from '../components/user/ProjectCard'
+import SettingsView from './SettingsView'
 import { Button } from '../components/ui/button'
-import { Badge } from '../components/ui/badge'
 import { Card, CardContent } from '../components/ui/card'
 import { Input } from '../components/ui/input'
 import { Label } from '../components/ui/label'
 import { Textarea } from '../components/ui/textarea'
 import {
-  Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle,
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from '../components/ui/dialog'
-import SettingsView from './SettingsView'
 import { cn } from '../lib/utils'
-import type { PageItem, UserProfile } from '../types'
-
-const BACKEND_URL = import.meta.env.VITE_PUBLIC_BASE_URL || 'http://localhost:8000'
+import type { ActivityResponse, PageItem, UserProfile } from '../types'
 
 type Filter = 'all' | 'published' | 'draft'
 
@@ -32,6 +33,8 @@ const FILTERS: { key: Filter; label: string }[] = [
   { key: 'published', label: '已发布' },
   { key: 'draft', label: '草稿' },
 ]
+
+const TAB_KEYS = ['overview', 'projects', 'settings'] as const
 
 // Extract readable message from axios error — FastAPI 422 detail is an array
 function getErrorMessage(err: any, fallback: string): string {
@@ -57,10 +60,13 @@ export default function UserProfileView() {
   const [filter, setFilter] = useState<Filter>('all')
   const [deleteTarget, setDeleteTarget] = useState<PageItem | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
+  const [activity, setActivity] = useState<ActivityResponse | null>(null)
+  const [followDialog, setFollowDialog] = useState<'followers' | 'following' | null>(null)
 
   const [editOpen, setEditOpen] = useState(false)
   const [editNickname, setEditNickname] = useState('')
   const [editBio, setEditBio] = useState('')
+  const [editReadme, setEditReadme] = useState('')
   const [savingProfile, setSavingProfile] = useState(false)
   const [profileError, setProfileError] = useState<string | null>(null)
   const [previewAvatarUrl, setPreviewAvatarUrl] = useState<string | null>(null)
@@ -68,7 +74,8 @@ export default function UserProfileView() {
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const isOwnProfile = currentUser?.user_id?.toLowerCase() === userId?.toLowerCase()
-  const tab = searchParams.get('tab') === 'settings' ? 'settings' : 'projects'
+  const rawTab = searchParams.get('tab')
+  const tab = (TAB_KEYS as readonly string[]).includes(rawTab || '') ? (rawTab as string) : 'overview'
 
   const fetchProfile = useCallback(async () => {
     if (!userId) return
@@ -84,11 +91,35 @@ export default function UserProfileView() {
 
   useEffect(() => { fetchProfile() }, [fetchProfile])
 
-  const setTab = (t: string) => {
+  // 切换用户时兜底关闭关注弹窗（避免从弹窗跳转他人主页后弹窗残留）
+  useEffect(() => { setFollowDialog(null) }, [userId])
+
+  // 活跃度数据 —— 仅 overview tab 加载
+  useEffect(() => {
+    if (tab !== 'overview' || !userId) return
+    let alive = true
+    setActivity(null)
+    getUserActivity(userId)
+      .then((res) => { if (alive) setActivity(res.data) })
+      .catch(() => { /* 降级：无活跃度时不展示热力图 */ })
+    return () => { alive = false }
+  }, [tab, userId])
+
+  const setTab = (key: string) => {
     const params = new URLSearchParams(searchParams)
-    if (t === 'projects') params.delete('tab')
-    else params.set('tab', t)
+    if (key === 'overview') params.delete('tab')
+    else params.set('tab', key)
     setSearchParams(params, { replace: true })
+  }
+
+  const handleFollowChange = (isFollowing: boolean, followerCount: number) => {
+    setProfile((prev) => prev ? { ...prev, is_following: isFollowing, follower_count: followerCount } : prev)
+  }
+
+  // 关闭关注弹窗时刷新 profile —— 弹窗内的关注/取关会改变自己主页的关注/粉丝计数
+  const closeFollowDialog = () => {
+    setFollowDialog(null)
+    fetchProfile()
   }
 
   const handleDelete = async () => {
@@ -107,6 +138,7 @@ export default function UserProfileView() {
   const openEdit = () => {
     setEditNickname(profile?.user.nickname || '')
     setEditBio(profile?.user.bio || '')
+    setEditReadme(profile?.user.readme || '')
     setPreviewAvatarUrl(null)
     setPendingAvatarFile(null)
     setProfileError(null)
@@ -127,13 +159,13 @@ export default function UserProfileView() {
     setSavingProfile(true)
     setProfileError(null)
     try {
-      let updated = (await updateProfile({ nickname: editNickname, bio: editBio })).data
+      let updated = (await updateProfile({ nickname: editNickname, bio: editBio, readme: editReadme })).data
       if (pendingAvatarFile) {
         const avatarRes = await uploadAvatar(pendingAvatarFile)
         updated = avatarRes.data // 包含最新 avatar_url
       }
       setUser(updated)
-      setProfile((p) => p ? { ...p, user: { ...p.user, nickname: updated.nickname, bio: updated.bio, avatar_url: updated.avatar_url } } : p)
+      setProfile((p) => p ? { ...p, user: { ...p.user, nickname: updated.nickname, bio: updated.bio, avatar_url: updated.avatar_url, readme: editReadme } } : p)
       if (previewAvatarUrl) URL.revokeObjectURL(previewAvatarUrl)
       setPreviewAvatarUrl(null)
       setPendingAvatarFile(null)
@@ -160,196 +192,190 @@ export default function UserProfileView() {
 
   const pages = profile.pages
   const publishedCount = pages.filter((p) => p.is_published).length
+  const latestProjects = pages.slice(0, 4)
   const filtered = pages.filter((p) => {
     if (filter === 'published') return p.is_published
     if (filter === 'draft') return !p.is_published
     return true
   })
 
-  return (
-    <div className="max-w-6xl mx-auto px-4 py-8">
-      <div className="flex flex-col md:flex-row gap-8">
-        {/* 左侧个人卡片（滚动时固定——吸附位置 = header 高度 + 页面顶部 py-8 padding，即初始位置） */}
-        <aside className="md:w-64 shrink-0 md:self-start md:sticky md:top-[calc(var(--header-height)+2rem)]">
-          <Avatar
-            src={profile.user.avatar_url}
-            name={profile.user.nickname || profile.user.user_id}
-            className="size-24 text-3xl mb-4"
-          />
-          <h1 className="text-xl font-bold text-foreground break-words">{profile.user.nickname || profile.user.user_id}</h1>
-          <p className="text-sm text-muted-foreground mb-4">@{profile.user.user_id}</p>
-          {profile.user.bio && <p className="text-sm text-foreground/80 mb-4 whitespace-pre-wrap">{profile.user.bio}</p>}
-          <p className="text-sm text-muted-foreground mb-5">{publishedCount} 个已发布页面</p>
-          {isOwnProfile && (
-            <div className="space-y-2">
-              <Button variant="outline" className="w-full" onClick={openEdit}>
-                <Pencil className="size-4" />
-                编辑资料
-              </Button>
-              <Button className="w-full" onClick={() => navigate('/')}>
-                <Plus className="size-4" />
-                新建页面
-              </Button>
-            </div>
-          )}
-        </aside>
+  const TABS = [
+    { key: 'overview', label: '首页' },
+    { key: 'projects', label: '项目' },
+    ...(isOwnProfile ? [{ key: 'settings', label: '设置' }] : []),
+  ]
 
-        {/* 右侧内容区 */}
-        <div className="flex-1 min-w-0">
-          {/* Tab 导航 */}
-          <div className="flex gap-6 border-b border-border mb-6">
+  return (
+    <div>
+      {/* Tab 栏 —— 全宽、sticky 在系统 header 下方（GitHub 风格） */}
+      <div className="sticky top-[var(--header-height)] z-40 bg-card border-b border-border">
+        <div className="max-w-7xl mx-auto px-4 flex gap-6 overflow-x-auto h-(--profile-tab-height)">
+          {TABS.map((t) => (
             <button
-              onClick={() => setTab('projects')}
+              key={t.key}
+              onClick={() => setTab(t.key)}
               className={cn(
-                'pb-3 text-sm font-medium -mb-px border-b-2 transition-colors',
-                tab === 'projects' ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'
+                'text-sm font-medium whitespace-nowrap border-b-2 -mb-px transition-colors',
+                tab === t.key ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'
               )}
             >
-              项目
+              {t.label}
             </button>
-            {isOwnProfile && (
-              <button
-                onClick={() => setTab('settings')}
-                className={cn(
-                  'pb-3 text-sm font-medium -mb-px border-b-2 transition-colors',
-                  tab === 'settings' ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'
-                )}
-              >
-                设置
-              </button>
-            )}
-          </div>
+          ))}
+        </div>
+      </div>
 
-          {tab === 'settings' ? (
-            <SettingsView />
-          ) : (
-            <>
-              {/* 发布/草稿筛选 + 上传 HTML（仅自己） */}
-              {isOwnProfile && (
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex gap-2">
-                    {FILTERS.map((f) => (
-                      <button
-                        key={f.key}
-                        onClick={() => setFilter(f.key)}
-                        className={cn(
-                          'px-3 py-1 rounded-full text-sm transition-colors',
-                          filter === f.key ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-accent'
-                        )}
-                      >
-                        {f.label}
-                      </button>
+      <div className="max-w-7xl mx-auto px-4 py-8">
+        <div className="flex flex-col md:flex-row gap-8">
+          {/* 左侧个人卡片（滚动时固定——吸附位置 = header + tab 栏高度 + 页面 py-8 间距） */}
+          <aside className="md:w-64 shrink-0 md:self-start md:sticky md:top-[calc(var(--header-height)+var(--profile-tab-height)+1rem)]">
+            <Avatar
+              src={profile.user.avatar_url}
+              name={profile.user.nickname || profile.user.user_id}
+              className="size-24 text-3xl mb-4"
+            />
+            <h1 className="text-xl font-bold text-foreground break-words">{profile.user.nickname || profile.user.user_id}</h1>
+            <p className="text-sm text-muted-foreground mb-4">@{profile.user.user_id}</p>
+            {!isOwnProfile && (
+              <FollowButton
+                targetUserId={profile.user.user_id || ''}
+                isFollowing={profile.is_following}
+                followerCount={profile.follower_count}
+                onChange={handleFollowChange}
+                className="mb-4"
+              />
+            )}
+            {profile.user.bio && <p className="text-sm text-foreground/80 mb-4 whitespace-pre-wrap">{profile.user.bio}</p>}
+            <div className="flex items-center gap-3 text-sm text-muted-foreground mb-4">
+              <button onClick={() => setFollowDialog('followers')} className="hover:text-foreground transition-colors">
+                {profile.follower_count} 关注者
+              </button>
+              <span>·</span>
+              <button onClick={() => setFollowDialog('following')} className="hover:text-foreground transition-colors">
+                {profile.following_count} 正在关注
+              </button>
+            </div>
+            <p className="text-sm text-muted-foreground mb-5">{publishedCount} 个已发布页面</p>
+            {isOwnProfile && (
+              <div className="space-y-2">
+                <Button variant="outline" className="w-full" onClick={openEdit}>
+                  <Pencil className="size-4" />
+                  编辑资料
+                </Button>
+                <Button className="w-full" onClick={() => navigate('/')}>
+                  <Plus className="size-4" />
+                  新建页面
+                </Button>
+              </div>
+            )}
+          </aside>
+
+          {/* 右侧内容区 */}
+          <div className="flex-1 min-w-0">
+            {tab === 'overview' && (
+              <div className="space-y-8">
+                {profile.user.readme && (
+                  <section>
+                    <h2 className="flex items-center gap-2 text-base font-semibold text-foreground mb-3">
+                      <BookOpen className="size-4 text-muted-foreground" />
+                      README.md
+                    </h2>
+                    <Card>
+                      <CardContent className="p-4 sm:p-6">
+                        <Markdown content={profile.user.readme} />
+                      </CardContent>
+                    </Card>
+                  </section>
+                )}
+
+                <section>
+                  <h2 className="text-base font-semibold text-foreground mb-3">最新项目</h2>
+                  {latestProjects.length === 0 ? (
+                    <Card>
+                      <CardContent className="py-10 text-center text-muted-foreground text-sm">暂无项目</CardContent>
+                    </Card>
+                  ) : (
+                    <div className="space-y-3">
+                      {latestProjects.map((page) => (
+                        <ProjectCard key={page.id} page={page} user_id={profile.user.user_id || ''} isOwn={isOwnProfile} onDelete={setDeleteTarget} />
+                      ))}
+                    </div>
+                  )}
+                </section>
+
+                <section>
+                  <h2 className="flex items-center gap-2 text-base font-semibold text-foreground mb-3">
+                    <Activity className="size-4 text-muted-foreground" />
+                    活跃度
+                  </h2>
+                  <Card>
+                    <CardContent className="p-4 sm:p-6">
+                      {activity ? <ContributionHeatmap days={activity.days} /> : <LoadingSpinner text="加载活跃度..." />}
+                    </CardContent>
+                  </Card>
+                </section>
+              </div>
+            )}
+
+            {tab === 'projects' && (
+              <>
+                {/* 发布/草稿筛选 + 上传 HTML（仅自己） */}
+                {isOwnProfile && (
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex gap-2">
+                      {FILTERS.map((f) => (
+                        <button
+                          key={f.key}
+                          onClick={() => setFilter(f.key)}
+                          className={cn(
+                            'px-3 py-1 rounded-full text-sm transition-colors',
+                            filter === f.key ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-accent'
+                          )}
+                        >
+                          {f.label}
+                        </button>
+                      ))}
+                    </div>
+                    <UploadHtmlButton onUploaded={fetchProfile} />
+                  </div>
+                )}
+
+                {deleteError && (
+                  <div className="mb-4 flex items-center gap-2 px-4 py-2 bg-destructive/10 border border-destructive/20 text-destructive text-sm rounded-lg">
+                    <CircleAlert className="size-4 shrink-0" />
+                    {deleteError}
+                  </div>
+                )}
+
+                {filtered.length === 0 ? (
+                  <Card>
+                    <CardContent className="flex flex-col items-center justify-center py-20 text-muted-foreground">
+                      <FileText className="size-12 mb-4 opacity-40" />
+                      <p className="text-lg mb-4">
+                        {isOwnProfile ? (filter === 'all' ? '还没有生成过页面' : '没有符合条件的页面') : '还没有发布过页面'}
+                      </p>
+                      {isOwnProfile && filter === 'all' && (
+                        <div className="flex flex-col items-center gap-3">
+                          <Button variant="outline" onClick={() => navigate('/')}>
+                            去首页开始创作
+                          </Button>
+                          <UploadHtmlButton onUploaded={fetchProfile} className="items-center" />
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <div className="space-y-3">
+                    {filtered.map((page) => (
+                      <ProjectCard key={page.id} page={page} user_id={profile.user.user_id || ''} isOwn={isOwnProfile} onDelete={setDeleteTarget} />
                     ))}
                   </div>
-                  <UploadHtmlButton onUploaded={fetchProfile} />
-                </div>
-              )}
+                )}
+              </>
+            )}
 
-              {deleteError && (
-                <div className="mb-4 flex items-center gap-2 px-4 py-2 bg-destructive/10 border border-destructive/20 text-destructive text-sm rounded-lg">
-                  <CircleAlert className="size-4 shrink-0" />
-                  {deleteError}
-                </div>
-              )}
-
-              {filtered.length === 0 ? (
-                <Card>
-                  <CardContent className="flex flex-col items-center justify-center py-20 text-muted-foreground">
-                    <FileText className="size-12 mb-4 opacity-40" />
-                    <p className="text-lg mb-4">
-                      {isOwnProfile ? (filter === 'all' ? '还没有生成过页面' : '没有符合条件的页面') : '还没有发布过页面'}
-                    </p>
-                    {isOwnProfile && filter === 'all' && (
-                      <div className="flex flex-col items-center gap-3">
-                        <Button variant="outline" onClick={() => navigate('/')}>
-                          去首页开始创作
-                        </Button>
-                        <UploadHtmlButton onUploaded={fetchProfile} className="items-center" />
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              ) : (
-                <div className="space-y-3">
-                  {filtered.map((page) => (
-                    <Card key={page.id} className="hover:border-primary/40 transition-colors overflow-hidden">
-                      <div className="flex items-center">
-                        {/* 左侧预览图（16:9） */}
-                        <div className="w-32 sm:w-44 shrink-0 aspect-video relative bg-muted">
-                          {page.cover_url ? (
-                            <img
-                              src={page.cover_url}
-                              alt={page.title || '页面封面'}
-                              className="absolute inset-0 w-full h-full object-cover"
-                            />
-                          ) : (
-                            <div className="absolute inset-0 flex items-center justify-center text-muted-foreground bg-gradient-to-br from-muted to-muted/40">
-                              <FileText className="size-8 opacity-40" />
-                            </div>
-                          )}
-                          {page.is_published ? (
-                            <Badge variant="success" className="absolute top-2 left-2">
-                              <CheckCircle2 className="size-3" />
-                              已发布
-                            </Badge>
-                          ) : (
-                            <Badge variant="muted" className="absolute top-2 left-2">
-                              <CircleDashed className="size-3" />
-                              草稿
-                            </Badge>
-                          )}
-                        </div>
-                      <CardContent className="flex-1 min-w-0 p-4 flex items-center justify-between">
-                        <div className="flex-1 min-w-0">
-                          <h3 className="font-medium text-foreground truncate">{page.title || '未命名页面'}</h3>
-                          <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-                            <span>{new Date(page.created_at).toLocaleDateString('zh-CN')}</span>
-                            {page.is_published && page.page_id && (
-                              <a
-                                href={`${BACKEND_URL}/${profile.user.user_id}/${page.page_id}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-primary hover:underline inline-flex items-center gap-0.5"
-                              >
-                                /{profile.user.user_id}/{page.page_id}
-                                <ExternalLink className="size-3" />
-                              </a>
-                            )}
-                          </div>
-                        </div>
-                        {isOwnProfile && (
-                          <div className="flex items-center gap-2 ml-4 shrink-0">
-                            <DownloadButton
-                              fileName={page.title || page.page_id}
-                              getContent={() => getPage(page.id).then((res) => res.data.html_content)}
-                            />
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => navigate(`/generator?pageId=${page.id}`)}
-                            >
-                              <Pencil className="size-4" />
-                              编辑
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                              onClick={() => setDeleteTarget(page)}
-                            >
-                              <Trash2 className="size-4" />
-                              删除
-                            </Button>
-                          </div>
-                        )}
-                      </CardContent>
-                      </div>
-                    </Card>
-                  ))}
-                </div>
-              )}
-            </>
-          )}
+            {tab === 'settings' && <SettingsView />}
+          </div>
         </div>
       </div>
 
@@ -414,6 +440,18 @@ export default function UserProfileView() {
               <p className="text-xs text-muted-foreground text-right">{editBio.length}/160</p>
             </div>
 
+            <div className="space-y-2">
+              <Label>个人主页 README（支持 Markdown）</Label>
+              <Textarea
+                value={editReadme}
+                onChange={(e) => setEditReadme(e.target.value)}
+                maxLength={20000}
+                rows={8}
+                placeholder="用 Markdown 介绍你的主页，会展示在个人主页首页右侧（可选）"
+              />
+              <p className="text-xs text-muted-foreground text-right">{editReadme.length}/20000</p>
+            </div>
+
             {profileError && (
               <p className="text-destructive text-sm">{profileError}</p>
             )}
@@ -434,6 +472,28 @@ export default function UserProfileView() {
         onConfirm={handleDelete}
         onCancel={() => setDeleteTarget(null)}
       />
+
+      {/* 关注者 / 正在关注 弹窗（由左侧资料卡计数触发） */}
+      <Dialog
+        open={followDialog !== null}
+        onOpenChange={(open) => { if (!open) closeFollowDialog() }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{followDialog === 'following' ? '正在关注' : '关注者'}</DialogTitle>
+            <DialogDescription>@{userId}</DialogDescription>
+          </DialogHeader>
+          <div className="max-h-[60vh] overflow-y-auto pr-1">
+            {followDialog && (
+              <FollowList
+                userId={userId!}
+                type={followDialog}
+                onNavigate={() => setFollowDialog(null)}
+              />
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

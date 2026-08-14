@@ -45,8 +45,9 @@ cd frontend && npm run dev
 ## 已有功能
 
 - 用户注册/登录（JWT），支持手机号 + 自定义 user_id
-- 个人资料（头像上传/昵称/简介 bio），header 右上角 avatar 下拉菜单
-- 用户主页（GitHub 风格）：左侧资料卡片 + 右侧「项目/设置」tab（query 驱动）
+- 个人资料（头像上传/昵称/简介 bio/README Markdown），header 右上角 avatar 下拉菜单
+- 关注体系：关注/取关他人、粉丝/正在关注计数（主页卡片）、粉丝/关注列表（tab）
+- 用户主页（GitHub 风格）：tab 栏置于系统 header 下方，`首页/项目/设置`；首页 = README + 4 条最新项目 + 活跃度贡献图（类似 contribution）
 - 5 个推荐提示词（套餐对比、话费计算器、祝福贺卡、抽奖转盘、流量可视化）
 - SSE 流式生成 + 左右分屏实时预览
 - 一键发布 + `/{user_id}/{page_id}` 短链接
@@ -64,8 +65,11 @@ cd frontend && npm run dev
 - **ECharts**：用 `ResizeObserver` 监听容器尺寸（不要用 `window.resize` 事件，首次加载不触发）
 - **LLM 输出过滤**：后端流式输出会缓冲直到检测到 HTML 开始标记（`\`\`\`html` / `<!DOCTYPE` / `<html>`），再转发 token 给前端。流结束后发送 `final` 事件用精确提取的 HTML 替换 Monaco 内容
 - **两步 LLM**：Step 1 理解需求 + 选 CDN 库 → Step 2 根据选中库注入 system prompt 生成 HTML。避免全量 CDN 列表暗示 LLM 添加不必要的图表/3D
-- **URL 方案**：`/{user_id}` 用户主页，`/{user_id}/{page_id}` 已发布页面，支持 page_id 修改后 301 重定向。主页 tab 用 query 驱动（`?tab=settings`），避免与发布页路径冲突
+- **URL 方案**：`/{user_id}` 用户主页，`/{user_id}/{page_id}` 已发布页面，支持 page_id 修改后 301 重定向。主页 tab 用 query 驱动（`?tab=overview|projects|settings`，默认 overview），避免与发布页路径冲突；粉丝/关注列表不在 tab，走左侧卡片计数触发的弹窗
+- **关注体系**：`follows` 表（follower_id/following_id 唯一约束、禁自关注）。`GET /api/users/{user_id}` 返回 `follower_count`/`following_count`/`is_following`（viewer 依赖，`get_optional_user`）。关注/取关返回最新 `follower_count`，前端乐观更新 + 失败回滚
+- **README**：存 `users.readme`（TEXT，≤20000 字符，编辑资料弹窗录入）。渲染用 `react-markdown` + `remark-gfm`（默认禁 raw HTML，防 XSS）——**禁止 dangerouslySetInnerHTML**
+- **活跃度贡献图**：`GET /api/users/{user_id}/activity?days=365` 按 `pages.created_at` 每日聚合（UTC `strftime('%Y-%m-%d')`），前端纯 CSS 热力图（52×7 格，无新依赖）
 - **user_id / page_id**：大小写不敏感匹配，存储保留原始大小写
 - **头像存储**：后端文件存储（方案 C）——`POST /api/auth/me/avatar` 上传，存 `backend/static/avatars/`，DB 存相对 URL `/static/avatars/xxx.png`。前端经 Vite proxy `/static` 加载。文件格式按 magic bytes 校验（防改扩展名），≤2MB
-- **个人主页**：`GET /api/users/{user_id}` 用 `get_optional_user` 判断是否本人——本人返回含草稿，他人只返回已发布
+- **个人主页**：`GET /api/users/{user_id}` 用 `get_optional_user` 判断是否本人——本人返回含草稿，他人只返回已发布。tab 栏 sticky 在 header 下方（`top-[var(--header-height)]`），左侧卡片 sticky 需再加 `--profile-tab-height`（见 `index.css`）
 - **页面封面快照**：生成完成后异步用 Playwright + 系统 Chrome 打开内部渲染端点 `GET /api/pages/{pk}/render`（JWT header 鉴权，仅本人）截图，存 `backend/static/snapshots/{page_pk}.png`，写回 `page.cover_url`。视口 1280×720（16:9），等 load + 2.5s（不能用 networkidle，无限动画页面永不结束），并发信号量 2，失败降级保留旧封面

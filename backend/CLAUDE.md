@@ -20,7 +20,7 @@ backend/
 │   ├── config.py            # pydantic-settings, 读 .env
 │   ├── database.py          # SQLAlchemy async engine + session
 │   ├── seed.py              # 种子数据（推荐提示词 + demo 用户）
-│   ├── models/__init__.py   # User(avatar_url/bio), Page(cover_url), PageIdRedirect, RecommendedPrompt, AuditLog ORM
+│   ├── models/__init__.py   # User(avatar_url/bio/readme), Page(cover_url), Follow, PageIdRedirect, RecommendedPrompt, AuditLog ORM
 │   ├── schemas/__init__.py  # Pydantic 请求/响应模型
 │   ├── api/                 # 路由层
 │   │   ├── __init__.py      # 路由注册
@@ -59,7 +59,7 @@ backend/
 | POST | /api/auth/register | No | 注册（需 user_id） |
 | POST | /api/auth/login | No | 登录（手机号或 user_id） |
 | GET | /api/auth/me | JWT | 用户信息（含 avatar_url/bio） |
-| PUT | /api/auth/me | JWT | 更新资料（nickname/bio） |
+| PUT | /api/auth/me | JWT | 更新资料（nickname/bio/readme） |
 | POST | /api/auth/me/avatar | JWT | 上传头像（multipart，≤2MB） |
 | GET | /api/auth/check?user_id= | No | 检查 user_id 可用性 |
 | POST | /api/generate | JWT | SSE 流式生成 HTML（两步 LLM） |
@@ -72,7 +72,13 @@ backend/
 | GET | /api/pages/check-id?page_id= | JWT | 检查 page_id 可用性 |
 | PUT | /api/pages/{pk}/page-id | JWT | 修改 page_id（旧→新 301 重定向） |
 | GET | /api/prompts | No | 推荐提示词列表 |
-| GET | /api/users/{user_id} | No | 用户公开信息 + 已发布页面 |
+| GET | /api/users/{user_id} | No | 用户公开信息 + 已发布页面 + 关注统计（follower_count/following_count/is_following） |
+| POST | /api/users/{user_id}/follow | JWT | 关注（禁自关注，幂等） |
+| DELETE | /api/users/{user_id}/follow | JWT | 取关（幂等） |
+| GET | /api/users/{user_id}/followers | No | 关注者列表（is_following 为 viewer 是否关注该用户） |
+| GET | /api/users/{user_id}/following | No | 正在关注列表 |
+| GET | /api/users/{user_id}/activity?days= | No | 每日页面创建数（近 N 天，默认 365，活跃度贡献图数据） |
+| POST | /api/pages/upload | JWT | 上传 .html/.htm 为草稿页（≤5MB，内容需含 <html>/<!DOCTYPE>） |
 | POST | /api/proxy | No | API 代理网关 |
 | GET / PUT | /api/settings/llm | JWT | LLM 配置 |
 | GET | /{user_id} | No | 用户主页 HTML |
@@ -105,6 +111,9 @@ backend/
 - **LLM 优先级**: 用户配置 > `.env` 平台默认（api_key 由 `_build_client` 统一解密，仅一处）
 - **user_id**: 注册必填，大小写不敏感匹配（存储保留原始大小写），保留字禁止注册。支持作为登录凭据
 - **头像存储**: 上传端点 `POST /api/auth/me/avatar`（multipart），格式按 magic bytes 校验（jpg/png/webp/gif），存 `static/avatars/{user_id}_{ts}.{ext}`，换头像删旧文件，DB 存相对 URL。`main.py` mount `/static`
+- **关注体系**: `Follow` 表（`follower_id`/`following_id` 唯一约束 `uq_follow_pair`，禁自关注）。follow/unfollow 幂等、返回最新 `follower_count`；followers/following 列表用 `Follow JOIN User` + `_build_follow_items` 批量算 viewer 的 `is_following`。新表由 `create_all` 自动建，无需迁移脚本
+- **README**: `users.readme` TEXT 列（迁移在 `_run_migration_sync` 加 `ALTER TABLE users ADD COLUMN readme TEXT`）。`GET /api/users/{user_id}` 与 `PUT /api/auth/me` 均带 readme；空串存为 NULL
+- **活跃度**: `GET /api/users/{user_id}/activity` 按 `strftime('%Y-%m-%d', pages.created_at)` 每日聚合（UTC，`datetime.utcnow()`），补齐全部日期返回固定长度数组；口径 = 每天创建页面数
 - **get_optional_user**: 公开端点的可选鉴权依赖（有 token 解析用户，无则 None）。`get_user_profile` 用它判断是否本人，本人返回 `is_published OR is_saved`（含草稿），他人只返回已发布
 - **page_id**: 发布时可自定义，同用户内唯一（大小写不敏感）。修改时旧 page_id 记录到 `page_id_redirects` 表，访问旧链接 301 重定向
 - **passlib/bcrypt**: 需 `bcrypt<4.1.0`（新版不兼容 passlib）

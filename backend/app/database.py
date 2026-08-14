@@ -66,6 +66,9 @@ def _run_migration_sync(conn):
     if "bio" not in user_columns:
         logger.info("Migrating: adding bio column to users")
         conn.execute(text("ALTER TABLE users ADD COLUMN bio TEXT"))
+    if "readme" not in user_columns:
+        logger.info("Migrating: adding readme column to users")
+        conn.execute(text("ALTER TABLE users ADD COLUMN readme TEXT"))
 
     # ── pages: cover_url (snapshot/cover image) ──
     if "cover_url" not in columns:

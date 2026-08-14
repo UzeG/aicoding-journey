@@ -46,6 +46,7 @@ class UserResponse(BaseModel):
 class UpdateProfileRequest(BaseModel):
     nickname: Optional[str] = Field(default=None, min_length=1, max_length=50)
     bio: Optional[str] = Field(default=None, max_length=160)
+    readme: Optional[str] = Field(default=None, max_length=20000)
 
 
 # ── Generate ──
@@ -169,12 +170,44 @@ class UserPublicResponse(BaseModel):
     nickname: Optional[str]
     avatar_url: Optional[str] = None
     bio: Optional[str] = None
+    readme: Optional[str] = None
     user_id: Optional[str] = None
 
 
 class UserProfileResponse(BaseModel):
     user: UserPublicResponse
     pages: list[PageListItem]
+    follower_count: int = 0
+    following_count: int = 0
+    is_following: bool = False
+
+
+# ── Follow ──
+
+class FollowResponse(BaseModel):
+    ok: bool
+    is_following: bool
+    follower_count: int
+
+
+class FollowUserItem(BaseModel):
+    id: str
+    user_id: str
+    nickname: Optional[str] = None
+    avatar_url: Optional[str] = None
+    bio: Optional[str] = None
+    is_following: bool = False
+
+
+# ── Activity ──
+
+class ActivityDay(BaseModel):
+    date: str
+    count: int
+
+
+class ActivityResponse(BaseModel):
+    days: list[ActivityDay]
 
 
 # ── Proxy ──

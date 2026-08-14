@@ -1,5 +1,5 @@
 import api from './client'
-import type { CheckPageIdResponse, CheckUserIdResponse, LLMSettings, PageDetail, PageItem, PublishResult, RecommendedPrompt, User, UserProfile } from '../types'
+import type { ActivityResponse, CheckPageIdResponse, CheckUserIdResponse, FollowResponse, FollowUserItem, LLMSettings, PageDetail, PageItem, PublishResult, RecommendedPrompt, User, UserProfile } from '../types'
 
 // Auth
 export const login = (account: string, password: string) =>
@@ -12,7 +12,7 @@ export const checkUserId = (user_id: string) =>
   api.get<CheckUserIdResponse>('/auth/check', { params: { user_id } })
 
 export const getMe = () => api.get<User>('/auth/me')
-export const updateProfile = (data: { nickname?: string; bio?: string }) =>
+export const updateProfile = (data: { nickname?: string; bio?: string; readme?: string }) =>
   api.put<User>('/auth/me', data)
 export const uploadAvatar = (file: File) => {
   const form = new FormData()
@@ -56,6 +56,12 @@ export const uploadHtml = (file: File) => {
 
 // Users
 export const getUserProfile = (user_id: string) => api.get<UserProfile>(`/users/${user_id}`)
+export const followUser = (user_id: string) => api.post<FollowResponse>(`/users/${user_id}/follow`)
+export const unfollowUser = (user_id: string) => api.delete<FollowResponse>(`/users/${user_id}/follow`)
+export const getFollowers = (user_id: string) => api.get<FollowUserItem[]>(`/users/${user_id}/followers`)
+export const getFollowing = (user_id: string) => api.get<FollowUserItem[]>(`/users/${user_id}/following`)
+export const getUserActivity = (user_id: string, days = 365) =>
+  api.get<ActivityResponse>(`/users/${user_id}/activity`, { params: { days } })
 
 // Prompts
 export const listPrompts = () => api.get<RecommendedPrompt[]>('/prompts')

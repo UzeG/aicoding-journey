@@ -60,10 +60,38 @@ export interface UserPublic {
   nickname: string | null
   avatar_url: string | null
   bio: string | null
+  readme: string | null
   user_id: string | null
 }
 
 export interface UserProfile {
   user: UserPublic
   pages: PageItem[]
+  follower_count: number
+  following_count: number
+  is_following: boolean
+}
+
+export interface FollowUserItem {
+  id: string
+  user_id: string
+  nickname: string | null
+  avatar_url: string | null
+  bio: string | null
+  is_following: boolean
+}
+
+export interface FollowResponse {
+  ok: boolean
+  is_following: boolean
+  follower_count: number
+}
+
+export interface ActivityDay {
+  date: string
+  count: number
+}
+
+export interface ActivityResponse {
+  days: ActivityDay[]
 }

@@ -157,11 +157,13 @@ async def update_profile(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Update editable profile fields (nickname, bio)."""
+    """Update editable profile fields (nickname, bio, readme)."""
     if req.nickname is not None:
         user.nickname = req.nickname.strip()
     if req.bio is not None:
         user.bio = req.bio.strip() or None
+    if req.readme is not None:
+        user.readme = req.readme.strip() or None
     await db.commit()
     await db.refresh(user)
     return _user_response(user)

@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import os
+from datetime import datetime, timedelta
 from typing import Optional
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile, status
@@ -10,9 +11,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user, get_db, get_optional_user
 from app.config import settings
-from app.models import AuditLog, Page, PageIdRedirect, User
+from app.models import AuditLog, Follow, Page, PageIdRedirect, User
 from app.schemas import (
+    ActivityDay,
+    ActivityResponse,
     CheckPageIdResponse,
+    FollowResponse,
+    FollowUserItem,
     PageListItem,
     PageResponse,
     PageUpdate,
@@ -441,6 +446,44 @@ async def serve_page(
 # ── Public user profile API ──
 
 
+async def _resolve_user(db: AsyncSession, user_id: str) -> User:
+    result = await db.execute(select(User).where(func.lower(User.user_id) == user_id.lower()))
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    return user
+
+
+async def _build_follow_items(
+    db: AsyncSession,
+    rows: list[tuple[Follow, User]],
+    viewer: Optional[User],
+) -> list[FollowUserItem]:
+    """Rows are (Follow, User) pairs from a joined followers/following query."""
+    items = [
+        FollowUserItem(
+            id=u.id,
+            user_id=u.user_id or "",
+            nickname=u.nickname,
+            avatar_url=u.avatar_url,
+            bio=u.bio,
+        )
+        for _, u in rows
+    ]
+    if viewer and items:
+        followed_ids = [it.id for it in items]
+        res = await db.execute(
+            select(Follow.following_id).where(
+                Follow.follower_id == viewer.id,
+                Follow.following_id.in_(followed_ids),
+            )
+        )
+        following_set = set(res.scalars().all())
+        for it in items:
+            it.is_following = it.id in following_set
+    return items
+
+
 @users_router.get("/{user_id}", response_model=UserProfileResponse)
 async def get_user_profile(
     user_id: str,
@@ -468,11 +511,26 @@ async def get_user_profile(
     )
     pages = pages_result.scalars().all()
 
+    follower_count = await db.scalar(
+        select(func.count()).select_from(Follow).where(Follow.following_id == user.id)
+    ) or 0
+    following_count = await db.scalar(
+        select(func.count()).select_from(Follow).where(Follow.follower_id == user.id)
+    ) or 0
+
+    is_following = False
+    if viewer is not None and viewer.id != user.id:
+        rel = await db.execute(
+            select(Follow).where(Follow.follower_id == viewer.id, Follow.following_id == user.id)
+        )
+        is_following = rel.scalar_one_or_none() is not None
+
     return UserProfileResponse(
         user=UserPublicResponse(
             nickname=user.nickname,
             avatar_url=user.avatar_url,
             bio=user.bio,
+            readme=user.readme,
             user_id=user.user_id,
         ),
         pages=[PageListItem(
@@ -487,4 +545,112 @@ async def get_user_profile(
             created_at=p.created_at,
             updated_at=p.updated_at,
         ) for p in pages],
+        follower_count=follower_count,
+        following_count=following_count,
+        is_following=is_following,
     )
+
+
+@users_router.post("/{user_id}/follow", response_model=FollowResponse)
+async def follow_user(
+    user_id: str,
+    viewer: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    target = await _resolve_user(db, user_id)
+    if target.id == viewer.id:
+        raise HTTPException(status_code=400, detail="You cannot follow yourself")
+
+    existing = await db.execute(
+        select(Follow).where(Follow.follower_id == viewer.id, Follow.following_id == target.id)
+    )
+    if existing.scalar_one_or_none() is None:
+        db.add(Follow(follower_id=viewer.id, following_id=target.id))
+        await db.commit()
+
+    count = await db.scalar(
+        select(func.count()).select_from(Follow).where(Follow.following_id == target.id)
+    )
+    return FollowResponse(ok=True, is_following=True, follower_count=count or 0)
+
+
+@users_router.delete("/{user_id}/follow", response_model=FollowResponse)
+async def unfollow_user(
+    user_id: str,
+    viewer: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    target = await _resolve_user(db, user_id)
+    result = await db.execute(
+        select(Follow).where(Follow.follower_id == viewer.id, Follow.following_id == target.id)
+    )
+    rel = result.scalar_one_or_none()
+    if rel is not None:
+        await db.delete(rel)
+        await db.commit()
+
+    count = await db.scalar(
+        select(func.count()).select_from(Follow).where(Follow.following_id == target.id)
+    )
+    return FollowResponse(ok=True, is_following=False, follower_count=count or 0)
+
+
+@users_router.get("/{user_id}/followers", response_model=list[FollowUserItem])
+async def list_followers(
+    user_id: str,
+    viewer: Optional[User] = Depends(get_optional_user),
+    db: AsyncSession = Depends(get_db),
+):
+    target = await _resolve_user(db, user_id)
+    result = await db.execute(
+        select(Follow, User)
+        .join(User, Follow.follower_id == User.id)
+        .where(Follow.following_id == target.id)
+        .order_by(Follow.created_at.desc())
+    )
+    return await _build_follow_items(db, result.all(), viewer)
+
+
+@users_router.get("/{user_id}/following", response_model=list[FollowUserItem])
+async def list_following(
+    user_id: str,
+    viewer: Optional[User] = Depends(get_optional_user),
+    db: AsyncSession = Depends(get_db),
+):
+    target = await _resolve_user(db, user_id)
+    result = await db.execute(
+        select(Follow, User)
+        .join(User, Follow.following_id == User.id)
+        .where(Follow.follower_id == target.id)
+        .order_by(Follow.created_at.desc())
+    )
+    return await _build_follow_items(db, result.all(), viewer)
+
+
+@users_router.get("/{user_id}/activity", response_model=ActivityResponse)
+async def get_user_activity(
+    user_id: str,
+    days: int = Query(365, ge=1, le=365),
+    db: AsyncSession = Depends(get_db),
+):
+    """Daily page-creation counts for the last {days} days (contribution-graph style)."""
+    target = await _resolve_user(db, user_id)
+    since = datetime.utcnow().date() - timedelta(days=days - 1)
+
+    result = await db.execute(
+        select(
+            func.strftime("%Y-%m-%d", Page.created_at).label("day"),
+            func.count().label("cnt"),
+        )
+        .where(Page.user_id == target.id, Page.status == "active", Page.created_at >= since)
+        .group_by("day")
+    )
+    counts = {row.day: row.cnt for row in result.all()}
+
+    return ActivityResponse(days=[
+        ActivityDay(
+            date=(since + timedelta(days=i)).isoformat(),
+            count=counts.get((since + timedelta(days=i)).isoformat(), 0),
+        )
+        for i in range(days)
+    ])
