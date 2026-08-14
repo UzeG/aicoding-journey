@@ -75,7 +75,7 @@
 #pi-trigger{position:fixed;right:-18px;top:50%;transform:translateY(-50%);z-index:2147483004;width:36px;height:36px;border:none;background:var(--pi-theme);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;border-radius:50%;box-shadow:none;opacity:.35;transition:opacity .2s ease,right .3s ease,top .3s ease,bottom .3s ease;}
 #pi-trigger:hover{filter:brightness(.9);opacity:1;}
 html.pi-open #pi-trigger{right:calc(min(90vw,400px) - 18px);opacity:.9;}
-#pi-panel{position:fixed;right:0;top:50%;transform:translate(100%,-50%);z-index:2147483002;width:min(90vw,400px);height:min(88vh,880px);background:var(--pi-theme);border-radius:1rem 0 0 1rem;box-shadow:-3px 0 14px rgba(0,0,0,.06);display:flex;flex-direction:column;overflow:hidden;font-family:system-ui,-apple-system,sans-serif;color:#fff;opacity:0;visibility:hidden;transition:transform .3s ease,opacity .3s ease,visibility 0s linear .3s;}
+#pi-panel{position:fixed;right:0;top:50%;transform:translate(100%,-50%);z-index:2147483002;width:min(90vw,400px);height:min(88vh,880px);background:var(--pi-theme);border-radius:1rem 0 0 1rem;box-shadow:-3px 0 14px rgba(0,0,0,.06);display:flex;flex-direction:column;overflow:hidden;font-family:system-ui,-apple-system,sans-serif;color:#fff;opacity:0;visibility:hidden;transition:transform .3s ease,opacity .3s ease,visibility 0s linear .3s;touch-action:none;}
 #pi-panel.open{transform:translate(0,-50%);opacity:1;visibility:visible;transition:transform .3s ease,opacity .3s ease,visibility 0s;}
 #pi-panel .pi-head{display:flex;align-items:center;gap:.8rem;padding:.8rem 1.1rem;border-bottom:1px solid rgba(255,255,255,.15);flex-shrink:0;}
 #pi-panel .pi-title{font-weight:600;font-size:1rem;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;}
@@ -84,7 +84,7 @@ html.pi-open #pi-trigger{right:calc(min(90vw,400px) - 18px);opacity:.9;}
 #pi-panel .pi-tabs{display:flex;border-bottom:1px solid rgba(255,255,255,.15);flex-shrink:0;}
 #pi-panel .pi-tab{flex:1;padding:.7rem .5rem;background:none;border:none;font:inherit;cursor:pointer;color:rgba(255,255,255,.7);border-bottom:2px solid transparent;}
 #pi-panel .pi-tab.on{color:#fff;border-bottom-color:#fff;font-weight:600;}
-#pi-panel .pi-body{flex:1;overflow-y:auto;padding:1rem 1.1rem;}
+#pi-panel .pi-body{flex:1;overflow-y:auto;padding:1rem 1.1rem;touch-action:auto;overscroll-behavior:contain;}
 #pi-panel .pi-body[hidden]{display:none;}
 #pi-panel .pi-grabber{display:none;}
 /* author tab */
