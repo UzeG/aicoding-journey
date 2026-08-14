@@ -1,4 +1,4 @@
-# Frontend — AI Coding HTML 托管平台
+# Frontend — Ship 网页工具托管平台
 
 React 19 + TypeScript + Vite + TailwindCSS 4 + Monaco Editor + Zustand + shadcn/ui + lucide-react。
 
@@ -29,6 +29,7 @@ frontend/src/
 ├── lib/
 │   ├── utils.ts                  # cn() 工具函数 (clsx + tailwind-merge, shadcn 依赖)
 │   ├── promptMeta.ts             # 推荐提示词关键词 → icon/accent/label 映射
+│   ├── theme.ts                  # 个人主题色：色卡/applyTheme(覆盖 --primary)/cache
 │   └── download.ts               # downloadHtml / sanitizeFilename（Blob 下载，中文文件名安全）
 ├── stores/                       # Zustand
 │   ├── auth.ts                   # 登录状态, user, fetchUser, logout
@@ -39,6 +40,8 @@ frontend/src/
 │   ├── ui/                       # shadcn/ui 组件 (Button/Input/Textarea/Card/Badge/Dialog/Select/Label)
 │   ├── layout/AppHeader.tsx      # header (logo + 右侧 avatar 下拉菜单)
 │   ├── home/                     # 首页区块组件
+│   │   ├── HeroPreview.tsx        # hero 工具部署演示（一句话→工具界面组装→已部署，自演+随输入）
+│   │   ├── HeroBackground.tsx     # hero Three.js 背景（细点+鼠标视差/推开+点击圆环，懒加载 three）
 │   │   ├── PromptCard.tsx         # 推荐提示词卡片（图标 + 分类标签）
 │   │   ├── PromptCardSkeleton.tsx # 推荐提示词加载骨架屏
 │   │   ├── ShowcaseSection.tsx    # 示例作品展示区（静态假数据）
@@ -66,7 +69,7 @@ frontend/src/
 │       ├── ContributionHeatmap.tsx # 活跃度贡献热力图（纯 CSS，52×7 格）
 │       └── Markdown.tsx          # react-markdown + remark-gfm 封装（.markdown-body 样式）
 └── views/
-    ├── HomeView.tsx              # 首页 (Hero + 推荐提示词)
+    ├── HomeView.tsx              # 首页（双栏 Hero：左文案+输入 / 右工具预览，+ Three.js 背景动效）
     ├── GeneratorView.tsx         # 分屏生成器 ★核心页面
     ├── UserProfileView.tsx       # 用户主页（tab 栏下移 header；首页/项目/设置）
     ├── LoginView.tsx             # 登录/注册（支持手机号 + user_id）
@@ -130,7 +133,9 @@ UserProfileView 点击编辑 → navigate("/generator?pageId={id}")
 - **LLM 配置**: Settings 页面存到后端 users 表，API Key 使用 password 输入框
 - **401 处理**: axios 拦截器自动清除 token 并跳转 /login
 - **TailwindCSS 4**: 使用 `@tailwindcss/vite` 插件，CSS-first 配置
-- **shadcn/ui**: CSS-first 配置，`index.css` 的 `:root` 定义 CSS 变量 + `@theme inline` 映射到 Tailwind token（主色 emerald）。组件手写维护在 `src/components/ui/`（未用 shadcn CLI）
+- **shadcn/ui**: CSS-first 配置，`index.css` 的 `:root` 定义 CSS 变量 + `@theme inline` 映射到 Tailwind token。色系「墨水与光」：纸 `#F7F6F2` / 墨 `#20221F` / 主色深青 `#0E7A6C` / 编译中深琥珀 `#A8580F` / 成功绿 `#4A7C59`。组件手写维护在 `src/components/ui/`（未用 shadcn CLI）
+- **个人主题色**: `lib/theme.ts` 提供 7 色色卡 + `applyTheme()`（覆盖根元素 `--primary/--ring/--live`，只换主色不动纸面/墨色）+ localStorage 缓存（key `ship.theme`）。`App.tsx` 登录后以服务端 `user.theme` 为准应用、首帧用缓存避免闪默认色；`SettingsView` 设置页色卡乐观更新 + 失败回滚。`applyTheme` 派发 `themechange` 事件供动态组件（HeroBackground 等）跟随变色
+- **首页 Hero**: 双栏布局——左文案 + 真实 `PromptInput`（onChange 驱动右面板），右 `HeroPreview` 工具部署演示（样本自演：prompt 打字机 → 迷你工具界面逐个组装 → 已部署；访客输入时标题跟随其文字）。背景 `HeroBackground`（Three.js：稀疏细点 + 鼠标视差/推开 + 点击扩散圆环，圆环/细点跟随主题色）。`three` 经动态 import 懒加载进独立 chunk；`prefers-reduced-motion` 静态一帧；canvas `pointer-events-none`（监听挂在 window）
 - **图标**: 所有 UI 一律用 lucide-react 图标，禁用 emoji。推荐提示词图标映射见 `src/lib/promptMeta.ts`（关键词 → icon/accent/label，未命中回落 Sparkles）
 - **Radix Select 哨兵值**: SelectItem 的 value 不允许空字符串，"自定义..." 选项用 `__custom__` 哨兵，选中后映射回 `''` 再渲染自定义 Input（见 SettingsView）
 - **ID 类型**: 所有 Page ID 为 `string`（不是 `number`），禁止 `parseInt()`——Snowflake ID 超 JS 安全整数

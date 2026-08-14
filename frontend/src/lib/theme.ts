@@ -7,20 +7,20 @@ export interface ThemeAccent {
   hex: string
 }
 
-/** 第一个是平台默认的标签红；其余为经过对比度校验的候选 */
+/** 第一个是平台默认的深青；其余为经过对比度校验的候选（白字 ≥ 4.5:1） */
 export const THEME_ACCENTS: ThemeAccent[] = [
-  { key: 'vermillion', label: '标签红', hex: '#C8432B' },
-  { key: 'teal', label: '钢青', hex: '#2E6E6A' },
+  { key: 'teal', label: '深青', hex: '#0E7A6C' },
   { key: 'slate', label: '石板蓝', hex: '#3D5A80' },
-  { key: 'moss', label: '墨绿', hex: '#3F6B4F' },
   { key: 'indigo', label: '靛蓝', hex: '#46549C' },
+  { key: 'moss', label: '墨绿', hex: '#3F6B4F' },
   { key: 'plum', label: '紫', hex: '#6E3B5E' },
-  { key: 'ochre', label: '深金', hex: '#8A5E1F' },
+  { key: 'amber', label: '深琥珀', hex: '#A8580F' },
+  { key: 'crimson', label: '暗红', hex: '#A8342B' },
 ]
 
 export const DEFAULT_THEME = THEME_ACCENTS[0].hex
 
-const THEME_STORAGE_KEY = 'htmlhost.theme'
+const THEME_STORAGE_KEY = 'ship.theme'
 
 /** 覆盖根元素的 --primary/--ring/--live。传入 null 时移除覆盖，回落到 :root 默认 */
 export function applyTheme(hex: string | null | undefined): void {
@@ -31,6 +31,8 @@ export function applyTheme(hex: string | null | undefined): void {
   } else {
     vars.forEach((v) => root.style.setProperty(v, hex))
   }
+  // 通知关注主题色的组件（如 hero 粒子场）重新读取 --primary
+  window.dispatchEvent(new CustomEvent('themechange'))
 }
 
 /** 读取缓存的个人主题色（首帧用，避免刷新闪默认色） */

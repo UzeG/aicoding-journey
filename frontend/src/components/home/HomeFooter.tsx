@@ -29,18 +29,10 @@ export default function HomeFooter() {
       <footer className="border-t border-border bg-card">
         <div className="max-w-5xl mx-auto px-4 py-8">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-muted-foreground">
-            <div className="flex items-center gap-2">
-              <span className="flex items-center justify-center size-6 rounded bg-primary text-primary-foreground font-mono text-[0.6rem] font-semibold">
-                &lt;/&gt;
-              </span>
-              <span className="font-mono text-sm font-semibold tracking-tight text-foreground">
-                HTML<span className="text-primary">_</span>HOST
-              </span>
-            </div>
-            <p>一句话，编译成能用的网页 · HTML 托管平台</p>
-            <p className="font-mono text-xs">© 2026 HTML_HOST</p>
+            <span className="text-sm font-bold tracking-tight text-foreground">Ship</span>
+            <p>一句话，部署一个能用的工具 · 网页托管平台</p>
+            <p className="text-xs">© 2026</p>
           </div>
-          <p className="mt-5 text-center font-mono text-xs text-muted-foreground/70">&lt;/footer&gt;</p>
         </div>
       </footer>
     </div>

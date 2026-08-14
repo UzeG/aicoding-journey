@@ -9,54 +9,51 @@
   /* 个人主页 tab 栏高度（tab 栏 sticky 在 header 下方，aside sticky 需再加此高度） */
   --profile-tab-height: 3rem;
 
-  --radius: 0.5rem;
+  --radius: 0.625rem;
 
-  /* 源页 · Markup —— 界面即 HTML 源码。
-     配色就是一套手工调校的语法高亮主题，每个角色对应一类源码元素：
-       标签色（元素名）= 主色    属性色 = 次级    字符串色 = 成功    注释色 = 弱化
+  /* 墨水与光 · Ink & Light —— 干净暖纸 + 深墨 + 深青主色 + 琥珀运行态。
      全部走 shadcn CSS 变量，未来换身份只需改 token。 */
-  --background: #f3f3ee;
-  --foreground: #211e19;
+  --background: #f7f6f2;
+  --foreground: #20221f;
 
   --card: #ffffff;
-  --card-foreground: #211e19;
+  --card-foreground: #20221f;
 
   --popover: #ffffff;
-  --popover-foreground: #211e19;
+  --popover-foreground: #20221f;
 
-  /* 标签色 —— 元素名 <div> */
-  --primary: #c8432b;
+  /* 主色：深青 */
+  --primary: #0e7a6c;
   --primary-foreground: #ffffff;
 
-  /* 属性色 —— class="…" */
-  --secondary: #2e6e6a;
-  --secondary-foreground: #ffffff;
+  /* 次级：浅青表面 */
+  --secondary: #e0efeb;
+  --secondary-foreground: #0e6b5f;
 
-  /* 注释色 —— <!-- … --> */
-  --muted: #edebe2;
-  --muted-foreground: #6f6859;
+  /* 弱化 */
+  --muted: #f0efea;
+  --muted-foreground: #6e6a61;
 
-  --accent: #ece8dc;
-  --accent-foreground: #211e19;
+  --accent: #e7ebe8;
+  --accent-foreground: #20221f;
 
   --destructive: #b3261e;
   --destructive-foreground: #ffffff;
 
-  /* 字符串色 —— "…"（成功/高亮用） */
-  --success: #9a7a2e;
+  --success: #4a7c59;
 
-  --border: #e0ddd0;
-  --input: #d7d3c4;
-  --ring: #c8432b;
+  --border: #e3e0d7;
+  --input: #d8d5ca;
+  --ring: #0e7a6c;
 
-  /* 运行中/流式生成 = 标签色，强调「此刻正在产生标记」 */
-  --live: #c8432b;
+  /* 运行中/编译中：深琥珀 */
+  --live: #a8580f;
 
-  --chart-1: #c8432b;
-  --chart-2: #2e6e6a;
-  --chart-3: #9a7a2e;
-  --chart-4: #8c8676;
-  --chart-5: #d8d4c4;
+  --chart-1: #0e7a6c;
+  --chart-2: #5f9a8e;
+  --chart-3: #a8580f;
+  --chart-4: #46549c;
+  --chart-5: #d8d5ca;
 }
 
 @theme inline {
@@ -98,21 +95,6 @@
 }
 
 @theme {
-  /* 首页 Hero 背景光晕慢速漂浮。用 scale/translate 属性而非 transform，避免与 Tailwind transform 工具互相覆盖 */
-  --animate-glow-float: glow-float 14s ease-in-out infinite;
-
-  @keyframes glow-float {
-    0%,
-    100% {
-      scale: 1;
-      translate: 0 0;
-    }
-    50% {
-      scale: 1.06;
-      translate: 0 -14px;
-    }
-  }
-
   /* 首页 Hero 内容入场 */
   --animate-fade-up: fade-up 0.6s ease-out both;
 
@@ -127,18 +109,6 @@
     }
   }
 
-  /* 终端行光标闪烁 */
-  --animate-caret-blink: caret-blink 1.1s step-end infinite;
-
-  @keyframes caret-blink {
-    0%,
-    100% {
-      opacity: 1;
-    }
-    50% {
-      opacity: 0;
-    }
-  }
 }
 
 body {

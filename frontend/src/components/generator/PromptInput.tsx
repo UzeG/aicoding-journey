@@ -10,9 +10,11 @@ interface Props {
   initialValue?: string
   /** 透传给 textarea 的类名（首页卡片化输入框传 bg-transparent） */
   textareaClassName?: string
+  /** 输入变化通知（首页用于驱动编译面板演示） */
+  onChange?: (value: string) => void
 }
 
-export default function PromptInput({ onGenerate, disabled, initialValue = '', textareaClassName }: Props) {
+export default function PromptInput({ onGenerate, disabled, initialValue = '', textareaClassName, onChange }: Props) {
   const [value, setValue] = useState(initialValue)
 
   const handleSubmit = () => {
@@ -32,7 +34,10 @@ export default function PromptInput({ onGenerate, disabled, initialValue = '', t
     <div className="flex gap-3">
       <Textarea
         value={value}
-        onChange={(e) => setValue(e.target.value)}
+        onChange={(e) => {
+          setValue(e.target.value)
+          onChange?.(e.target.value)
+        }}
         onKeyDown={handleKeyDown}
         placeholder="描述你想造的工具，例如：做一个话费计算器..."
         rows={2}
