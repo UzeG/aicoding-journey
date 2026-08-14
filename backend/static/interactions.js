@@ -86,6 +86,7 @@ html.pi-open #pi-trigger{right:calc(min(90vw,400px) - 18px);opacity:.9;}
 #pi-panel .pi-tab.on{color:#fff;border-bottom-color:#fff;font-weight:600;}
 #pi-panel .pi-body{flex:1;overflow-y:auto;padding:1rem 1.1rem;}
 #pi-panel .pi-body[hidden]{display:none;}
+#pi-panel .pi-grabber{display:none;}
 /* author tab */
 #pi-panel .pi-author{display:flex;align-items:center;gap:.8rem;padding-bottom:.9rem;border-bottom:1px solid rgba(255,255,255,.15);margin-bottom:1rem;cursor:pointer;}
 #pi-panel .pi-avatar{width:56px;height:56px;border-radius:50%;object-fit:cover;flex-shrink:0;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-weight:600;font-size:1.3rem;color:#fff;}
@@ -124,8 +125,10 @@ html.pi-open #pi-trigger{right:calc(min(90vw,400px) - 18px);opacity:.9;}
 .pi-modal-go{padding:.4rem 1rem;border:none;border-radius:8px;background:#fff;color:var(--pi-theme);font:inherit;font-weight:600;cursor:pointer;}
 @media (max-width:640px){
   #pi-trigger{right:1rem;bottom:1.2rem;top:auto;transform:none;width:36px;height:36px;border-radius:50%;box-shadow:0 2px 14px rgba(0,0,0,.35);}
-  html.pi-open #pi-trigger{right:1rem;bottom:calc(78vh + .75rem);opacity:.9;}
+  html.pi-open #pi-trigger{right:1rem;bottom:calc(78vh + .75rem);opacity:0;pointer-events:none;}
   #pi-panel{right:0;left:0;bottom:0;top:auto;transform:translateY(100%);width:100%;height:78vh;border-radius:1rem 1rem 0 0;box-shadow:0 -3px 14px rgba(0,0,0,.06);}
+  #pi-panel .pi-grabber{display:flex;align-items:center;justify-content:center;padding:.75rem 0 .4rem;cursor:grab;touch-action:none;flex-shrink:0;}
+  #pi-panel .pi-grabber::before{content:'';width:56px;height:5px;border-radius:3px;background:rgba(255,255,255,.55);}
   #pi-panel.open{transform:translateY(0);}
 }
 `
@@ -143,6 +146,11 @@ html.pi-open #pi-trigger{right:calc(min(90vw,400px) - 18px);opacity:.9;}
   // ── panel ──
   var panel = document.createElement('div')
   panel.id = 'pi-panel'
+
+  // grabber: mobile bottom-sheet drag handle (iOS-style)
+  var grabber = document.createElement('div')
+  grabber.className = 'pi-grabber'
+  panel.appendChild(grabber)
 
   // head: current work title + like/favorite
   var head = document.createElement('div')
@@ -270,6 +278,34 @@ html.pi-open #pi-trigger{right:calc(min(90vw,400px) - 18px);opacity:.9;}
     document.documentElement.classList.toggle('pi-open', OPEN)
     updateIcon()
   }
+
+  // ── mobile bottom-sheet drag-to-dismiss (grabber) ──
+  var dragStartY = 0
+  var dragging = false
+  grabber.addEventListener('pointerdown', function (e) {
+    if (!isMobile() || !OPEN) return
+    dragging = true
+    dragStartY = e.clientY
+    panel.style.transition = 'none'
+    try { grabber.setPointerCapture(e.pointerId) } catch (err) { /* ignore */ }
+    e.preventDefault()
+  })
+  grabber.addEventListener('pointermove', function (e) {
+    if (!dragging) return
+    var dy = e.clientY - dragStartY
+    if (dy < 0) dy = 0
+    panel.style.transform = 'translateY(' + dy + 'px)'
+  })
+  function endDrag(e) {
+    if (!dragging) return
+    dragging = false
+    var dy = e.clientY - dragStartY
+    panel.style.transition = ''
+    panel.style.transform = ''
+    if (dy > 100) togglePanel() // 拖过阈值收起
+  }
+  grabber.addEventListener('pointerup', endDrag)
+  grabber.addEventListener('pointercancel', endDrag)
 
   function updateIcon() {
     var key = OPEN ? (isMobile() ? 'down' : 'right') : (isMobile() ? 'up' : 'left')
