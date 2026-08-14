@@ -65,6 +65,16 @@
     '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>'
   var SEND_ICON =
     '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>'
+  var HEART_ICON =
+    '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>'
+  var HEART_FILLED =
+    '<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>'
+  var STAR_ICON =
+    '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>'
+  var STAR_FILLED =
+    '<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>'
+  var TRASH_ICON =
+    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>'
 
   var isMobile = function () {
     return window.matchMedia('(max-width: 640px)').matches
@@ -81,7 +91,8 @@ html.pi-open #pi-trigger{right:calc(min(88vw,360px) - 18px);opacity:.9;}
 #pi-panel.open{transform:translate(0,-50%);opacity:1;visibility:visible;transition:transform .3s ease,opacity .3s ease,visibility 0s;}
 #pi-panel .pi-head{display:flex;align-items:center;gap:.8rem;padding:.8rem 1.1rem;border-bottom:1px solid rgba(255,255,255,.15);flex-shrink:0;}
 #pi-panel .pi-title{font-weight:600;font-size:1rem;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;}
-#pi-panel .pi-btn{display:inline-flex;align-items:center;gap:.3rem;padding:.4rem .85rem;border:1px solid rgba(255,255,255,.35);border-radius:999px;background:rgba(255,255,255,.12);cursor:pointer;font:inherit;font-size:.85rem;color:#fff;white-space:nowrap;flex-shrink:0;}
+#pi-panel .pi-btn{display:inline-flex;align-items:center;gap:.3rem;padding:.4rem .7rem;border:1px solid rgba(255,255,255,.35);border-radius:999px;background:rgba(255,255,255,.12);cursor:pointer;font:inherit;font-size:.85rem;color:#fff;white-space:nowrap;flex-shrink:0;}
+#pi-panel .pi-btn .pi-count{min-width:1em;text-align:left;}
 #pi-panel .pi-btn.on{background:#fff;color:var(--pi-theme);border-color:#fff;}
 #pi-panel .pi-tabs{display:flex;border-bottom:1px solid rgba(255,255,255,.15);flex-shrink:0;}
 #pi-panel .pi-tab{flex:1;padding:.7rem .5rem;background:none;border:none;font:inherit;cursor:pointer;color:rgba(255,255,255,.7);border-bottom:2px solid transparent;}
@@ -109,13 +120,18 @@ html.pi-open #pi-trigger{right:calc(min(88vw,360px) - 18px);opacity:.9;}
 /* comments */
 #pi-panel .pi-comments{flex:1;display:flex;flex-direction:column;overflow:hidden;padding:0;touch-action:auto;}
 #pi-panel .pi-comments-list{flex:1;overflow-y:auto;padding:1rem 1.1rem;touch-action:auto;overscroll-behavior:contain;}
-#pi-panel .pi-comment{display:flex;gap:.6rem;padding:.6rem .8rem;border:1px solid rgba(255,255,255,.15);border-radius:10px;margin-bottom:.6rem;background:rgba(255,255,255,.12);}
+#pi-panel .pi-comment{position:relative;display:flex;gap:.6rem;padding:.6rem .8rem;border:1px solid rgba(255,255,255,.15);border-radius:10px;margin-bottom:.6rem;background:rgba(255,255,255,.12);}
 #pi-panel .pi-comment-avatar{width:32px;height:32px;border-radius:50%;object-fit:cover;flex-shrink:0;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-weight:600;font-size:.85rem;color:#fff;}
 #pi-panel .pi-comment-main{flex:1;min-width:0;}
 #pi-panel .pi-comment-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:.25rem;}
 #pi-panel .pi-comment-name{font-weight:600;font-size:.82rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 #pi-panel .pi-comment-time{color:rgba(255,255,255,.6);font-size:.72rem;margin-left:.5rem;}
-#pi-panel .pi-comment-del{background:none;border:none;color:rgba(255,255,255,.85);font-size:.72rem;cursor:pointer;padding:0 .2rem;}
+#pi-panel .pi-comment-del{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;padding:0;background:none;border:none;border-radius:6px;color:rgba(255,255,255,.85);cursor:pointer;}
+#pi-panel .pi-comment-del:hover{color:#fff;background:rgba(255,255,255,.15);}
+/* 删除评论确认（局部小弹窗，锚定在评论条上） */
+#pi-panel .pi-confirm{position:absolute;right:.6rem;top:.6rem;z-index:10;display:flex;align-items:center;gap:.45rem;background:#fff;color:var(--pi-theme);border-radius:10px;padding:.4rem .6rem;box-shadow:0 6px 18px rgba(0,0,0,.3);font-size:.8rem;white-space:nowrap;}
+#pi-panel .pi-confirm-yes{border:none;border-radius:6px;background:var(--pi-theme);color:#fff;padding:.28rem .6rem;cursor:pointer;font:inherit;font-size:.76rem;font-weight:600;}
+#pi-panel .pi-confirm-no{border:1px solid rgba(0,0,0,.12);border-radius:6px;background:transparent;color:var(--pi-theme);padding:.28rem .6rem;cursor:pointer;font:inherit;font-size:.76rem;}
 #pi-panel .pi-comment-body{font-size:.88rem;white-space:pre-wrap;word-break:break-word;}
 #pi-panel .pi-empty{color:rgba(255,255,255,.7);font-size:.85rem;text-align:center;padding:1.5rem 0;}
 #pi-panel .pi-form{flex-shrink:0;display:flex;align-items:stretch;gap:.5rem;padding:.7rem 1.1rem;border-top:1px solid rgba(255,255,255,.15);}
@@ -163,8 +179,8 @@ html.pi-open #pi-trigger{right:calc(min(88vw,360px) - 18px);opacity:.9;}
   head.className = 'pi-head'
   var titleEl = document.createElement('div')
   titleEl.className = 'pi-title'
-  var likeBtn = makeBtn('♡ 点赞')
-  var favBtn = makeBtn('☆ 收藏')
+  var likeBtn = makeBtn('')
+  var favBtn = makeBtn('')
   likeBtn.addEventListener('click', toggleLike)
   favBtn.addEventListener('click', toggleFavorite)
   head.appendChild(titleEl)
@@ -334,12 +350,14 @@ html.pi-open #pi-trigger{right:calc(min(88vw,360px) - 18px);opacity:.9;}
   }
 
   function setLikeButton() {
-    likeBtn.textContent = (state.liked ? '♥ 已赞' : '♡ 点赞') + ' ' + state.likeCount
+    likeBtn.innerHTML = (state.liked ? HEART_FILLED : HEART_ICON) + '<span class="pi-count">' + state.likeCount + '</span>'
+    likeBtn.title = state.liked ? '取消点赞' : '点赞'
     likeBtn.classList.toggle('on', state.liked)
   }
 
   function setFavButton() {
-    favBtn.textContent = (state.favorited ? '★ 已收藏' : '☆ 收藏') + ' ' + state.favCount
+    favBtn.innerHTML = (state.favorited ? STAR_FILLED : STAR_ICON) + '<span class="pi-count">' + state.favCount + '</span>'
+    favBtn.title = state.favorited ? '取消收藏' : '收藏'
     favBtn.classList.toggle('on', state.favorited)
   }
 
@@ -469,9 +487,13 @@ html.pi-open #pi-trigger{right:calc(min(88vw,360px) - 18px);opacity:.9;}
       if (c.is_mine) {
         var del = document.createElement('button')
         del.className = 'pi-comment-del'
-        del.textContent = '删除'
         del.type = 'button'
-        del.addEventListener('click', function () { deleteComment(c.id) })
+        del.title = '删除评论'
+        del.innerHTML = TRASH_ICON
+        del.addEventListener('click', function (e) {
+          e.stopPropagation()
+          showDeleteConfirm(c, del)
+        })
         right.appendChild(del)
       }
       headRow.appendChild(name)
@@ -587,6 +609,47 @@ html.pi-open #pi-trigger{right:calc(min(88vw,360px) - 18px);opacity:.9;}
       state.comments = state.comments.filter(function (c) { return c.id !== id })
       renderComments()
     }).catch(function () {})
+  }
+
+  // 删除评论的局部确认弹窗（锚定在评论条上，非全局遮罩）
+  function showDeleteConfirm(comment, anchorBtn) {
+    // 先关闭可能已存在的确认条
+    var prev = document.querySelector('.pi-confirm')
+    if (prev) prev.remove()
+
+    var item = anchorBtn.closest('.pi-comment')
+    if (!item) return
+
+    var pop = document.createElement('div')
+    pop.className = 'pi-confirm'
+    pop.textContent = '删除这条评论？'
+    var yes = document.createElement('button')
+    yes.type = 'button'
+    yes.className = 'pi-confirm-yes'
+    yes.textContent = '删除'
+    yes.addEventListener('click', function (e) {
+      e.stopPropagation()
+      pop.remove()
+      deleteComment(comment.id)
+    })
+    var no = document.createElement('button')
+    no.type = 'button'
+    no.className = 'pi-confirm-no'
+    no.textContent = '取消'
+    no.addEventListener('click', function (e) { e.stopPropagation(); pop.remove() })
+    pop.appendChild(yes)
+    pop.appendChild(no)
+    item.appendChild(pop)
+
+    // 点击弹窗外部任意处 → 关闭（延时绑定，避免吞掉本次触发的 click）
+    setTimeout(function () {
+      document.addEventListener('click', function handler(e) {
+        if (!document.contains(pop)) { document.removeEventListener('click', handler); return }
+        if (e.target.closest && e.target.closest('.pi-confirm')) return
+        pop.remove()
+        document.removeEventListener('click', handler)
+      })
+    }, 0)
   }
 
   // ── login modal ──
