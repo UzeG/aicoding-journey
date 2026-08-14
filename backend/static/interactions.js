@@ -27,7 +27,7 @@
   try { cachedTheme = localStorage.getItem('manifest.theme') } catch (e) { cachedTheme = null }
   applyTheme(cachedTheme)
   var OPEN = false
-  var state = { liked: false, favorited: false, likeCount: 0, favCount: 0, comments: [], page: null }
+  var state = { liked: false, favorited: false, likeCount: 0, favCount: 0, comments: [], page: null, isFollowing: false, followerCount: 0, viewerIsSelf: false }
 
   function getToken() {
     try { return localStorage.getItem(TOKEN_KEY) || '' } catch (e) { return '' }
@@ -93,6 +93,9 @@ html.pi-open #pi-trigger{right:calc(min(90vw,400px) - 18px);opacity:.9;}
 #pi-panel .pi-name{font-weight:600;font-size:1.05rem;}
 #pi-panel .pi-id{font-size:.82rem;color:rgba(255,255,255,.75);}
 #pi-panel .pi-bio{font-size:.85rem;color:rgba(255,255,255,.85);margin-top:.15rem;white-space:pre-wrap;word-break:break-word;}
+#pi-panel .pi-followers{font-size:.8rem;color:rgba(255,255,255,.75);margin-top:.15rem;}
+#pi-panel .pi-follow{margin-left:auto;display:inline-flex;align-items:center;gap:.3rem;padding:.35rem .8rem;border:1px solid rgba(255,255,255,.4);border-radius:999px;background:rgba(255,255,255,.12);color:#fff;cursor:pointer;font:inherit;font-size:.82rem;white-space:nowrap;flex-shrink:0;}
+#pi-panel .pi-follow.on{background:#fff;color:var(--pi-theme);border-color:#fff;font-weight:600;}
 #pi-panel .pi-works-title{font-weight:600;font-size:.92rem;margin-bottom:.6rem;color:rgba(255,255,255,.9);}
 #pi-panel .pi-work{display:flex;align-items:center;gap:.7rem;padding:.5rem .6rem;border-radius:10px;text-decoration:none;color:#fff;margin-bottom:.4rem;}
 #pi-panel .pi-work:hover{background:rgba(255,255,255,.12);}
@@ -181,11 +184,20 @@ html.pi-open #pi-trigger{right:calc(min(90vw,400px) - 18px);opacity:.9;}
   idEl.className = 'pi-id'
   var bioEl = document.createElement('div')
   bioEl.className = 'pi-bio'
+  var followersEl = document.createElement('div')
+  followersEl.className = 'pi-followers'
+  var followBtn = document.createElement('button')
+  followBtn.type = 'button'
+  followBtn.className = 'pi-follow'
+  followBtn.textContent = '关注'
+  followBtn.addEventListener('click', function (e) { e.stopPropagation(); toggleFollow() })
   authorMeta.appendChild(nameEl)
   authorMeta.appendChild(idEl)
   authorMeta.appendChild(bioEl)
+  authorMeta.appendChild(followersEl)
   authorCard.appendChild(avatarBox)
   authorCard.appendChild(authorMeta)
+  authorCard.appendChild(followBtn)
   // 点击作者信息栏 → 打开作者个人主页
   authorCard.addEventListener('click', function () {
     if (authorUserId) window.location.href = '/' + encodeURIComponent(authorUserId)
@@ -314,6 +326,9 @@ html.pi-open #pi-trigger{right:calc(min(90vw,400px) - 18px);opacity:.9;}
     // author's other published works — fetched separately
     if (author.user_id) {
       api('/api/users/' + encodeURIComponent(author.user_id)).then(function (d) {
+        state.isFollowing = !!d.is_following
+        state.followerCount = d.follower_count || 0
+        renderFollow()
         renderWorks((d.pages || []).filter(function (wp) {
           return wp.is_published && wp.page_id && wp.page_id !== p.page_id
         }), author.user_id)
@@ -405,6 +420,37 @@ html.pi-open #pi-trigger{right:calc(min(90vw,400px) - 18px);opacity:.9;}
       item.appendChild(headRow)
       item.appendChild(body)
       listEl.appendChild(item)
+    })
+  }
+
+  function renderFollow() {
+    followersEl.textContent = state.followerCount + ' 关注者'
+    if (state.viewerIsSelf || !state.page || !state.page.author) {
+      followBtn.style.display = 'none'
+      return
+    }
+    followBtn.style.display = ''
+    followBtn.textContent = state.isFollowing ? '已关注' : '关注'
+    followBtn.classList.toggle('on', state.isFollowing)
+  }
+
+  function toggleFollow() {
+    if (requireLogin()) return
+    var authorId = state.page && state.page.author ? state.page.author.user_id : ''
+    if (!authorId) return
+    var prevFollowing = state.isFollowing
+    var prevCount = state.followerCount
+    state.isFollowing = !prevFollowing
+    state.followerCount = state.isFollowing ? prevCount + 1 : Math.max(0, prevCount - 1)
+    renderFollow()
+    api('/api/users/' + encodeURIComponent(authorId) + '/follow', { method: prevFollowing ? 'DELETE' : 'POST' }).then(function (d) {
+      state.isFollowing = !!d.is_following
+      state.followerCount = d.follower_count || 0
+      renderFollow()
+    }).catch(function () {
+      state.isFollowing = prevFollowing
+      state.followerCount = prevCount
+      renderFollow()
     })
   }
 
@@ -529,6 +575,7 @@ html.pi-open #pi-trigger{right:calc(min(90vw,400px) - 18px);opacity:.9;}
     if (d.viewer) {
       state.liked = !!d.viewer.liked
       state.favorited = !!d.viewer.favorited
+      state.viewerIsSelf = !!d.viewer.is_self
     }
     renderHead()
     renderAuthor()

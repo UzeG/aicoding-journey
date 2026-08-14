@@ -414,7 +414,11 @@ async def get_page_interactions(
                 PageFavorite.page_fk == page.id, PageFavorite.user_fk == viewer.id
             )
         ) or 0
-        viewer_state = InteractionViewer(liked=liked > 0, favorited=favorited > 0)
+        viewer_state = InteractionViewer(
+            liked=liked > 0,
+            favorited=favorited > 0,
+            is_self=viewer.id == page.user_id,
+        )
 
     owner = await db.get(User, page.user_id)
     page_info = InteractionPageInfo(

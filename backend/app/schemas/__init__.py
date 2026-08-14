@@ -221,6 +221,7 @@ class CommentItem(BaseModel):
 class InteractionViewer(BaseModel):
     liked: bool = False
     favorited: bool = False
+    is_self: bool = False
 
 
 class InteractionPageInfo(BaseModel):
