@@ -45,7 +45,7 @@ export default function AppHeader() {
     <header className="bg-card border-b border-border sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 h-(--header-height) flex items-center justify-between">
         <Link to="/" className="flex items-center text-foreground no-underline">
-          <span className="text-base font-bold tracking-tight">Ship</span>
+          <span className="text-base font-bold tracking-tight">Manifest</span>
         </Link>
 
         <div className="flex items-center">

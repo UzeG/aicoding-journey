@@ -1,4 +1,4 @@
-# Ship · 一句话部署网页工具 — Demo
+# Manifest · 可复用的 HTML 页面平台 — Demo
 
 自然语言 → HTML 页面 → 公网链接，端到端自动化。
 

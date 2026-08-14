@@ -30,7 +30,7 @@ type Filter = 'all' | 'published' | 'draft'
 
 const FILTERS: { key: Filter; label: string }[] = [
   { key: 'all', label: '全部' },
-  { key: 'published', label: '已发布' },
+  { key: 'published', label: '已部署' },
   { key: 'draft', label: '草稿' },
 ]
 
@@ -358,7 +358,7 @@ export default function UserProfileView() {
                     <CardContent className="flex flex-col items-center justify-center py-20 text-muted-foreground">
                       <FileText className="size-12 mb-4 opacity-40" />
                       <p className="text-lg mb-4">
-                        {isOwnProfile ? (filter === 'all' ? '还没有生成过页面' : '没有符合条件的页面') : '还没有发布过页面'}
+                        {isOwnProfile ? (filter === 'all' ? '还没有生成过页面' : '没有符合条件的页面') : '还没有部署过页面'}
                       </p>
                       {isOwnProfile && filter === 'all' && (
                         <div className="flex flex-col items-center gap-3">
@@ -474,7 +474,7 @@ export default function UserProfileView() {
       <ConfirmDialog
         open={!!deleteTarget}
         title="删除页面"
-        message={`确定要删除「${deleteTarget?.title || '未命名页面'}」吗？已发布的链接将失效。`}
+        message={`确定要删除「${deleteTarget?.title || '未命名页面'}」吗？已部署的链接将失效。`}
         onConfirm={handleDelete}
         onCancel={() => setDeleteTarget(null)}
       />

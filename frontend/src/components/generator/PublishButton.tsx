@@ -48,7 +48,7 @@ export default function PublishButton({ pageId, disabled }: Props) {
       window.open(res.data.url, '_blank')
       navigate(`/${currentUserId}`)
     } catch (err: any) {
-      setError(err.response?.data?.detail || '发布失败，请重试')
+      setError(err.response?.data?.detail || '部署失败，请重试')
     } finally {
       setPublishing(false)
     }
@@ -58,7 +58,7 @@ export default function PublishButton({ pageId, disabled }: Props) {
     <div>
       <Button onClick={handleClick} disabled={disabled || publishing || !pageId}>
         {publishing ? <Loader2 className="size-4 animate-spin" /> : <Upload className="size-4" />}
-        {publishing ? '发布中...' : '发布页面'}
+        {publishing ? '部署中...' : '部署页面'}
       </Button>
 
       <SavePageDialog
@@ -67,9 +67,9 @@ export default function PublishButton({ pageId, disabled }: Props) {
         onConfirm={handleConfirm}
         defaultValues={{ title, page_id: '' }}
         loading={publishing}
-        title="发布页面"
-        description="确认页面名称后发布到公网。"
-        confirmLabel="发布"
+        title="部署页面"
+        description="确认页面名称后部署到公网。"
+        confirmLabel="部署"
         showPageId
       />
 
@@ -78,7 +78,7 @@ export default function PublishButton({ pageId, disabled }: Props) {
           <DialogHeader>
             <div className="flex items-center gap-2">
               <PartyPopper className="size-5 text-primary" />
-              <DialogTitle>发布成功！</DialogTitle>
+              <DialogTitle>部署成功！</DialogTitle>
             </div>
             <DialogDescription>页面已上线，复制链接或打开访问。</DialogDescription>
           </DialogHeader>

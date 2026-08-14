@@ -1,4 +1,4 @@
-# Backend — Ship 网页工具托管平台
+# Backend — Manifest 可复用的 HTML 页面平台
 
 Python 3.12 + FastAPI + SQLAlchemy async + SQLite。
 

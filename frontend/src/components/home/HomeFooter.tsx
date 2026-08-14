@@ -11,14 +11,14 @@ export default function HomeFooter() {
         <div className="max-w-3xl mx-auto px-4">
           <div className="rounded-lg border border-primary/20 bg-primary/5 p-10 md:p-14 text-center">
             <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground">
-              想做一个能用的工具？一句话开始
+              想部署一个能用的页面？
             </h2>
             <p className="mt-2 text-muted-foreground">
-              说出你的想法，几分钟内拥有一个可以分享的网页工具
+              上传你的 HTML，或让 AI 生成一个——一键部署上线，分享给所有人使用
             </p>
             <Button size="lg" className="mt-6" asChild>
               <Link to="/generator">
-                <Sparkles className="size-4" /> 开始创作
+                <Sparkles className="size-4" /> 开始部署
               </Link>
             </Button>
           </div>
@@ -29,8 +29,8 @@ export default function HomeFooter() {
       <footer className="border-t border-border bg-card">
         <div className="max-w-5xl mx-auto px-4 py-8">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-muted-foreground">
-            <span className="text-sm font-bold tracking-tight text-foreground">Ship</span>
-            <p>一句话，部署一个能用的工具 · 网页托管平台</p>
+            <span className="text-sm font-bold tracking-tight text-foreground">Manifest</span>
+            <p>上传或生成，一键部署上线 · HTML 页面平台</p>
             <p className="text-xs">© 2026</p>
           </div>
         </div>

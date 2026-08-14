@@ -1,4 +1,4 @@
-# Frontend — Ship 网页工具托管平台
+# Frontend — Manifest 可复用的 HTML 页面平台
 
 React 19 + TypeScript + Vite + TailwindCSS 4 + Monaco Editor + Zustand + shadcn/ui + lucide-react。
 
@@ -40,7 +40,8 @@ frontend/src/
 │   ├── ui/                       # shadcn/ui 组件 (Button/Input/Textarea/Card/Badge/Dialog/Select/Label)
 │   ├── layout/AppHeader.tsx      # header (logo + 右侧 avatar 下拉菜单)
 │   ├── home/                     # 首页区块组件
-│   │   ├── HeroPreview.tsx        # hero 工具部署演示（一句话→工具界面组装→已部署，自演+随输入）
+│   │   ├── HeroInput.tsx          # hero 输入区（上传/生成 分段切换，实际上传为草稿）
+│   │   ├── HeroPreview.tsx        # hero 部署演示（上传或生成→页面组装→已上线，自演+随输入）
 │   │   ├── HeroBackground.tsx     # hero Three.js 背景（细点+鼠标视差/推开+点击圆环，懒加载 three）
 │   │   ├── PromptCard.tsx         # 推荐提示词卡片（图标 + 分类标签）
 │   │   ├── PromptCardSkeleton.tsx # 推荐提示词加载骨架屏

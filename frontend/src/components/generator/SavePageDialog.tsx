@@ -110,7 +110,7 @@ export default function SavePageDialog({
                   value={values.page_id}
                   onChange={(e) => { setValues((v) => ({ ...v, page_id: e.target.value })); validatePageId(e.target.value) }}
                   maxLength={50}
-                  placeholder="留空则自动生成，发布后可在页面管理中修改"
+                  placeholder="留空则自动生成，部署后可在页面管理中修改"
                   disabled={loading}
                   onKeyDown={(e) => { if (e.key === 'Enter' && canSubmit) onConfirm(values) }}
                 />

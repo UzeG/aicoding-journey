@@ -20,7 +20,7 @@ export const THEME_ACCENTS: ThemeAccent[] = [
 
 export const DEFAULT_THEME = THEME_ACCENTS[0].hex
 
-const THEME_STORAGE_KEY = 'ship.theme'
+const THEME_STORAGE_KEY = 'manifest.theme'
 
 /** 覆盖根元素的 --primary/--ring/--live。传入 null 时移除覆盖，回落到 :root 默认 */
 export function applyTheme(hex: string | null | undefined): void {

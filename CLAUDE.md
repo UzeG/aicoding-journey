@@ -1,4 +1,4 @@
-# Ship · AI 网页工具托管平台
+# Manifest · 可复用的 HTML 页面平台
 
 自然语言 → LLM 流式生成 HTML → 一键发布为公网短链接 的端到端 Demo。
 

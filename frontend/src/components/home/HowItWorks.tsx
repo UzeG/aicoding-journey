@@ -1,4 +1,4 @@
-import { Type, Zap, Rocket, type LucideIcon } from 'lucide-react'
+import { Upload, Rocket, Share2, type LucideIcon } from 'lucide-react'
 
 interface Step {
   icon: LucideIcon
@@ -7,9 +7,9 @@ interface Step {
 }
 
 const STEPS: Step[] = [
-  { icon: Type, title: '描述想法', desc: '用一句话说清你要的工具，如「做一个话费计算器」' },
-  { icon: Zap, title: '生成或上传', desc: 'AI 实时生成你的工具，或直接上传本地文件' },
-  { icon: Rocket, title: '发布上架', desc: '一键生成公网链接，放进你的工具箱随时分享' },
+  { icon: Upload, title: '上传或生成', desc: '上传你造好的 HTML，或让 AI 按需求生成一个' },
+  { icon: Rocket, title: '一键部署', desc: '秒级部署成公网链接，人人可直接访问使用' },
+  { icon: Share2, title: '分享使用', desc: '把链接放进主页、分享出去，随时反复使用' },
 ]
 
 export default function HowItWorks() {
@@ -17,8 +17,8 @@ export default function HowItWorks() {
     <section className="py-16 md:py-20">
       <div className="max-w-5xl mx-auto px-4">
         <div className="text-center mb-12">
-          <h2 className="text-2xl md:text-3xl font-bold tracking-tight">三步，从想法到上架</h2>
-          <p className="mt-3 text-muted-foreground">不需要会写代码，把工具说清楚就行</p>
+          <h2 className="text-2xl md:text-3xl font-bold tracking-tight">三步，从文件到上线</h2>
+          <p className="mt-3 text-muted-foreground">上传或生成，都能快速部署</p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {STEPS.map((s, i) => (

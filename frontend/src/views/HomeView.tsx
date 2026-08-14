@@ -2,7 +2,7 @@ import { useEffect, useState, lazy, Suspense } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Sparkles, Upload, Rocket, type LucideIcon } from 'lucide-react'
 import { listPrompts } from '../api/endpoints'
-import PromptInput from '../components/generator/PromptInput'
+import HeroInput, { type HeroMode } from '../components/home/HeroInput'
 import HeroPreview from '../components/home/HeroPreview'
 import PromptCard from '../components/home/PromptCard'
 import PromptCardSkeleton from '../components/home/PromptCardSkeleton'
@@ -20,9 +20,9 @@ interface HeroFeature {
 }
 
 const HERO_FEATURES: HeroFeature[] = [
-  { icon: Sparkles, title: 'AI 流式生成' },
   { icon: Upload, title: '上传 HTML' },
-  { icon: Rocket, title: '一键发布' },
+  { icon: Sparkles, title: 'AI 生成' },
+  { icon: Rocket, title: '一键部署' },
 ]
 
 // three 随 HeroBackground 懒加载，不进入主包
@@ -32,6 +32,8 @@ export default function HomeView() {
   const [prompts, setPrompts] = useState<RecommendedPrompt[]>([])
   const [loading, setLoading] = useState(true)
   const [livePrompt, setLivePrompt] = useState('')
+  const [mode, setMode] = useState<HeroMode>('generate')
+  const [uploadName, setUploadName] = useState('')
   const { isAuthenticated } = useAuthStore()
   const navigate = useNavigate()
 
@@ -50,6 +52,11 @@ export default function HomeView() {
     navigate(`/generator?prompt=${encodeURIComponent(prompt)}`)
   }
 
+  const handleUploaded = (name: string) => {
+    setMode('upload')
+    setUploadName(name)
+  }
+
   return (
     <div>
       {/* Hero：左文案+输入，右编译面板（产品在首页上跑起来） */}
@@ -64,22 +71,21 @@ export default function HomeView() {
         <div className="relative max-w-6xl mx-auto px-4 grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
           <div className="animate-fade-up">
             <h1 className="text-4xl md:text-5xl xl:text-6xl font-extrabold tracking-tight leading-[1.08] mb-5">
-              一句话，
-              <span className="block text-primary">变成能用的网页</span>
+              上传或生成，
+              <span className="block text-primary">一键部署上线</span>
             </h1>
             <p className="text-lg text-muted-foreground leading-relaxed mb-8 max-w-md">
-              描述你想要的工具，AI 实时生成，一键部署成公网链接。
-              右边就是它工作的样子。
+              你的 HTML 可以是工具、个人主页，任何单页应用——一键部署成公网链接，
+              随时分享、反复使用。
             </p>
 
-            <div className="rounded-xl border border-border bg-card shadow-sm p-3">
-              <PromptInput
-                onGenerate={handleGenerate}
-                disabled={false}
-                textareaClassName="bg-transparent"
-                onChange={setLivePrompt}
-              />
-            </div>
+            <HeroInput
+              mode={mode}
+              onModeChange={setMode}
+              onGenerate={handleGenerate}
+              onPromptChange={setLivePrompt}
+              onUploaded={handleUploaded}
+            />
 
             <div className="mt-5 flex flex-wrap gap-x-6 gap-y-2 text-sm text-muted-foreground">
               {HERO_FEATURES.map((f) => (
@@ -92,7 +98,7 @@ export default function HomeView() {
           </div>
 
           <div className="animate-fade-up">
-            <HeroPreview prompt={livePrompt} />
+            <HeroPreview prompt={livePrompt} mode={mode} fileName={uploadName} />
           </div>
         </div>
       </section>
@@ -104,8 +110,8 @@ export default function HomeView() {
       <section className="py-16 md:py-20 bg-muted/40">
         <div className="max-w-5xl mx-auto px-4">
           <div className="text-center mb-12">
-            <h2 className="text-2xl md:text-3xl font-bold tracking-tight">不知道想做什么？从这些开始</h2>
-            <p className="mt-3 text-muted-foreground">点击卡片，用该描述开始生成</p>
+            <h2 className="text-2xl md:text-3xl font-bold tracking-tight">不知道造什么？从这些开始</h2>
+            <p className="mt-3 text-muted-foreground">点击卡片，让 AI 按需求生成一个</p>
           </div>
           {loading ? (
             <PromptCardSkeleton />
