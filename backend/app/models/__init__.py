@@ -53,6 +53,42 @@ class Page(Base):
     user = relationship("User", back_populates="pages")
 
 
+class PageLike(Base):
+    """A user liked a published page."""
+
+    __tablename__ = "page_likes"
+    __table_args__ = (UniqueConstraint("page_fk", "user_fk", name="uq_page_like"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    page_fk: Mapped[int] = mapped_column(BigInteger, ForeignKey("pages.id"), nullable=False, index=True)
+    user_fk: Mapped[str] = mapped_column(String(36), ForeignKey("users.id"), nullable=False, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
+class PageComment(Base):
+    """A comment on a published page."""
+
+    __tablename__ = "page_comments"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    page_fk: Mapped[int] = mapped_column(BigInteger, ForeignKey("pages.id"), nullable=False, index=True)
+    user_fk: Mapped[str] = mapped_column(String(36), ForeignKey("users.id"), nullable=False, index=True)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
+class PageFavorite(Base):
+    """A user favorited a published page."""
+
+    __tablename__ = "page_favorites"
+    __table_args__ = (UniqueConstraint("page_fk", "user_fk", name="uq_page_favorite"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    page_fk: Mapped[int] = mapped_column(BigInteger, ForeignKey("pages.id"), nullable=False, index=True)
+    user_fk: Mapped[str] = mapped_column(String(36), ForeignKey("users.id"), nullable=False, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+
 class PageIdRedirect(Base):
     __tablename__ = "page_id_redirects"
 

@@ -202,6 +202,50 @@ class FollowUserItem(BaseModel):
     is_following: bool = False
 
 
+# ── Interactions (page likes / comments / favorites) ──
+
+class CommentUser(BaseModel):
+    user_id: str
+    nickname: Optional[str] = None
+    avatar_url: Optional[str] = None
+
+
+class CommentItem(BaseModel):
+    id: int
+    content: str
+    created_at: datetime
+    user: CommentUser
+    is_mine: bool = False
+
+
+class InteractionViewer(BaseModel):
+    liked: bool = False
+    favorited: bool = False
+
+
+class InteractionPageInfo(BaseModel):
+    title: Optional[str] = None
+    page_id: Optional[str] = None
+    author: CommentUser
+
+
+class InteractionResponse(BaseModel):
+    like_count: int = 0
+    favorite_count: int = 0
+    comments: list[CommentItem] = []
+    viewer: Optional[InteractionViewer] = None
+    page: Optional[InteractionPageInfo] = None
+
+
+class CommentCreate(BaseModel):
+    content: str = Field(..., min_length=1, max_length=500)
+
+
+class ToggleResponse(BaseModel):
+    state: bool
+    count: int
+
+
 # ── Activity ──
 
 class ActivityDay(BaseModel):

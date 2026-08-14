@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Loader2, Phone, Lock, User, AtSign, Check, X } from 'lucide-react'
 import { useAuthStore } from '../stores/auth'
 import { checkUserId } from '../api/endpoints'
@@ -21,6 +21,8 @@ export default function LoginView() {
   const [loading, setLoading] = useState(false)
   const { login, register, fetchUser } = useAuthStore()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const redirect = searchParams.get('redirect')
   const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
   const validateUserId = useCallback((val: string) => {
@@ -62,7 +64,12 @@ export default function LoginView() {
       }
       // Load user data before navigating so header avatar/menu shows correctly
       await fetchUser()
-      navigate('/')
+      if (redirect && redirect.startsWith('/')) {
+        // 发布页是后端渲染的非 React 路由，必须整页跳回（不能用 navigate()）
+        window.location.href = redirect
+      } else {
+        navigate('/')
+      }
     } catch (err: any) {
       setError(err.response?.data?.detail || '操作失败，请重试')
     } finally {

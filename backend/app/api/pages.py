@@ -11,19 +11,35 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user, get_db, get_optional_user
 from app.config import settings
-from app.models import AuditLog, Follow, Page, PageIdRedirect, User
+from app.models import (
+    AuditLog,
+    Follow,
+    Page,
+    PageComment,
+    PageFavorite,
+    PageIdRedirect,
+    PageLike,
+    User,
+)
 from app.schemas import (
     ActivityDay,
     ActivityResponse,
     CheckPageIdResponse,
+    CommentCreate,
+    CommentItem,
+    CommentUser,
     FollowResponse,
     FollowUserItem,
+    InteractionPageInfo,
+    InteractionResponse,
+    InteractionViewer,
     PageListItem,
     PageResponse,
     PageUpdate,
     PublishRequest,
     PublishResponse,
     SaveDraftRequest,
+    ToggleResponse,
     UpdatePageIdRequest,
     UserProfileResponse,
     UserPublicResponse,
@@ -342,6 +358,177 @@ async def render_page(
     return HTMLResponse(content=page.html_content, status_code=200)
 
 
+# ── Page interactions (likes / comments / favorites) ──
+
+
+async def _resolve_page(db: AsyncSession, pk: str) -> Page:
+    result = await db.execute(select(Page).where(Page.id == int(pk)))
+    page = result.scalar_one_or_none()
+    if not page:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Page not found")
+    return page
+
+
+@router.get("/{pk}/interactions", response_model=InteractionResponse)
+async def get_page_interactions(
+    pk: str,
+    viewer: Optional[User] = Depends(get_optional_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Public read: like/favorite counts + comments + (if logged in) viewer state."""
+    page = await _resolve_page(db, pk)
+
+    like_count = await db.scalar(
+        select(func.count()).select_from(PageLike).where(PageLike.page_fk == page.id)
+    ) or 0
+    favorite_count = await db.scalar(
+        select(func.count()).select_from(PageFavorite).where(PageFavorite.page_fk == page.id)
+    ) or 0
+
+    comments_result = await db.execute(
+        select(PageComment, User)
+        .join(User, PageComment.user_fk == User.id)
+        .where(PageComment.page_fk == page.id)
+        .order_by(PageComment.created_at.desc())
+    )
+    comments = [
+        CommentItem(
+            id=c.id,
+            content=c.content,
+            created_at=c.created_at,
+            user=CommentUser(user_id=u.user_id or "", nickname=u.nickname, avatar_url=u.avatar_url),
+            is_mine=(viewer is not None and u.id == viewer.id),
+        )
+        for c, u in comments_result.all()
+    ]
+
+    viewer_state = None
+    if viewer is not None:
+        liked = await db.scalar(
+            select(func.count()).select_from(PageLike).where(
+                PageLike.page_fk == page.id, PageLike.user_fk == viewer.id
+            )
+        ) or 0
+        favorited = await db.scalar(
+            select(func.count()).select_from(PageFavorite).where(
+                PageFavorite.page_fk == page.id, PageFavorite.user_fk == viewer.id
+            )
+        ) or 0
+        viewer_state = InteractionViewer(liked=liked > 0, favorited=favorited > 0)
+
+    owner = await db.get(User, page.user_id)
+    page_info = InteractionPageInfo(
+        title=page.title,
+        page_id=page.page_id,
+        author=CommentUser(
+            user_id=owner.user_id if owner else "",
+            nickname=owner.nickname if owner else None,
+            avatar_url=owner.avatar_url if owner else None,
+        ),
+    )
+
+    return InteractionResponse(
+        like_count=like_count,
+        favorite_count=favorite_count,
+        comments=comments,
+        viewer=viewer_state,
+        page=page_info,
+    )
+
+
+@router.post("/{pk}/like", response_model=ToggleResponse)
+async def toggle_page_like(
+    pk: str,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    page = await _resolve_page(db, pk)
+    result = await db.execute(
+        select(PageLike).where(PageLike.page_fk == page.id, PageLike.user_fk == user.id)
+    )
+    rel = result.scalar_one_or_none()
+    if rel is not None:
+        await db.delete(rel)
+        state = False
+    else:
+        db.add(PageLike(page_fk=page.id, user_fk=user.id))
+        state = True
+    await db.commit()
+
+    count = await db.scalar(
+        select(func.count()).select_from(PageLike).where(PageLike.page_fk == page.id)
+    ) or 0
+    return ToggleResponse(state=state, count=count)
+
+
+@router.post("/{pk}/favorite", response_model=ToggleResponse)
+async def toggle_page_favorite(
+    pk: str,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    page = await _resolve_page(db, pk)
+    result = await db.execute(
+        select(PageFavorite).where(PageFavorite.page_fk == page.id, PageFavorite.user_fk == user.id)
+    )
+    rel = result.scalar_one_or_none()
+    if rel is not None:
+        await db.delete(rel)
+        state = False
+    else:
+        db.add(PageFavorite(page_fk=page.id, user_fk=user.id))
+        state = True
+    await db.commit()
+
+    count = await db.scalar(
+        select(func.count()).select_from(PageFavorite).where(PageFavorite.page_fk == page.id)
+    ) or 0
+    return ToggleResponse(state=state, count=count)
+
+
+@router.post("/{pk}/comments", response_model=CommentItem)
+async def add_page_comment(
+    pk: str,
+    req: CommentCreate,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    page = await _resolve_page(db, pk)
+    comment = PageComment(page_fk=page.id, user_fk=user.id, content=req.content.strip())
+    db.add(comment)
+    await db.commit()
+    await db.refresh(comment)
+    return CommentItem(
+        id=comment.id,
+        content=comment.content,
+        created_at=comment.created_at,
+        user=CommentUser(user_id=user.user_id or "", nickname=user.nickname, avatar_url=user.avatar_url),
+    )
+
+
+@router.delete("/{pk}/comments/{cid}")
+async def delete_page_comment(
+    pk: str,
+    cid: int,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    page = await _resolve_page(db, pk)
+    result = await db.execute(
+        select(PageComment).where(
+            PageComment.id == cid,
+            PageComment.page_fk == page.id,
+            PageComment.user_fk == user.id,
+        )
+    )
+    comment = result.scalar_one_or_none()
+    if not comment:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Comment not found")
+    await db.delete(comment)
+    await db.commit()
+    return {"ok": True}
+
+
 # ── Public routes ──
 
 
@@ -395,6 +582,14 @@ async def serve_user_profile(
     return HTMLResponse(content=html, status_code=200)
 
 
+def build_interaction_widget(page_pk: str) -> str:
+    """HTML fragment injected into served published pages (not stored / not snapshotted)."""
+    return (
+        f'<div id="platform-interactions" data-pk="{page_pk}"></div>\n'
+        '<script src="/static/interactions.js" defer></script>'
+    )
+
+
 @public_router.get("/{user_id}/{page_id}")
 async def serve_page(
     user_id: str,
@@ -440,7 +635,15 @@ async def serve_page(
     if not page:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Page not found")
 
-    return HTMLResponse(content=page.html_content, status_code=200)
+    # 服务期注入互动组件（点赞/评论/收藏）——不改动存储的 html_content
+    widget = build_interaction_widget(str(page.id))
+    html = page.html_content
+    if "</body>" in html:
+        html = html.replace("</body>", widget + "\n</body>")
+    else:
+        html = html + "\n" + widget
+
+    return HTMLResponse(content=html, status_code=200)
 
 
 # ── Public user profile API ──
