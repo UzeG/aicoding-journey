@@ -61,7 +61,7 @@ export default function HomeView() {
   return (
     <div>
       {/* Hero：左文案+输入，右编译面板（产品在首页上跑起来） */}
-      <section className="relative overflow-hidden pt-16 pb-20 md:pt-24 md:pb-28">
+      <section className="relative overflow-hidden py-12 md:py-0 md:min-h-[calc(100svh-var(--header-height)-1px)] md:flex md:items-center">
         {/* 背景：稀疏细点 + 鼠标视差/推开 + 点击扩散圆环（懒加载 three） */}
         <div aria-hidden className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute inset-x-0 top-0 h-px bg-border" />
