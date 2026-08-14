@@ -6,13 +6,14 @@ import PreviewPanel from '../components/generator/PreviewPanel'
 import PromptInput from '../components/generator/PromptInput'
 import PublishButton from '../components/generator/PublishButton'
 import SaveDraftButton from '../components/generator/SaveDraftButton'
+import DownloadButton from '../components/common/DownloadButton'
 import { useSSE } from '../hooks/useSSE'
 import { useGenerationStore } from '../stores/generation'
 import { getPage } from '../api/endpoints'
 
 export default function GeneratorView() {
   const [searchParams] = useSearchParams()
-  const { isStreaming, codeContent, pageId, error, progressStep, progressMessage } = useGenerationStore()
+  const { isStreaming, codeContent, pageId, title, error, progressStep, progressMessage } = useGenerationStore()
   const { startGeneration } = useSSE()
   const abortRef = useRef<AbortController | null>(null)
   const initialPrompt = searchParams.get('prompt') || ''
@@ -57,6 +58,13 @@ export default function GeneratorView() {
           <PromptInput onGenerate={handleGenerate} disabled={isStreaming} initialValue={!isStreaming ? initialPrompt : undefined} />
         </div>
         <SaveDraftButton pageId={pageId} disabled={isStreaming || !codeContent || !pageId} />
+        <DownloadButton
+          variant="outline"
+          size="default"
+          fileName={title}
+          getContent={() => codeContent}
+          disabled={isStreaming || !codeContent}
+        />
         <PublishButton pageId={pageId} disabled={isStreaming || !codeContent || !pageId} />
       </div>
 

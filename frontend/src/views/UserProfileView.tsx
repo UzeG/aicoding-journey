@@ -3,11 +3,12 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import {
   FileText, Pencil, Trash2, CheckCircle2, CircleDashed, ExternalLink, CircleAlert, Plus, User, Camera,
 } from 'lucide-react'
-import { deletePage, getUserProfile, updateProfile, uploadAvatar } from '../api/endpoints'
+import { deletePage, getPage, getUserProfile, updateProfile, uploadAvatar } from '../api/endpoints'
 import { useAuthStore } from '../stores/auth'
 import ConfirmDialog from '../components/common/ConfirmDialog'
 import LoadingSpinner from '../components/common/LoadingSpinner'
 import Avatar from '../components/common/Avatar'
+import DownloadButton from '../components/common/DownloadButton'
 import { Button } from '../components/ui/button'
 import { Badge } from '../components/ui/badge'
 import { Card, CardContent } from '../components/ui/card'
@@ -311,6 +312,10 @@ export default function UserProfileView() {
                         </div>
                         {isOwnProfile && (
                           <div className="flex items-center gap-2 ml-4 shrink-0">
+                            <DownloadButton
+                              fileName={page.title || page.page_id}
+                              getContent={() => getPage(page.id).then((res) => res.data.html_content)}
+                            />
                             <Button
                               variant="ghost"
                               size="sm"
