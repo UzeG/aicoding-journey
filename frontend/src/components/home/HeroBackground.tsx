@@ -2,12 +2,12 @@ import { useEffect, useRef } from 'react'
 import type * as THREE from 'three'
 
 /**
- * Hero 背景动效（Three.js，懒加载）：克制版。
- * - 稀疏的细点（不是字形碎片），低不透明度，纯背景
- * - 鼠标移动：整体视差倾斜 + 光标一圈柔和的推开涟漪
- * - 点击：在点击处扩散一枚青色圆环（干净、受控、不挡内容）
+ * Hero 背景（Three.js，懒加载）：平铺网格（线段留空隙 + 交叉处圆点），鼠标驱动鼓起。
+ * - 网格平铺在页面（正对相机），铺满整个 section
+ * - 线段端点内缩留一小段空隙，交叉处是圆点（DeepSeek 原版样式）
+ * - 无时间动画：鼠标不动 → 完全静止；鼠标移动 → 光标附近网格线与点一起鼓起（离开复原）
  * - 颜色跟随当前 --primary（个人主题色）
- * - 降级：reduced-motion → 静态一帧；WebGL 不可用 → 纯纸面
+ * - 降级：reduced-motion → 静态平面网格；WebGL 不可用 → 纯纸面
  */
 export default function HeroBackground() {
   const hostRef = useRef<HTMLDivElement>(null)
@@ -24,12 +24,11 @@ export default function HeroBackground() {
       if (disposed || !host || host.clientWidth === 0) return
 
       const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-      const isMobile = host.clientWidth < 768
-      const DOT_COUNT = isMobile ? 24 : 55
 
       const scene = new THREE.Scene()
       const camera = new THREE.PerspectiveCamera(55, host.clientWidth / host.clientHeight, 0.1, 100)
-      camera.position.set(0, 0, 12)
+      camera.position.set(0, 0, 10)
+      camera.lookAt(0, 0, 0)
 
       let renderer: THREE.WebGLRenderer
       try {
@@ -44,10 +43,68 @@ export default function HeroBackground() {
 
       const css = (name: string) =>
         getComputedStyle(document.documentElement).getPropertyValue(name).trim()
-      let themeColor = css('--primary') || '#0E7A6C'
-      const inkColor = css('--foreground') || '#20221F'
+      let themeHex = css('--primary') || '#0E7A6C'
 
-      // 柔和圆点纹理（白色，颜色由 SpriteMaterial.color 叠加）
+      // ── 网格：线段端点内缩留空隙 + 交叉处圆点 ──
+      const CELL = 0.8
+      const GAP = 0.2
+      const GRID_W = 40 * CELL
+      const GRID_H = 24 * CELL
+      const SEGS_X = 40
+      const SEGS_Y = 24
+      const NX = SEGS_X + 1
+      const NY = SEGS_Y + 1
+
+      const lineVerts: Array<{ x: number; y: number }> = []
+      for (let iy = 0; iy < NY; iy++) {
+        const y = -GRID_H / 2 + iy * CELL
+        for (let ix = 0; ix < NX - 1; ix++) {
+          const x1 = -GRID_W / 2 + ix * CELL + GAP / 2
+          const x2 = -GRID_W / 2 + (ix + 1) * CELL - GAP / 2
+          lineVerts.push({ x: x1, y }, { x: x2, y })
+        }
+      }
+      for (let ix = 0; ix < NX; ix++) {
+        const x = -GRID_W / 2 + ix * CELL
+        for (let iy = 0; iy < NY - 1; iy++) {
+          const y1 = -GRID_H / 2 + iy * CELL + GAP / 2
+          const y2 = -GRID_H / 2 + (iy + 1) * CELL - GAP / 2
+          lineVerts.push({ x, y: y1 }, { x, y: y2 })
+        }
+      }
+
+      const V = lineVerts.length
+      const linePos = new Float32Array(V * 3)
+      const lineBaseX = new Float32Array(V)
+      const lineBaseY = new Float32Array(V)
+      for (let v = 0; v < V; v++) {
+        linePos[v * 3] = lineVerts[v].x
+        linePos[v * 3 + 1] = lineVerts[v].y
+        lineBaseX[v] = lineVerts[v].x
+        lineBaseY[v] = lineVerts[v].y
+      }
+      const lineGeo = new THREE.BufferGeometry()
+      lineGeo.setAttribute('position', new THREE.BufferAttribute(linePos, 3).setUsage(THREE.DynamicDrawUsage))
+      const lineMat = new THREE.LineBasicMaterial({ color: themeHex, transparent: true, opacity: 0.1 })
+      scene.add(new THREE.LineSegments(lineGeo, lineMat))
+
+      // 交叉处圆点
+      const dotCount = NX * NY
+      const dotPos = new Float32Array(dotCount * 3)
+      const dotBaseX = new Float32Array(dotCount)
+      const dotBaseY = new Float32Array(dotCount)
+      let di = 0
+      for (let iy = 0; iy < NY; iy++) {
+        const y = -GRID_H / 2 + iy * CELL
+        for (let ix = 0; ix < NX; ix++) {
+          const x = -GRID_W / 2 + ix * CELL
+          dotPos[di * 3] = x
+          dotPos[di * 3 + 1] = y
+          dotBaseX[di] = x
+          dotBaseY[di] = y
+          di++
+        }
+      }
       const dotTex = (() => {
         const c = document.createElement('canvas')
         c.width = c.height = 32
@@ -55,7 +112,7 @@ export default function HeroBackground() {
         if (g) {
           const grad = g.createRadialGradient(16, 16, 0, 16, 16, 16)
           grad.addColorStop(0, 'rgba(255,255,255,1)')
-          grad.addColorStop(0.35, 'rgba(255,255,255,0.55)')
+          grad.addColorStop(0.4, 'rgba(255,255,255,0.6)')
           grad.addColorStop(1, 'rgba(255,255,255,0)')
           g.fillStyle = grad
           g.fillRect(0, 0, 32, 32)
@@ -64,166 +121,104 @@ export default function HeroBackground() {
         tex.colorSpace = THREE.SRGBColorSpace
         return tex
       })()
+      const dotGeo = new THREE.BufferGeometry()
+      dotGeo.setAttribute('position', new THREE.BufferAttribute(dotPos, 3).setUsage(THREE.DynamicDrawUsage))
+      const dotMat = new THREE.PointsMaterial({
+        size: 0.12,
+        map: dotTex,
+        transparent: true,
+        opacity: 0.4,
+        color: themeHex,
+        depthWrite: false,
+        sizeAttenuation: true,
+      })
+      scene.add(new THREE.Points(dotGeo, dotMat))
 
-      const group = new THREE.Group()
-      scene.add(group)
-
-      const rand = (a: number, b: number) => a + Math.random() * (b - a)
-      const dots: THREE.Sprite[] = []
-      const homes: THREE.Vector3[] = []
-      const meta: Array<{ speed: number; phase: number; isTheme: boolean; radius: number }> = []
-      const spreadX = 21
-      const spreadY = 13
-      const spreadZ = 6
-
-      for (let i = 0; i < DOT_COUNT; i++) {
-        const isTheme = Math.random() < 0.55
-        const mat = new THREE.SpriteMaterial({
-          map: dotTex,
-          color: isTheme ? themeColor : inkColor,
-          transparent: true,
-          opacity: rand(0.06, 0.14),
-          depthWrite: false,
-        })
-        const s = new THREE.Sprite(mat)
-        const scale = rand(0.05, 0.13)
-        s.position.set(rand(-spreadX / 2, spreadX / 2), rand(-spreadY / 2, spreadY / 2), rand(-spreadZ, 1))
-        s.scale.set(scale, scale, 1)
-        s.frustumCulled = false
-        group.add(s)
-        dots.push(s)
-        homes.push(s.position.clone())
-        meta.push({ speed: rand(0.4, 1.1), phase: rand(0, Math.PI * 2), isTheme, radius: rand(1.4, 3) })
-      }
-
-      // 点击扩散圆环（3 个复用，各自独立材质）
-      const ringGeo = new THREE.RingGeometry(0.96, 1, 64)
-      const rings: Array<THREE.Mesh<THREE.BufferGeometry, THREE.MeshBasicMaterial>> = []
-      for (let i = 0; i < 3; i++) {
-        const mat = new THREE.MeshBasicMaterial({
-          color: themeColor,
-          transparent: true,
-          opacity: 0,
-          side: THREE.DoubleSide,
-          depthWrite: false,
-        })
-        const m = new THREE.Mesh(ringGeo, mat)
-        m.visible = false
-        scene.add(m)
-        rings.push(m)
-      }
-      let ringCursor = 0
-
-      // 鼠标 → 视差 + 排斥中心（映射到 z=0 平面）
-      let nx = 0
-      let ny = 0
-      const repelPt = new THREE.Vector3(9999, 9999, 0)
+      // ── 鼠标（映射到 z=0 平面）──
+      const mousePt = new THREE.Vector3(9999, 9999, 0)
       const ndc = new THREE.Vector3()
       const rayDir = new THREE.Vector3()
-      const setRepel = (cx: number, cy: number) => {
-        nx = (cx / host.clientWidth) * 2 - 1
-        ny = -((cy / host.clientHeight) * 2 - 1)
-        ndc.set(nx, ny, 0.5).unproject(camera)
-        rayDir.copy(ndc).sub(camera.position).normalize()
-        if (Math.abs(rayDir.z) > 1e-6) {
-          const t = -camera.position.z / rayDir.z
-          repelPt.copy(camera.position).addScaledVector(rayDir, t)
-        } else {
-          repelPt.set(9999, 9999, 0)
+      const mouseActive = () => mousePt.x < 9000
+
+      const applyBulge = () => {
+        const mx = mousePt.x
+        const my = mousePt.y
+        const R = 3.4
+        for (let v = 0; v < V; v++) {
+          const bx = lineBaseX[v]
+          const by = lineBaseY[v]
+          let px = bx
+          let py = by
+          if (mouseActive()) {
+            const dx = bx - mx
+            const dy = by - my
+            const d2 = dx * dx + dy * dy
+            if (d2 < R * R) {
+              const d = Math.sqrt(d2)
+              const fall = 1 - d / R
+              const ux = dx / d
+              const uy = dy / d
+              px = bx + ux * fall * 0.45
+              py = by + uy * fall * 0.45
+            }
+          }
+          linePos[v * 3] = px
+          linePos[v * 3 + 1] = py
         }
+        for (let d = 0; d < dotCount; d++) {
+          const bx = dotBaseX[d]
+          const by = dotBaseY[d]
+          let px = bx
+          let py = by
+          if (mouseActive()) {
+            const dx = bx - mx
+            const dy = by - my
+            const d2 = dx * dx + dy * dy
+            if (d2 < R * R) {
+              const dist = Math.sqrt(d2)
+              const fall = 1 - dist / R
+              const ux = dx / dist
+              const uy = dy / dist
+              px = bx + ux * fall * 0.45
+              py = by + uy * fall * 0.45
+            }
+          }
+          dotPos[d * 3] = px
+          dotPos[d * 3 + 1] = py
+        }
+        lineGeo.attributes.position.needsUpdate = true
+        dotGeo.attributes.position.needsUpdate = true
+        renderer.render(scene, camera)
       }
 
       const onMove = (e: PointerEvent) => {
         const r = host.getBoundingClientRect()
         if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) {
-          nx = 0
-          ny = 0
-          repelPt.set(9999, 9999, 0)
-          return
+          mousePt.set(9999, 9999, 0)
+        } else {
+          ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -(((e.clientY - r.top) / r.height) * 2 - 1), 0.5).unproject(camera)
+          rayDir.copy(ndc).sub(camera.position).normalize()
+          if (Math.abs(rayDir.z) > 1e-6) {
+            mousePt.copy(camera.position).addScaledVector(rayDir, -camera.position.z / rayDir.z)
+          }
         }
-        setRepel(e.clientX - r.left, e.clientY - r.top)
+        applyBulge()
       }
-
-      const onClick = (e: MouseEvent) => {
-        const r = host.getBoundingClientRect()
-        if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) return
-        ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -(((e.clientY - r.top) / r.height) * 2 - 1), 0.5).unproject(camera)
-        rayDir.copy(ndc).sub(camera.position).normalize()
-        if (Math.abs(rayDir.z) < 1e-6) return
-        const pt = camera.position.clone().addScaledVector(rayDir, -camera.position.z / rayDir.z)
-        const ring = rings[ringCursor]
-        ringCursor = (ringCursor + 1) % rings.length
-        ring.visible = true
-        ring.position.copy(pt)
-        ring.scale.set(0.1, 0.1, 1)
-        ring.userData.life = 0
-        ring.material.opacity = 0.32
-      }
-
       const onTheme = () => {
         const c = css('--primary') || '#0E7A6C'
-        if (c === themeColor) return
-        themeColor = c
-        for (let i = 0; i < dots.length; i++) {
-          if (meta[i].isTheme) dots[i].material.color.set(c)
+        if (c !== themeHex) {
+          themeHex = c
+          lineMat.color.set(c)
+          ;(dotMat.color as THREE.Color).set(c)
+          renderer.render(scene, camera)
         }
-        rings.forEach((m) => (m.material as THREE.MeshBasicMaterial).color.set(c))
       }
 
-      let raf = 0
-      const t0 = performance.now()
-      const tick = (now: number) => {
-        if (disposed) return
-        const t = (now - t0) / 1000
-        group.rotation.y = Math.sin(t * 0.03) * 0.06 + nx * 0.03
-        group.rotation.x = -ny * 0.03
-        camera.position.x += (nx * 0.8 - camera.position.x) * 0.04
-        camera.position.y += (-ny * 0.5 - camera.position.y) * 0.04
-        camera.lookAt(0, 0, 0)
+      applyBulge()
 
-        for (let i = 0; i < dots.length; i++) {
-          const sp = dots[i]
-          const home = homes[i]
-          const m = meta[i]
-          let tx = home.x + Math.sin(t * 0.4 * m.speed + m.phase) * 0.22
-          let ty = home.y + Math.cos(t * 0.35 * m.speed + m.phase) * 0.18
-          const dx = sp.position.x - repelPt.x
-          const dy = sp.position.y - repelPt.y
-          const d2 = dx * dx + dy * dy
-          if (d2 < m.radius * m.radius && d2 > 1e-6) {
-            const d = Math.sqrt(d2)
-            const f = (1 - d / m.radius) * 0.9
-            tx += (dx / d) * f
-            ty += (dy / d) * f
-          }
-          sp.position.x += (tx - sp.position.x) * 0.05
-          sp.position.y += (ty - sp.position.y) * 0.05
-        }
-
-        for (const ring of rings) {
-          if (!ring.visible) continue
-          ring.userData.life += 1 / 60
-          const life = ring.userData.life
-          if (life >= 0.65) {
-            ring.visible = false
-            continue
-          }
-          const s = 0.1 + life * 5.5
-          ring.scale.set(s, s, 1)
-          ring.material.opacity = Math.max(0, 0.32 * (1 - life * 1.5))
-        }
-
-        renderer.render(scene, camera)
-        raf = requestAnimationFrame(tick)
-      }
-
-      if (reduced) {
-        renderer.render(scene, camera)
-      } else {
+      if (!reduced) {
         window.addEventListener('pointermove', onMove, { passive: true })
-        window.addEventListener('click', onClick)
         window.addEventListener('themechange', onTheme)
-        raf = requestAnimationFrame(tick)
       }
 
       const ro = new ResizeObserver(() => {
@@ -234,20 +229,19 @@ export default function HeroBackground() {
         renderer.setSize(w, h)
         camera.aspect = w / h
         camera.updateProjectionMatrix()
-        if (reduced) renderer.render(scene, camera)
+        applyBulge()
       })
       ro.observe(host)
 
       cleanups.push(() => {
-        cancelAnimationFrame(raf)
         window.removeEventListener('pointermove', onMove)
-        window.removeEventListener('click', onClick)
         window.removeEventListener('themechange', onTheme)
         ro.disconnect()
         dotTex.dispose()
-        ringGeo.dispose()
-        dots.forEach((s) => s.material.dispose())
-        rings.forEach((r) => r.material.dispose())
+        lineGeo.dispose()
+        lineMat.dispose()
+        dotGeo.dispose()
+        dotMat.dispose()
         renderer.dispose()
         if (renderer.domElement.parentNode === host) host.removeChild(renderer.domElement)
       })
