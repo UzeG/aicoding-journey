@@ -56,7 +56,7 @@ cd frontend && npm run dev
 - 发布页互动：点赞/收藏（toggle）+ 评论（发/删自己的），互动组件**服务期注入**到发布页（不落库、不进快照）
 - LLM 配置（platform/user 两级优先级）
 - API 代理网关（解决生成页面的 CORS 问题）
-- **发布页互动（同源设计）**：dev 下应用(5173)与发布页(8000)不同源，互动组件读不到 JWT——故**发布页与应用同源**：Vite proxy 把两段 `{user_id}/{page_id}` 字符集路径代理到 8000，`VITE_PUBLIC_BASE_URL`/`PUBLIC_BASE_URL` 指向 5173，组件直接读 `localStorage.access_token`。互动 3 张表 `page_likes/page_comments/page_favorites`；`serve_page` 服务期注入 `<div id="platform-interactions" data-pk>` + `/static/interactions.js`。**互动 UI 右侧抽屉式**：PC 圆形触发按钮（常态半透明、随抽屉边缘）侧滑抽屉（宽 `min(90vw,400px)`），两个 tab = 作者（头像/bio + N 关注者 + 关注按钮 + TA 其他作品）/ 评论，点赞收藏在面板头部；overlay 在页之上、不影响布局；移动端变底部抽屉；全部挂 `documentElement`；`textContent` 防 XSS、未登录弹窗→`/login?redirect=`。`render_page`（快照）不注入
+- **发布页互动（同源设计）**：dev 下应用(5173)与发布页(8000)不同源，互动组件读不到 JWT——故**发布页与应用同源**：Vite proxy 把两段 `{user_id}/{page_id}` 字符集路径代理到 8000，`VITE_PUBLIC_BASE_URL`/`PUBLIC_BASE_URL` 指向 5173，组件直接读 `localStorage.access_token`。互动 3 张表 `page_likes/page_comments/page_favorites`；`serve_page` 服务期注入 `<div id="platform-interactions" data-pk>` + `/static/interactions.js`。**互动 UI 底部上滑（PC/移动端统一）**：右下角圆形触发按钮（打开后淡出被抽屉盖住），抽屉从底部上滑、顶部横杠点击/拖拽收起；PC 收窄锚右下角、移动端全宽 bottom sheet；两个 tab = 作者（头像/bio + N 关注者 + 关注按钮 + TA 其他作品）/ 评论，点赞收藏在面板头部；overlay 在页之上、不影响布局；全部挂 `documentElement`；`textContent` 防 XSS、未登录弹窗→`/login?redirect=`。`render_page`（快照）不注入
 - 内容安全：prompt 过滤 + 发布前 HTML 扫描 + iframe sandbox
 - Platform SDK 自动注入（`window.platform`）
 - 个人主题色（设置页 7 色可选，CSS 变量驱动全站换主色）

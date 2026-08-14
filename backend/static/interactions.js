@@ -76,19 +76,16 @@
   var TRASH_ICON =
     '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>'
 
-  var isMobile = function () {
-    return window.matchMedia('(max-width: 640px)').matches
-  }
-
   // ── styles ──
   var style = document.createElement('style')
   style.textContent = `
 :root{--pi-theme:#0E7A6C;}
-#pi-trigger{position:fixed;right:-18px;top:50%;transform:translateY(-50%);z-index:3004;width:36px;height:36px;border:none;background:var(--pi-theme);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;border-radius:50%;box-shadow:none;opacity:.35;transition:opacity .2s ease,right .3s ease,top .3s ease,bottom .3s ease;}
+#pi-trigger{position:fixed;right:1rem;bottom:1.2rem;z-index:3004;width:36px;height:36px;border:none;background:var(--pi-theme);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;border-radius:50%;box-shadow:0 2px 14px rgba(0,0,0,.35);opacity:.35;transition:opacity .2s ease;}
 #pi-trigger:hover{filter:brightness(.9);opacity:1;}
-html.pi-open #pi-trigger{right:calc(min(88vw,360px) - 18px);opacity:.9;}
-#pi-panel{position:fixed;right:0;top:50%;transform:translate(100%,-50%);z-index:3002;width:min(88vw,360px);height:min(84vh,800px);background:var(--pi-theme);border-radius:1rem 0 0 1rem;box-shadow:-3px 0 14px rgba(0,0,0,.06);display:flex;flex-direction:column;overflow:hidden;font-family:system-ui,-apple-system,sans-serif;color:#fff;opacity:0;visibility:hidden;transition:transform .3s ease,opacity .3s ease,visibility 0s linear .3s;touch-action:none;}
-#pi-panel.open{transform:translate(0,-50%);opacity:1;visibility:visible;transition:transform .3s ease,opacity .3s ease,visibility 0s;}
+html.pi-open #pi-trigger{opacity:0;pointer-events:none;}
+/* 抽屉：底部上滑 bottom sheet（PC/移动端统一；打开时盖住右下角触发按钮） */
+#pi-panel{position:fixed;left:0;right:0;bottom:0;z-index:3004;transform:translateY(100%);height:78vh;background:var(--pi-theme);border-radius:1rem 1rem 0 0;box-shadow:0 -3px 14px rgba(0,0,0,.06);display:flex;flex-direction:column;overflow:hidden;font-family:system-ui,-apple-system,sans-serif;color:#fff;opacity:0;visibility:hidden;transition:transform .3s ease,opacity .3s ease,visibility 0s linear .3s;touch-action:none;}
+#pi-panel.open{transform:translateY(0);opacity:1;visibility:visible;transition:transform .3s ease,opacity .3s ease,visibility 0s;}
 #pi-panel .pi-head{display:flex;align-items:center;gap:.8rem;padding:.8rem 1.1rem;border-bottom:1px solid rgba(255,255,255,.15);flex-shrink:0;}
 #pi-panel .pi-title{font-weight:600;font-size:1rem;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;}
 #pi-panel .pi-btn{display:inline-flex;align-items:center;gap:.3rem;padding:.4rem .7rem;border:1px solid rgba(255,255,255,.35);border-radius:999px;background:rgba(255,255,255,.12);cursor:pointer;font:inherit;font-size:.85rem;color:#fff;white-space:nowrap;flex-shrink:0;}
@@ -99,7 +96,8 @@ html.pi-open #pi-trigger{right:calc(min(88vw,360px) - 18px);opacity:.9;}
 #pi-panel .pi-tab.on{color:#fff;border-bottom-color:#fff;font-weight:600;}
 #pi-panel .pi-body{flex:1;overflow-y:auto;padding:1rem 1.1rem;touch-action:auto;overscroll-behavior:contain;}
 #pi-panel .pi-body[hidden]{display:none;}
-#pi-panel .pi-grabber{display:none;}
+#pi-panel .pi-grabber{display:flex;align-items:center;justify-content:center;padding:.75rem 0 .4rem;cursor:grab;touch-action:none;flex-shrink:0;}
+#pi-panel .pi-grabber::before{content:'';width:56px;height:5px;border-radius:3px;background:rgba(255,255,255,.55);}
 /* author tab */
 #pi-panel .pi-author{display:flex;align-items:center;gap:.8rem;padding-bottom:.9rem;border-bottom:1px solid rgba(255,255,255,.15);margin-bottom:1rem;cursor:pointer;}
 #pi-panel .pi-avatar{width:56px;height:56px;border-radius:50%;object-fit:cover;flex-shrink:0;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-weight:600;font-size:1.3rem;color:#fff;}
@@ -149,13 +147,9 @@ html.pi-open #pi-trigger{right:calc(min(88vw,360px) - 18px);opacity:.9;}
 .pi-modal-row{display:flex;gap:.5rem;justify-content:center;}
 .pi-modal-cancel{padding:.4rem 1rem;border:1px solid rgba(255,255,255,.4);border-radius:8px;background:transparent;color:#fff;cursor:pointer;font:inherit;}
 .pi-modal-go{padding:.4rem 1rem;border:none;border-radius:8px;background:#fff;color:var(--pi-theme);font:inherit;font-weight:600;cursor:pointer;}
-@media (max-width:640px){
-  #pi-trigger{right:1rem;bottom:1.2rem;top:auto;transform:none;width:36px;height:36px;border-radius:50%;box-shadow:0 2px 14px rgba(0,0,0,.35);}
-  html.pi-open #pi-trigger{right:1rem;} /* 移动端按钮原位不动，打开时被抽屉（z-index 更高）盖住 */
-  #pi-panel{right:0;left:0;bottom:0;top:auto;transform:translateY(100%);width:100%;height:78vh;border-radius:1rem 1rem 0 0;box-shadow:0 -3px 14px rgba(0,0,0,.06);z-index:3004;}
-  #pi-panel .pi-grabber{display:flex;align-items:center;justify-content:center;padding:.75rem 0 .4rem;cursor:grab;touch-action:none;flex-shrink:0;}
-  #pi-panel .pi-grabber::before{content:'';width:56px;height:5px;border-radius:3px;background:rgba(255,255,255,.55);}
-  #pi-panel.open{transform:translateY(0);}
+/* PC：抽屉收窄并锚定右下角（移动端保持基础全宽 bottom sheet） */
+@media (min-width:641px){
+  #pi-panel{left:auto;right:1rem;width:min(92vw,420px);height:min(82vh,760px);}
 }
 `
   document.head.appendChild(style)
@@ -313,7 +307,7 @@ html.pi-open #pi-trigger{right:calc(min(88vw,360px) - 18px);opacity:.9;}
   var dragStartY = 0
   var dragging = false
   grabber.addEventListener('pointerdown', function (e) {
-    if (!isMobile() || !OPEN) return
+    if (!OPEN) return
     dragging = true
     dragStartY = e.clientY
     panel.style.transition = 'none'
@@ -329,17 +323,15 @@ html.pi-open #pi-trigger{right:calc(min(88vw,360px) - 18px);opacity:.9;}
   function endDrag(e) {
     if (!dragging) return
     dragging = false
-    var dy = e.clientY - dragStartY
     panel.style.transition = ''
     panel.style.transform = ''
-    if (dy > 100) togglePanel() // 拖过阈值收起
+    togglePanel() // 点击或拖动横杠都收起
   }
   grabber.addEventListener('pointerup', endDrag)
   grabber.addEventListener('pointercancel', endDrag)
 
   function updateIcon() {
-    var key = OPEN ? (isMobile() ? 'down' : 'right') : (isMobile() ? 'up' : 'left')
-    trigger.innerHTML = ICONS[key]
+    trigger.innerHTML = OPEN ? ICONS.down : ICONS.up
   }
 
   window.addEventListener('resize', updateIcon)
