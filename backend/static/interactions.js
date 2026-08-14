@@ -120,13 +120,14 @@ html.pi-open #pi-trigger{right:calc(min(88vw,360px) - 18px);opacity:.9;}
 /* comments */
 #pi-panel .pi-comments{flex:1;display:flex;flex-direction:column;overflow:hidden;padding:0;touch-action:auto;}
 #pi-panel .pi-comments-list{flex:1;overflow-y:auto;padding:1rem 1.1rem;touch-action:auto;overscroll-behavior:contain;}
-#pi-panel .pi-comment{position:relative;display:flex;gap:.6rem;padding:.6rem .8rem;border:1px solid rgba(255,255,255,.15);border-radius:10px;margin-bottom:.6rem;background:rgba(255,255,255,.12);}
+#pi-panel .pi-comment{position:relative;display:flex;align-items:flex-start;gap:.6rem;padding:.6rem .8rem;border:1px solid rgba(255,255,255,.15);border-radius:10px;margin-bottom:.6rem;background:rgba(255,255,255,.12);}
 #pi-panel .pi-comment-avatar{width:32px;height:32px;border-radius:50%;object-fit:cover;flex-shrink:0;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-weight:600;font-size:.85rem;color:#fff;}
 #pi-panel .pi-comment-main{flex:1;min-width:0;}
 #pi-panel .pi-comment-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:.25rem;}
 #pi-panel .pi-comment-name{font-weight:600;font-size:.82rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 #pi-panel .pi-comment-time{color:rgba(255,255,255,.6);font-size:.72rem;margin-left:.5rem;}
-#pi-panel .pi-comment-del{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;padding:0;background:none;border:none;border-radius:6px;color:rgba(255,255,255,.85);cursor:pointer;}
+#pi-panel .pi-comment-del{display:inline-flex;align-items:center;justify-content:center;align-self:center;flex-shrink:0;width:24px;height:24px;padding:0;background:none;border:none;border-radius:6px;color:rgba(255,255,255,.85);cursor:pointer;}
+#pi-panel .pi-comment-del:hover{background:rgba(255,255,255,.15);color:#fff;}
 #pi-panel .pi-comment-del:hover{color:#fff;background:rgba(255,255,255,.15);}
 /* 删除评论确认（局部小弹窗，锚定在评论条上） */
 #pi-panel .pi-confirm{position:absolute;right:.6rem;top:.6rem;z-index:10;display:flex;align-items:center;gap:.45rem;background:#fff;color:var(--pi-theme);border-radius:10px;padding:.4rem .6rem;box-shadow:0 6px 18px rgba(0,0,0,.3);font-size:.8rem;white-space:nowrap;}
@@ -484,8 +485,12 @@ html.pi-open #pi-trigger{right:calc(min(88vw,360px) - 18px);opacity:.9;}
       time.className = 'pi-comment-time'
       time.textContent = formatTime(c.created_at)
       right.appendChild(time)
+      headRow.appendChild(name)
+      headRow.appendChild(right)
+      // 删除按钮：评论块右侧、垂直居中（仅自己评论）
+      var del = null
       if (c.is_mine) {
-        var del = document.createElement('button')
+        del = document.createElement('button')
         del.className = 'pi-comment-del'
         del.type = 'button'
         del.title = '删除评论'
@@ -494,10 +499,7 @@ html.pi-open #pi-trigger{right:calc(min(88vw,360px) - 18px);opacity:.9;}
           e.stopPropagation()
           showDeleteConfirm(c, del)
         })
-        right.appendChild(del)
       }
-      headRow.appendChild(name)
-      headRow.appendChild(right)
       var body = document.createElement('div')
       body.className = 'pi-comment-body'
       body.textContent = c.content // XSS-safe
@@ -505,6 +507,7 @@ html.pi-open #pi-trigger{right:calc(min(88vw,360px) - 18px);opacity:.9;}
       main.appendChild(body)
       item.appendChild(avatar)
       item.appendChild(main)
+      if (del) item.appendChild(del)
       listEl.appendChild(item)
     })
   }

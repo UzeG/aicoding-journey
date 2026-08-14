@@ -507,6 +507,7 @@ async def add_page_comment(
         content=comment.content,
         created_at=comment.created_at,
         user=CommentUser(user_id=user.user_id or "", nickname=user.nickname, avatar_url=user.avatar_url),
+        is_mine=True,  # 发布者必然是本人，立即显示删除按钮
     )
 
 
