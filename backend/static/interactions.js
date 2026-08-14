@@ -63,6 +63,8 @@
   }
   var FILE_ICON =
     '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>'
+  var SEND_ICON =
+    '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>'
 
   var isMobile = function () {
     return window.matchMedia('(max-width: 640px)').matches
@@ -105,17 +107,21 @@ html.pi-open #pi-trigger{right:calc(min(88vw,360px) - 18px);opacity:.9;}
 #pi-panel .pi-work-name{font-size:.9rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 #pi-panel .pi-work-url{font-size:.78rem;color:rgba(255,255,255,.7);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 /* comments */
-#pi-panel .pi-comment{border:1px solid rgba(255,255,255,.15);border-radius:10px;padding:.6rem .8rem;margin-bottom:.6rem;background:rgba(255,255,255,.12);}
-#pi-panel .pi-comment-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:.3rem;}
+#pi-panel .pi-comments{flex:1;display:flex;flex-direction:column;overflow:hidden;padding:0;touch-action:auto;}
+#pi-panel .pi-comments-list{flex:1;overflow-y:auto;padding:1rem 1.1rem;touch-action:auto;overscroll-behavior:contain;}
+#pi-panel .pi-comment{display:flex;gap:.6rem;padding:.6rem .8rem;border:1px solid rgba(255,255,255,.15);border-radius:10px;margin-bottom:.6rem;background:rgba(255,255,255,.12);}
+#pi-panel .pi-comment-avatar{width:32px;height:32px;border-radius:50%;object-fit:cover;flex-shrink:0;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-weight:600;font-size:.85rem;color:#fff;}
+#pi-panel .pi-comment-main{flex:1;min-width:0;}
+#pi-panel .pi-comment-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:.25rem;}
 #pi-panel .pi-comment-name{font-weight:600;font-size:.82rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 #pi-panel .pi-comment-time{color:rgba(255,255,255,.6);font-size:.72rem;margin-left:.5rem;}
 #pi-panel .pi-comment-del{background:none;border:none;color:rgba(255,255,255,.85);font-size:.72rem;cursor:pointer;padding:0 .2rem;}
 #pi-panel .pi-comment-body{font-size:.88rem;white-space:pre-wrap;word-break:break-word;}
 #pi-panel .pi-empty{color:rgba(255,255,255,.7);font-size:.85rem;text-align:center;padding:1.5rem 0;}
-#pi-panel .pi-form{margin-top:.6rem;}
-#pi-panel .pi-ta{width:100%;box-sizing:border-box;padding:.55rem .7rem;border:1px solid rgba(255,255,255,.3);border-radius:8px;background:rgba(255,255,255,.15);font:inherit;font-size:.88rem;color:#fff;resize:vertical;}
+#pi-panel .pi-form{flex-shrink:0;display:flex;align-items:stretch;gap:.5rem;padding:.7rem 1.1rem;border-top:1px solid rgba(255,255,255,.15);}
+#pi-panel .pi-ta{flex:1;height:38px;box-sizing:border-box;padding:.5rem .7rem;border:1px solid rgba(255,255,255,.3);border-radius:8px;background:rgba(255,255,255,.15);font:inherit;font-size:.88rem;color:#fff;resize:none;touch-action:auto;}
 #pi-panel .pi-ta::placeholder{color:rgba(255,255,255,.6);}
-#pi-panel .pi-submit{margin-top:.45rem;padding:.4rem 1rem;border:none;border-radius:8px;background:#fff;color:var(--pi-theme);cursor:pointer;font:inherit;font-size:.88rem;font-weight:600;}
+#pi-panel .pi-submit{height:38px;width:38px;padding:0;border:none;border-radius:8px;background:#fff;color:var(--pi-theme);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;}
 .pi-modal{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:3005;font-family:system-ui,sans-serif;}
 .pi-modal-box{background:var(--pi-theme);border-radius:12px;padding:1.5rem;max-width:320px;text-align:center;color:#fff;box-shadow:0 8px 30px rgba(0,0,0,.3);}
 .pi-modal-title{font-weight:600;margin:0 0 .5rem;font-size:1rem;}
@@ -222,21 +228,25 @@ html.pi-open #pi-trigger{right:calc(min(88vw,360px) - 18px);opacity:.9;}
 
   // comments body
   var commentsBody = document.createElement('div')
-  commentsBody.className = 'pi-body'
+  commentsBody.className = 'pi-body pi-comments'
   commentsBody.id = 'pi-body-comments'
   commentsBody.hidden = true
+  var listWrap = document.createElement('div')
+  listWrap.className = 'pi-comments-list'
+  commentsBody.appendChild(listWrap)
   var listEl = document.createElement('div')
-  commentsBody.appendChild(listEl)
+  listWrap.appendChild(listEl)
   var form = document.createElement('div')
   form.className = 'pi-form'
   var ta = document.createElement('textarea')
   ta.className = 'pi-ta'
   ta.placeholder = '写下你的评论…'
   ta.maxLength = 500
-  ta.rows = 2
+  ta.rows = 1
   var submitBtn = document.createElement('button')
   submitBtn.className = 'pi-submit'
-  submitBtn.textContent = '发表评论'
+  submitBtn.innerHTML = SEND_ICON
+  submitBtn.title = '发表评论'
   submitBtn.type = 'button'
   submitBtn.addEventListener('click', submitComment)
   form.appendChild(ta)
@@ -427,13 +437,29 @@ html.pi-open #pi-trigger{right:calc(min(88vw,360px) - 18px);opacity:.9;}
       return
     }
     state.comments.forEach(function (c) {
+      var user = c.user || {}
+      var displayName = user.nickname || user.user_id || '匿名'
       var item = document.createElement('div')
       item.className = 'pi-comment'
+      // 左侧头像（无头像用首字母）
+      var avatar = document.createElement('span')
+      avatar.className = 'pi-comment-avatar'
+      if (user.avatar_url) {
+        avatar = document.createElement('img')
+        avatar.className = 'pi-comment-avatar'
+        avatar.src = user.avatar_url
+        avatar.alt = ''
+      } else {
+        avatar.textContent = displayName.slice(0, 1).toUpperCase()
+      }
+      // 右侧：上 = 用户名，下 = 内容
+      var main = document.createElement('div')
+      main.className = 'pi-comment-main'
       var headRow = document.createElement('div')
       headRow.className = 'pi-comment-head'
       var name = document.createElement('span')
       name.className = 'pi-comment-name'
-      name.textContent = (c.user && (c.user.nickname || c.user.user_id)) || '匿名'
+      name.textContent = displayName
       var right = document.createElement('span')
       right.style.cssText = 'display:flex;align-items:center;flex-shrink:0;'
       var time = document.createElement('span')
@@ -453,8 +479,10 @@ html.pi-open #pi-trigger{right:calc(min(88vw,360px) - 18px);opacity:.9;}
       var body = document.createElement('div')
       body.className = 'pi-comment-body'
       body.textContent = c.content // XSS-safe
-      item.appendChild(headRow)
-      item.appendChild(body)
+      main.appendChild(headRow)
+      main.appendChild(body)
+      item.appendChild(avatar)
+      item.appendChild(main)
       listEl.appendChild(item)
     })
   }
@@ -543,14 +571,14 @@ html.pi-open #pi-trigger{right:calc(min(88vw,360px) - 18px);opacity:.9;}
     var text = (ta.value || '').trim()
     if (!text) return
     submitBtn.disabled = true
-    submitBtn.textContent = '发布中…'
+    submitBtn.innerHTML = '…'
     api('/api/pages/' + pk + '/comments', { method: 'POST', body: { content: text } }).then(function (c) {
       state.comments.unshift(c)
       renderComments()
       ta.value = ''
     }).catch(function () {}).finally(function () {
       submitBtn.disabled = false
-      submitBtn.textContent = '发表评论'
+      submitBtn.innerHTML = SEND_ICON
     })
   }
 
