@@ -139,7 +139,8 @@ UserProfileView 点击编辑 → navigate("/generator?pageId={id}")
 - **page_id 校验**: 发布弹窗 300ms debounce 实时调用 `/api/pages/check-id`，大小写不敏感
 - **Header**: 无中间导航，右侧未登录显示「登录」按钮，已登录显示 Avatar 下拉菜单（我的主页/我的项目/设置/退出）。菜单点击外部关闭
 - **用户主页 tab**: `?tab=overview|projects|settings` 用 query 驱动（不用路径，避免与 `/{user_id}/{page_id}` 发布页路由冲突），默认 overview。tab 栏 `sticky top-[var(--header-height)] z-40` 置于系统 header 下方，全宽；左侧卡片 sticky 需再加 `--profile-tab-height`（index.css 定义）。自己看含草稿 + 设置 tab + 编辑资料，别人看只读
-- **Overview 首页**: README.md（有则渲染）+ 4 条最新项目（`pages.slice(0,4)`）+ 活跃度贡献热力图（`getUserActivity` 365 天，纯 CSS 52×7 格，零依赖）。README 用 `Markdown` 组件（react-markdown + remark-gfm），样式 `.markdown-body` 在 index.css，默认禁 raw HTML 防 XSS
+- **Overview 首页**: README.md（有则渲染）+ 4 条最新项目（`pages.slice(0,4)`）+ 活跃度贡献热力图（`getUserActivity(user_id, year?)`，纯 CSS 52×7 格，零依赖）。README 用 `Markdown` 组件（react-markdown + remark-gfm），样式 `.markdown-body` 在 index.css，默认禁 raw HTML 防 XSS
+- **活跃度热力图**（`ContributionHeatmap`）：`flex-1` 周列 + `aspect-square` 格子铺满容器宽，图例/月份标签天然右对齐热力图；hover 自定义 tooltip（"6 contributions on July 4th" 风格，absolute 定位跟随滚动）；月份标签在每列换月处显示；年份选择 PC 右上 / 手机热力图下方下拉（切年经 `onYearChange` 重拉）
 - **关注体系**: `FollowButton` 乐观更新（点击立即翻转 is_following/计数，失败回滚）；未登录点击跳 /login。粉丝/正在关注计数在左卡片可点击，打开 `FollowList` 弹窗（`followDialog` state，Radix Dialog 关闭卸载内容、每次打开重新拉取）；列表项内嵌 FollowButton 支持回关（`u.id !== currentUser?.id` 才显示）
 - **头像**: `Avatar` 组件展示 `user.avatar_url`（相对路径 `/static/...`，经 Vite proxy 加载），无头像显示首字母。上传走 `POST /api/auth/me/avatar`
 - **页面封面**: `PageItem.cover_url`（相对路径 `/static/snapshots/...`，经 Vite proxy 加载）。项目卡片左侧 `aspect-video`（16:9）显示封面，无封面显示占位图标

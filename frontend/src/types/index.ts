@@ -93,5 +93,7 @@ export interface ActivityDay {
 }
 
 export interface ActivityResponse {
+  year: number
   days: ActivityDay[]
+  years: number[]
 }

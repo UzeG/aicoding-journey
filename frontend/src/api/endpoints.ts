@@ -60,8 +60,8 @@ export const followUser = (user_id: string) => api.post<FollowResponse>(`/users/
 export const unfollowUser = (user_id: string) => api.delete<FollowResponse>(`/users/${user_id}/follow`)
 export const getFollowers = (user_id: string) => api.get<FollowUserItem[]>(`/users/${user_id}/followers`)
 export const getFollowing = (user_id: string) => api.get<FollowUserItem[]>(`/users/${user_id}/following`)
-export const getUserActivity = (user_id: string, days = 365) =>
-  api.get<ActivityResponse>(`/users/${user_id}/activity`, { params: { days } })
+export const getUserActivity = (user_id: string, year?: number) =>
+  api.get<ActivityResponse>(`/users/${user_id}/activity`, { params: year ? { year } : {} })
 
 // Prompts
 export const listPrompts = () => api.get<RecommendedPrompt[]>('/prompts')

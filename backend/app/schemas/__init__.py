@@ -207,7 +207,9 @@ class ActivityDay(BaseModel):
 
 
 class ActivityResponse(BaseModel):
+    year: int
     days: list[ActivityDay]
+    years: list[int]
 
 
 # ── Proxy ──

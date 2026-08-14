@@ -630,27 +630,61 @@ async def list_following(
 @users_router.get("/{user_id}/activity", response_model=ActivityResponse)
 async def get_user_activity(
     user_id: str,
-    days: int = Query(365, ge=1, le=365),
+    year: Optional[int] = Query(None, ge=2000, le=2100),
     db: AsyncSession = Depends(get_db),
 ):
-    """Daily page-creation counts for the last {days} days (contribution-graph style)."""
+    """Per-day page-creation counts for a calendar year (contribution-graph style).
+
+    Defaults to the most recent year with any activity. `years` lists every year that
+    has activity so the frontend can render the GitHub-style year selector.
+    """
     target = await _resolve_user(db, user_id)
-    since = datetime.utcnow().date() - timedelta(days=days - 1)
+
+    years_result = await db.execute(
+        select(func.strftime("%Y", Page.created_at).label("y"))
+        .where(Page.user_id == target.id, Page.status == "active")
+        .distinct()
+        .order_by(func.strftime("%Y", Page.created_at).desc())
+    )
+    years = [int(r.y) for r in years_result.all()]
+    if not years:
+        years = [datetime.utcnow().year]
+
+    now = datetime.utcnow()
+    if year is None:
+        year = years[0]
+    year = min(year, now.year)
+
+    start = datetime(year, 1, 1)
+    if year == now.year:
+        end_exclusive = now.date() + timedelta(days=1)  # 到今天为止
+    else:
+        end_exclusive = datetime(year + 1, 1, 1).date()
 
     result = await db.execute(
         select(
             func.strftime("%Y-%m-%d", Page.created_at).label("day"),
             func.count().label("cnt"),
         )
-        .where(Page.user_id == target.id, Page.status == "active", Page.created_at >= since)
+        .where(
+            Page.user_id == target.id,
+            Page.status == "active",
+            Page.created_at >= start,
+            Page.created_at < end_exclusive,
+        )
         .group_by("day")
     )
     counts = {row.day: row.cnt for row in result.all()}
 
-    return ActivityResponse(days=[
-        ActivityDay(
-            date=(since + timedelta(days=i)).isoformat(),
-            count=counts.get((since + timedelta(days=i)).isoformat(), 0),
-        )
-        for i in range(days)
-    ])
+    day_count = (end_exclusive - start.date()).days
+    return ActivityResponse(
+        year=year,
+        years=years,
+        days=[
+            ActivityDay(
+                date=(start.date() + timedelta(days=i)).isoformat(),
+                count=counts.get((start.date() + timedelta(days=i)).isoformat(), 0),
+            )
+            for i in range(day_count)
+        ],
+    )

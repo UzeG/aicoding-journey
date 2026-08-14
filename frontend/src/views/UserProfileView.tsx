@@ -61,6 +61,7 @@ export default function UserProfileView() {
   const [deleteTarget, setDeleteTarget] = useState<PageItem | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [activity, setActivity] = useState<ActivityResponse | null>(null)
+  const [activityYear, setActivityYear] = useState<number | null>(null)
   const [followDialog, setFollowDialog] = useState<'followers' | 'following' | null>(null)
 
   const [editOpen, setEditOpen] = useState(false)
@@ -94,16 +95,20 @@ export default function UserProfileView() {
   // 切换用户时兜底关闭关注弹窗（避免从弹窗跳转他人主页后弹窗残留）
   useEffect(() => { setFollowDialog(null) }, [userId])
 
-  // 活跃度数据 —— 仅 overview tab 加载
-  useEffect(() => {
-    if (tab !== 'overview' || !userId) return
+  // 活跃度数据 —— 仅 overview tab 加载；切年时保留旧数据避免闪烁，响应后覆盖
+  const fetchActivity = useCallback((year?: number) => {
+    if (!userId) return
     let alive = true
-    setActivity(null)
-    getUserActivity(userId)
+    getUserActivity(userId, year)
       .then((res) => { if (alive) setActivity(res.data) })
       .catch(() => { /* 降级：无活跃度时不展示热力图 */ })
     return () => { alive = false }
-  }, [tab, userId])
+  }, [userId])
+
+  useEffect(() => {
+    if (tab !== 'overview') return
+    fetchActivity(activityYear ?? undefined)
+  }, [tab, activityYear, fetchActivity])
 
   const setTab = (key: string) => {
     const params = new URLSearchParams(searchParams)
@@ -310,7 +315,7 @@ export default function UserProfileView() {
                   </h2>
                   <Card>
                     <CardContent className="p-4 sm:p-6">
-                      {activity ? <ContributionHeatmap days={activity.days} /> : <LoadingSpinner text="加载活跃度..." />}
+                      {activity ? <ContributionHeatmap data={activity} onYearChange={setActivityYear} /> : <LoadingSpinner text="加载活跃度..." />}
                     </CardContent>
                   </Card>
                 </section>
