@@ -197,7 +197,8 @@ export default function UserProfileView() {
 
   const pages = profile.pages
   const publishedCount = pages.filter((p) => p.is_published).length
-  const latestProjects = pages.slice(0, 4)
+  // 最新项目仅展示已发布页面（草稿由「项目」tab 的筛选区分）
+  const latestProjects = pages.filter((p) => p.is_published).slice(0, 4)
   const filtered = pages.filter((p) => {
     if (filter === 'published') return p.is_published
     if (filter === 'draft') return !p.is_published

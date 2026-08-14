@@ -1,7 +1,6 @@
 import { useNavigate } from 'react-router-dom'
-import { CheckCircle2, CircleDashed, ExternalLink, FileText, Pencil, Trash2 } from 'lucide-react'
+import { ExternalLink, FileText, Pencil, Trash2 } from 'lucide-react'
 import { Button } from '../ui/button'
-import { Badge } from '../ui/badge'
 import { Card, CardContent } from '../ui/card'
 import DownloadButton from '../common/DownloadButton'
 import { getPage } from '../../api/endpoints'
@@ -34,17 +33,6 @@ export default function ProjectCard({ page, user_id, isOwn, onDelete }: Props) {
             <div className="absolute inset-0 flex items-center justify-center text-muted-foreground bg-gradient-to-br from-muted to-muted/40">
               <FileText className="size-8 opacity-40" />
             </div>
-          )}
-          {page.is_published ? (
-            <Badge variant="success" className="absolute top-2 left-2">
-              <CheckCircle2 className="size-3" />
-              已发布
-            </Badge>
-          ) : (
-            <Badge variant="muted" className="absolute top-2 left-2">
-              <CircleDashed className="size-3" />
-              草稿
-            </Badge>
           )}
         </div>
         <CardContent className="flex-1 min-w-0 p-4 flex items-center justify-between">
