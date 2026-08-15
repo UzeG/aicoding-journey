@@ -93,6 +93,38 @@ export interface FollowResponse {
   follower_count: number
 }
 
+export interface GalleryAuthor {
+  user_id: string
+  nickname: string | null
+  avatar_url: string | null
+}
+
+export interface GalleryItem {
+  id: string
+  page_id: string
+  title: string | null
+  cover_url: string | null
+  tags: string[]
+  url: string
+  created_at: string
+  like_count: number
+  favorite_count: number
+  author: GalleryAuthor
+}
+
+export interface TagCount {
+  tag: string
+  count: number
+}
+
+export interface GalleryResponse {
+  items: GalleryItem[]
+  total: number
+  page: number
+  page_size: number
+  tag_counts: TagCount[]
+}
+
 export interface ActivityDay {
   date: string
   count: number

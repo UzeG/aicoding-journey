@@ -3,6 +3,7 @@ import { useEffect } from 'react'
 import AppHeader from './components/layout/AppHeader'
 import HomeView from './views/HomeView'
 import GeneratorView from './views/GeneratorView'
+import GalleryView from './views/GalleryView'
 import UserProfileView from './views/UserProfileView'
 import LoginView from './views/LoginView'
 import AdminLayout from './views/admin/AdminLayout'
@@ -71,6 +72,7 @@ export default function App() {
           <Routes>
             <Route path="/" element={<HomeView />} />
             <Route path="/generator" element={<GeneratorView />} />
+            <Route path="/gallery" element={<GalleryView />} />
             <Route path="/home" element={<HomeRedirect />} />
             <Route path="/login" element={<LoginView />} />
 

@@ -26,6 +26,7 @@ backend/
 │   │   ├── __init__.py      # 路由注册
 │   │   ├── auth.py          # /api/auth/{register,login,me,check,me/avatar}
 │   │   ├── generate.py      # /api/generate (SSE 流式) ★核心
+│   │   ├── gallery.py       # /api/gallery（作品广场，公开只读聚合）
 │   │   ├── pages.py         # /api/pages CRUD + /{user_id}/{page_id} 公开访问
 │   │   ├── prompts.py       # /api/prompts
 │   │   ├── proxy.py         # /api/proxy (CORS 代理)
@@ -82,6 +83,7 @@ backend/
 | GET | /api/users/{user_id}/followers | No | 关注者列表（is_following 为 viewer 是否关注该用户） |
 | GET | /api/users/{user_id}/following | No | 正在关注列表 |
 | GET | /api/users/{user_id}/activity?year= | No | 每日页面创建数（按自然年，默认最新有数据的年份；响应含 years 供年份选择器） |
+| GET | /api/gallery?tag=&q=&sort=&page=&page_size= | No | 作品广场：公开聚合已发布 public 页面（封面/tags/作者/点赞收藏数）；tag 用 SQLite `json_each` 精确匹配数组元素，sort=latest\|hot，分页 + tag_counts 聚合 |
 | POST | /api/pages/upload | JWT | 上传 .html/.htm 为草稿页（≤5MB，内容需含 <html>/<!DOCTYPE>） |
 | POST | /api/proxy | No | API 代理网关 |
 | GET / PUT | /api/settings/llm | JWT | LLM 配置 |
@@ -115,6 +117,7 @@ backend/
 - **发布页互动**: 3 张表 `page_likes/page_comments/page_favorites`（UNIQUE(page_fk,user_fk)）。互动端点 `GET /{pk}/interactions`（可选鉴权，返回计数+评论+viewer+`page`(标题/作者)）、`POST /{pk}/like|favorite`（toggle）、`POST /{pk}/comments`、`DELETE /{pk}/comments/{cid}`（仅本人）。`serve_page` **服务期注入** `build_interaction_widget`（`<div id="platform-interactions" data-pk>` + `/static/interactions.js`），不改存储 html；`render_page`（快照）不注入。组件读 `localStorage.access_token`（同源前提：dev 用 Vite proxy 把两段 `{user_id}/{page_id}` 字符集路径代理到 8000，见 frontend/vite.config.ts；`PUBLIC_BASE_URL` 指向 5173），未登录弹窗→`/login?redirect=`
 - **互动 UI（底部上滑 bottom sheet，PC/移动端统一）**: `interactions.js` 右下角圆形触发按钮（常态 `opacity:.35`，打开后淡出并被抽屉盖住）；抽屉从底部上滑（`translateY(100%)→0`），顶部横杠点击/拖拽收起；PC（≥641px）收窄锚右下角（`min(92vw,420px)`）、移动端全宽 78vh。两个 tab：**作者**（头像/昵称/@id/bio + **N 关注者 + 关注/已关注按钮**（读 `GET /api/users/{author}` 的 `follower_count`/`is_following`，`viewer.is_self`=true 即自己的页时隐藏；乐观更新） + TA 的其他已发布作品：封面+名+url；**点击作者信息栏 → `/{author_user_id}` 打开作者主页**）+ **评论**（列表/表单/删自己的）。overlay 层级在页之上、**不影响页面布局**（项目不缩放）。点赞/收藏在面板头部。**全部 append 到 `documentElement`**，`textContent` 防 XSS，未登录弹窗→`/login?redirect=`。`InteractionViewer` 新增 `is_self`（viewer 是否页面作者）。**抽屉跟随当前用户主题色/深浅**：读 `localStorage.manifest.theme`+`manifest.appearance`（`applyPiTheme`），深浅切换 surface 底色（浅白/深炭）、深色用提亮主色，跟随系统深浅变化重算
 - **页面 tags**: `pages.tags` TEXT（JSON 数组字符串，迁移补列）。two_step 由 **Step 1 一并生成**（≤5 个、每个 ≤20 字符，`get_step1_prompt()` 输出格式含 `tags`）；single_step 无 Step 1 兜底 `[]`。**tags 不进 Step 2 提示词**（只存库+透出）。用户可在发布弹窗增删改：`POST /{pk}/publish` 传 `tags` 覆盖 AI 结果（未传保留 AI 生成），`PUT /api/pages/{pk}` 支持更新；`save_draft` 派生副本复制 tags。`PageListItem`/`PageResponse` 透出（JSON 字符串→list 的 before-validator）；`done` SSE 事件带 `tags`（前端 store 预填）。后端统一 `normalize_tags()`（去重/trim/≤5/≤20，容忍 JSON 字符串或列表）
+- **作品广场 Gallery**: `GET /api/gallery`（[gallery.py](app/api/gallery.py)）公开只读聚合——过滤 `is_published + status=active + visibility=public`，JOIN User 取作者，标量子查询聚合 `page_likes/page_favorites` 计数，**不返回 html_content**。tag 筛选用 SQLite JSON1 `json_each` **精确匹配**数组元素（`EXISTS(select 1 from json_each(pages.tags) where value=:tag)`），避免 LIKE 子串误匹配；标题搜索 `ilike` 需转义 `% _ \`。`tag_counts` 从全部已发布页聚合 tags 供筛选条展示。`/gallery` 加入 `_RESERVED_IDS`（防 user_id 撞路由）。页面卡片链接直接复用 `/{user_id}/{page_id}` 公开 URL
 - **is_saved 机制**: 生成时 `is_saved=False`，页面不会出现在列表（`list_pages` 过滤 `is_published OR is_saved`）。用户主动点击"保存草稿"后 `is_saved=True`，页面才在用户主页中可见
 - **LLM 优先级**: 用户配置 > `.env` 平台默认（api_key 由 `_build_client` 统一解密，仅一处）
 - **思考模式**: 默认**关闭**（`config.LLM_THINKING=False`）。所有 LLM 调用（Step1/Step2/单步/admin chat）经 `_thinking_extra_body()` 传 `extra_body={"thinking":{"type":"disabled"}}`（SDK 会扁平化为顶层字段，DeepSeek V4 默认思考的模型据此关闭）。`.env` 设 `LLM_THINKING=true` 即开启

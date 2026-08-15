@@ -41,6 +41,7 @@ def _sniff_image_type(head: bytes) -> str | None:
 _RESERVED_IDS = frozenset({
     "api", "admin", "static", "p", "login", "register", "settings",
     "generate", "mock", "www", "root", "system", "null", "undefined",
+    "gallery", "home",
 })
 
 

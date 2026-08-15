@@ -308,6 +308,40 @@ class ToggleResponse(BaseModel):
     count: int
 
 
+# ── Gallery ──
+
+class GalleryAuthor(BaseModel):
+    user_id: str
+    nickname: Optional[str] = None
+    avatar_url: Optional[str] = None
+
+
+class GalleryItem(BaseModel):
+    id: str
+    page_id: str
+    title: Optional[str] = None
+    cover_url: Optional[str] = None
+    tags: list[str] = []
+    url: str
+    created_at: datetime
+    like_count: int = 0
+    favorite_count: int = 0
+    author: GalleryAuthor
+
+
+class TagCount(BaseModel):
+    tag: str
+    count: int
+
+
+class GalleryResponse(BaseModel):
+    items: list[GalleryItem]
+    total: int
+    page: int
+    page_size: int
+    tag_counts: list[TagCount] = []
+
+
 # ── Activity ──
 
 class ActivityDay(BaseModel):

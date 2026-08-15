@@ -1,5 +1,5 @@
 import api from './client'
-import type { ActivityResponse, CheckPageIdResponse, CheckUserIdResponse, FollowResponse, FollowUserItem, LLMSettings, PageDetail, PageItem, PublishResult, RecommendedPrompt, User, UserProfile } from '../types'
+import type { ActivityResponse, CheckPageIdResponse, CheckUserIdResponse, FollowResponse, FollowUserItem, GalleryResponse, LLMSettings, PageDetail, PageItem, PublishResult, RecommendedPrompt, User, UserProfile } from '../types'
 
 // Auth
 export const login = (account: string, password: string) =>
@@ -62,6 +62,10 @@ export const getFollowers = (user_id: string) => api.get<FollowUserItem[]>(`/use
 export const getFollowing = (user_id: string) => api.get<FollowUserItem[]>(`/users/${user_id}/following`)
 export const getUserActivity = (user_id: string, year?: number) =>
   api.get<ActivityResponse>(`/users/${user_id}/activity`, { params: year ? { year } : {} })
+
+// Gallery
+export const getGallery = (params: { tag?: string; q?: string; sort?: 'latest' | 'hot'; page?: number; page_size?: number }) =>
+  api.get<GalleryResponse>('/gallery', { params })
 
 // Prompts
 export const listPrompts = () => api.get<RecommendedPrompt[]>('/prompts')

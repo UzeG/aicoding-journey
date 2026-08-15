@@ -72,6 +72,7 @@ frontend/src/
 └── views/
     ├── HomeView.tsx              # 首页（双栏 Hero：左文案+输入 / 右工具预览，+ Three.js 背景动效）
     ├── GeneratorView.tsx         # 分屏生成器 ★核心页面
+    ├── GalleryView.tsx           # 作品广场：卡片墙 + tag 筛选 chips + 最新/最热排序 + 搜索 + 分页
     ├── UserProfileView.tsx       # 用户主页（tab 栏下移 header；首页/项目/设置）
     ├── LoginView.tsx             # 登录/注册（支持手机号 + user_id）
     └── SettingsView.tsx          # LLM 配置（复用为主页设置 tab）
@@ -83,6 +84,7 @@ frontend/src/
 |---|---|---|
 | `/` | HomeView | 首页 + 推荐提示词 |
 | `/generator` | GeneratorView | 分屏生成器（支持 ?prompt=&pageId=） |
+| `/gallery` | GalleryView | 作品广场（公开浏览已发布页面，tag 筛选/搜索/排序/分页；置于 `/:userId` 前防路由冲突） |
 | `/:userId` | UserProfileView | 用户主页（自己=管理，别人=只读） |
 | `/home` | HomeRedirect | 重定向到 /{当前用户id} |
 | `/login` | LoginView | 登录/注册 |
@@ -146,7 +148,7 @@ UserProfileView 点击编辑 → navigate("/generator?pageId={id}")
 - **Mock 模式**: `npm run dev:mock` 启动，`.env.mock` 设 `VITE_MOCK_LLM=true`。`vite.config.ts` 中 `/api/generate` 被 rewrite 为 `/api/mock/generate`，返回样本 HTML。前端代码无需改动。正式模式用 `npm run dev`
 - **user_id 校验**: 注册页 300ms debounce 实时调用 `/api/auth/check`，大小写不敏感
 - **page_id 校验**: 发布弹窗 300ms debounce 实时调用 `/api/pages/check-id`，大小写不敏感
-- **Header**: 无中间导航，右侧未登录显示「登录」按钮，已登录显示 Avatar 下拉菜单（我的主页/我的项目/设置/退出）。菜单点击外部关闭
+- **Header**: 左侧 logo + 「作品广场」导航（`/gallery`，登录/未登录都可见）；右侧未登录显示「登录」按钮，已登录显示 Avatar 下拉菜单（我的主页/我的项目/设置/退出）。菜单点击外部关闭
 - **用户主页 tab**: `?tab=overview|projects|settings` 用 query 驱动（不用路径，避免与 `/{user_id}/{page_id}` 发布页路由冲突），默认 overview。tab 栏 `sticky top-[var(--header-height)] z-40` 置于系统 header 下方，全宽；左侧卡片 sticky 需再加 `--profile-tab-height`（index.css 定义）。自己看含草稿 + 设置 tab + 编辑资料，别人看只读
 - **Overview 首页**: README.md（有则渲染）+ 4 条最新项目（`pages.slice(0,4)`）+ 活跃度贡献热力图（`getUserActivity(user_id, year?)`，纯 CSS 52×7 格，零依赖）。README 用 `Markdown` 组件（react-markdown + remark-gfm），样式 `.markdown-body` 在 index.css，默认禁 raw HTML 防 XSS
 - **活跃度热力图**（`ContributionHeatmap`）：`flex-1` 周列 + `aspect-square` 格子铺满容器宽，图例/月份标签天然右对齐热力图；hover 自定义 tooltip（"6 contributions on July 4th" 风格，absolute 定位跟随滚动）；月份标签在每列换月处显示；年份选择 PC 右上 / 手机热力图下方下拉（切年经 `onYearChange` 重拉）
