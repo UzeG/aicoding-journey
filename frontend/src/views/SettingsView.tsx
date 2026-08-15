@@ -3,7 +3,7 @@ import { Settings, Save, Loader2, Lightbulb, CheckCircle2, CircleAlert, Palette,
 import { getLLMSettings, updateLLMSettings, updateProfile } from '../api/endpoints'
 import { useAuthStore } from '../stores/auth'
 import { cn } from '../lib/utils'
-import { THEME_ACCENTS, DEFAULT_THEME, applyTheme, cacheTheme, applyAppearance, activeAppearance, type AppearanceMode } from '../lib/theme'
+import { THEME_ACCENTS, DEFAULT_THEME, applyTheme, cacheTheme, applyAppearance, activeAppearance, isLightAccent, type AppearanceMode } from '../lib/theme'
 import { Button } from '../components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
 import { Input } from '../components/ui/input'
@@ -178,7 +178,12 @@ export default function SettingsView() {
                   className="relative size-10 rounded-full border-2 border-border shadow-sm transition-transform hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                   style={{ backgroundColor: a.hex }}
                 >
-                  {active && <Check className="absolute inset-0 m-auto size-5 text-white" strokeWidth={3} />}
+                  {active && (
+                    <Check
+                      className={cn('absolute inset-0 m-auto size-5', isLightAccent(a.hex) ? 'text-foreground' : 'text-white')}
+                      strokeWidth={3}
+                    />
+                  )}
                 </button>
               )
             })}

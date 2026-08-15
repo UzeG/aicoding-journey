@@ -9,17 +9,24 @@ export interface ThemeAccent {
   hex: string
   /** 深色模式主色（亮色系，深字 ≥ 4.5:1） */
   darkHex: string
+  /** 浅色模式下主按钮/前景色（默认白；纸白等浅主色需用墨色） */
+  lightFg?: string
 }
 
 /** 第一个是平台默认的深青 */
 export const THEME_ACCENTS: ThemeAccent[] = [
   { key: 'teal', label: '深青', hex: '#0E7A6C', darkHex: '#3CC2AB' },
+  { key: 'sky', label: '天青', hex: '#2B7A9E', darkHex: '#6BB7DC' },
   { key: 'slate', label: '石板蓝', hex: '#3D5A80', darkHex: '#7BA3D2' },
   { key: 'indigo', label: '靛蓝', hex: '#46549C', darkHex: '#97A1EA' },
   { key: 'moss', label: '墨绿', hex: '#3F6B4F', darkHex: '#79B389' },
   { key: 'plum', label: '紫', hex: '#6E3B5E', darkHex: '#BE85AE' },
+  { key: 'rose', label: '玫红', hex: '#A83A6E', darkHex: '#DE7FAD' },
+  { key: 'brown', label: '棕褐', hex: '#7A5C32', darkHex: '#C4A06A' },
   { key: 'amber', label: '深琥珀', hex: '#A8580F', darkHex: '#E3A45E' },
   { key: 'crimson', label: '暗红', hex: '#A8342B', darkHex: '#E57F74' },
+  { key: 'ink', label: '墨黑', hex: '#20201F', darkHex: '#E6E6E3' },
+  { key: 'paper', label: '纸白', hex: '#F5F5F1', darkHex: '#FFFFFF', lightFg: '#10110D' },
 ]
 
 export const DEFAULT_THEME = THEME_ACCENTS[0]
@@ -63,12 +70,21 @@ export function applyTheme(hex: string | null | undefined): void {
     root.style.removeProperty('--live')
   } else {
     root.style.setProperty('--primary', target)
-    root.style.setProperty('--primary-foreground', dark ? '#10110D' : '#FFFFFF')
+    root.style.setProperty('--primary-foreground', dark ? '#10110D' : (accent?.lightFg || '#FFFFFF'))
     root.style.setProperty('--ring', target)
     root.style.setProperty('--live', target)
   }
   // 通知关注主题色的组件（HeroBackground 等）重新读取 --primary/--foreground
   window.dispatchEvent(new CustomEvent('themechange'))
+}
+
+/** 主色是否为很浅的颜色（纸白等）—— 用于决定色卡勾选/图标用浅色还是深色 */
+export function isLightAccent(hex: string): boolean {
+  const n = parseInt(hex.slice(1), 16)
+  const r = (n >> 16) & 255
+  const g = (n >> 8) & 255
+  const b = n & 255
+  return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.7
 }
 
 export function getCachedTheme(): string | null {
