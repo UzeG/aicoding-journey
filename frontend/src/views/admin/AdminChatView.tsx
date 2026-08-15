@@ -34,6 +34,9 @@ export default function AdminChatView() {
   const abortRef = useRef<AbortController | null>(null)
   const listRef = useRef<HTMLDivElement>(null)
   const streamRef = useRef('')
+  const startAtRef = useRef(0)
+  const timerRef = useRef<number | null>(null)
+  const [elapsed, setElapsed] = useState(0)
 
   // 自动滚动到底部
   useEffect(() => {
@@ -41,12 +44,16 @@ export default function AdminChatView() {
   }, [messages, streamingText])
 
   useEffect(() => {
-    return () => abortRef.current?.abort()
+    return () => {
+      if (timerRef.current) window.clearInterval(timerRef.current)
+      abortRef.current?.abort()
+    }
   }, [])
 
   const stop = () => {
     abortRef.current?.abort()
     setRunning(false)
+    if (timerRef.current) window.clearInterval(timerRef.current)
   }
 
   const send = async () => {
@@ -58,6 +65,11 @@ export default function AdminChatView() {
     streamRef.current = ''
     setStreamingText('')
     setRunning(true)
+    startAtRef.current = performance.now()
+    setElapsed(0)
+    timerRef.current = window.setInterval(() => {
+      setElapsed(Math.round(performance.now() - startAtRef.current))
+    }, 100)
 
     const abortController = new AbortController()
     abortRef.current = abortController
@@ -101,6 +113,8 @@ export default function AdminChatView() {
         setError((err as Error).message || '网络错误')
       }
     } finally {
+      if (timerRef.current) window.clearInterval(timerRef.current)
+      setElapsed(Math.round(performance.now() - startAtRef.current))
       if (streamRef.current) {
         setMessages((prev) => [...prev, { role: 'assistant', content: streamRef.current }])
       }
@@ -133,9 +147,21 @@ export default function AdminChatView() {
         </CardHeader>
 
         <CardContent className="flex-1 min-h-0 flex flex-col">
+          {/* 状态：耗时 */}
+          <div className="text-xs text-muted-foreground mb-2 min-h-[1rem]">
+            {running ? (
+              <span className="inline-flex items-center gap-1.5 text-primary">
+                <Loader2 className="size-3 animate-spin" />
+                LLM 回复中… {elapsed}ms
+              </span>
+            ) : elapsed > 0 ? (
+              <span>本次耗时 {elapsed}ms</span>
+            ) : null}
+          </div>
+
           {/* 消息列表 */}
           <div ref={listRef} className="flex-1 overflow-y-auto space-y-3 pr-1 mb-3">
-            {messages.length === 0 && !streamingText && (
+            {messages.length === 0 && !streamingText && !running && (
               <p className="text-sm text-muted-foreground text-center py-12">
                 输入一条 prompt，测试 LLM 是否连通、回复如何。
               </p>
@@ -154,6 +180,14 @@ export default function AdminChatView() {
                 </div>
               </div>
             ))}
+            {running && !streamingText && (
+              <div className="flex justify-start">
+                <div className="rounded-2xl px-4 py-2.5 text-sm bg-muted text-foreground rounded-bl-sm inline-flex items-center gap-2">
+                  <Loader2 className="size-3.5 animate-spin shrink-0" />
+                  思考中…
+                </div>
+              </div>
+            )}
             {streamingText && (
               <div className="flex justify-start">
                 <div className="max-w-[85%] rounded-2xl px-4 py-2.5 text-sm whitespace-pre-wrap break-words bg-muted text-foreground rounded-bl-sm">

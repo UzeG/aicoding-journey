@@ -66,6 +66,7 @@ async def create_two_step_stream(
 
         if verbose:
             yield {"type": "step1", "refined_prompt": refined_prompt, "libraries": libraries}
+            yield {"type": "step1_prompt", "system": get_step1_prompt(), "user": prompt}
 
         # ── Step 2: Generate ──
         yield {"type": "progress", "step": "generate", "message": "正在生成页面..."}
@@ -260,6 +261,9 @@ async def _run_step2_generate(
         {"role": "user", "content": refined_prompt},
     ]
 
+    if verbose:
+        yield {"type": "step2_prompt", "system": system_prompt, "user": refined_prompt}
+
     total_tokens = 0
     full_content = ""
     html_started = False
@@ -391,6 +395,9 @@ async def _run_single_step_generate(
         {"role": "system", "content": system_prompt},
         {"role": "user", "content": prompt},
     ]
+
+    if verbose:
+        yield {"type": "step2_prompt", "system": system_prompt, "user": prompt}
 
     total_tokens = 0
     full_content = ""

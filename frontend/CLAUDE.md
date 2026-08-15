@@ -127,7 +127,7 @@ UserProfileView 点击编辑 → navigate("/generator?pageId={id}")
 ## 关键设计决策
 
 - **后台权限**: `User.is_admin`（来自 `GET /api/auth/me`，后端按 `ADMIN_USER_IDS` 计算）。`AppHeader` 下拉仅管理员显示「后台管理」；`AdminLayout` 做路由守卫。Admin API 全部走 `api/admin.ts`（axios 自动带 JWT、401 跳登录）
-- **测试台 SSE**: `AdminTestBenchView` 本地实现 fetch+ReadableStream（不复用 `useSSE`，其与 generation store 耦合），消费 `step1`/`token_raw`/`token`/`final`/`done`/`error` 事件。`token_raw` 是 HTML 过滤前的原始流（正式生成会丢弃）。测试台顶部可选**生成策略**（two_step/single_step，透传 `strategy`），single_step 时无 `step1` 事件、step1 面板为空
+- **测试台 SSE**: `AdminTestBenchView` 本地实现 fetch+ReadableStream（不复用 `useSSE`，其与 generation store 耦合），消费 `step1`/`step1_prompt`/`step2_prompt`/`token_raw`/`token`/`final`/`done`/`error` 事件。`token_raw` 是 HTML 过滤前的原始流（正式生成会丢弃）。`step1_prompt`/`step2_prompt` 分别展示后端**实际发给 Step 1 / Step 2 LLM 的完整 system+user 消息**。流水线布局：原始 prompt → Step1（输入/输出）→ Step2（输入/输出）→ HTML（代码/页面）。测试台顶部可选**生成策略**（two_step/single_step，透传 `strategy`），single_step 时无 `step1`/`step1_prompt` 事件
 - **LLM 聊天测试**: `AdminChatView`（`/admin/chat`）单轮 prompt → 流式回复（`chatSSE` 消费 `token`/`done`/`error`）；配置选择平台默认/自定义（model/base_url/api_key，仅本次请求不落库），Enter 发送 / 停止中止 / 清空
 - **SSE 消费**: 使用 fetch + ReadableStream 而非 EventSource（需要 POST）
 - **SSE 事件类型**: `progress`（步骤进度）、`token`（追加代码）、`final`（替换为精确 HTML）、`done`（结束）、`error`（错误）
