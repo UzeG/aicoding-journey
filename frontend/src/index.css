@@ -11,30 +11,30 @@
 
   --radius: 0.625rem;
 
-  /* 墨水与光 · Ink & Light —— 干净暖纸 + 深墨 + 深青主色 + 琥珀运行态。
-     全部走 shadcn CSS 变量，未来换身份只需改 token。 */
-  --background: #f7f6f2;
+  /* 墨水与光 · Ink & Light —— 中性色由 --primary 派生（color-mix），
+     选什么主题色全站表面/边框/弱化都带它的色相；深浅由 .dark 反转。 */
+  --background: color-mix(in oklab, #f7f6f2 91%, var(--primary));
   --foreground: #20221f;
 
-  --card: #ffffff;
+  --card: color-mix(in oklab, #ffffff 89%, var(--primary));
   --card-foreground: #20221f;
 
-  --popover: #ffffff;
+  --popover: color-mix(in oklab, #ffffff 89%, var(--primary));
   --popover-foreground: #20221f;
 
   /* 主色：深青 */
   --primary: #0e7a6c;
   --primary-foreground: #ffffff;
 
-  /* 次级：浅青表面 */
-  --secondary: #e0efeb;
-  --secondary-foreground: #0e6b5f;
+  /* 次级：明显带主色相的表面 */
+  --secondary: color-mix(in oklab, #e8f0ec 78%, var(--primary));
+  --secondary-foreground: color-mix(in oklab, #0e6b5f 82%, var(--primary));
 
   /* 弱化 */
-  --muted: #f0efea;
-  --muted-foreground: #6e6a61;
+  --muted: color-mix(in oklab, #f0efea 87%, var(--primary));
+  --muted-foreground: color-mix(in oklab, #6e6a61 87%, var(--primary));
 
-  --accent: #e7ebe8;
+  --accent: color-mix(in oklab, #e7ebe8 82%, var(--primary));
   --accent-foreground: #20221f;
 
   --destructive: #b3261e;
@@ -42,15 +42,15 @@
 
   --success: #4a7c59;
 
-  --border: #e3e0d7;
-  --input: #d8d5ca;
+  --border: color-mix(in oklab, #e3e0d7 79%, var(--primary));
+  --input: color-mix(in oklab, #d8d5ca 78%, var(--primary));
   --ring: #0e7a6c;
 
   /* 运行中/编译中：深琥珀 */
   --live: #a8580f;
 
-  --chart-1: #0e7a6c;
-  --chart-2: #5f9a8e;
+  --chart-1: color-mix(in oklab, #0e7a6c 80%, var(--primary));
+  --chart-2: color-mix(in oklab, #5f9a8e 75%, var(--primary));
   --chart-3: #a8580f;
   --chart-4: #46549c;
   --chart-5: #d8d5ca;
@@ -58,25 +58,25 @@
 
 /* 墨水与光 · 深色：暖炭底，主色用亮色变体（由 applyTheme 覆盖），纸面/墨色反转 */
 :root.dark {
-  --background: #151712;
+  --background: color-mix(in oklab, #151712 91%, var(--primary));
   --foreground: #e9e5d8;
 
-  --card: #1c1e18;
+  --card: color-mix(in oklab, #1c1e18 89%, var(--primary));
   --card-foreground: #e9e5d8;
 
-  --popover: #1c1e18;
+  --popover: color-mix(in oklab, #1c1e18 89%, var(--primary));
   --popover-foreground: #e9e5d8;
 
   --primary: #3cc2ab;
   --primary-foreground: #10110d;
 
-  --secondary: #22312c;
-  --secondary-foreground: #9fd2c5;
+  --secondary: color-mix(in oklab, #22312c 78%, var(--primary));
+  --secondary-foreground: color-mix(in oklab, #9fd2c5 82%, var(--primary));
 
-  --muted: #21241d;
-  --muted-foreground: #98937f;
+  --muted: color-mix(in oklab, #21241d 87%, var(--primary));
+  --muted-foreground: color-mix(in oklab, #98937f 87%, var(--primary));
 
-  --accent: #24271f;
+  --accent: color-mix(in oklab, #24271f 82%, var(--primary));
   --accent-foreground: #e9e5d8;
 
   --destructive: #e06b60;
@@ -84,14 +84,14 @@
 
   --success: #74ae82;
 
-  --border: #2c3026;
-  --input: #383b30;
+  --border: color-mix(in oklab, #2c3026 79%, var(--primary));
+  --input: color-mix(in oklab, #383b30 78%, var(--primary));
   --ring: #3cc2ab;
 
   --live: #d2955e;
 
-  --chart-1: #3cc2ab;
-  --chart-2: #7ba3d2;
+  --chart-1: color-mix(in oklab, #3cc2ab 80%, var(--primary));
+  --chart-2: color-mix(in oklab, #7ba3d2 75%, var(--primary));
   --chart-3: #e3a45e;
   --chart-4: #be85ae;
   --chart-5: #383b30;
