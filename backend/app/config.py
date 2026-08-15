@@ -8,9 +8,6 @@ class Settings(BaseSettings):
     # Application
     APP_HOST: str = "0.0.0.0"
     APP_PORT: int = 8000
-    # 已不再用于拼 URL（应用与发布页同源，全部走相对路径）；仅因 backend/.env 仍含该变量、
-    # 而 pydantic-settings 默认禁止多余环境变量，保留此字段避免启动失败。待 .env 清理后可移除
-    PUBLIC_BASE_URL: str = "http://localhost:5173"
 
     # Database
     DATABASE_URL: str = "sqlite+aiosqlite:///./htmlhost.db"
