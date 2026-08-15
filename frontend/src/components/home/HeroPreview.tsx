@@ -241,7 +241,7 @@ export default function HeroPreview({
         <span className="font-mono text-xs text-muted-foreground">$ 上传或生成 → 部署 → 链接</span>
         {deployed && (
           <span className="flex items-center gap-1 font-mono text-xs text-success">
-            demo/{pageId}
+            /{pageId}
             <ExternalLink className="size-3" />
           </span>
         )}

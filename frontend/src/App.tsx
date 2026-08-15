@@ -1,5 +1,6 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { useEffect } from 'react'
+import { cn } from './lib/utils'
 import AppHeader from './components/layout/AppHeader'
 import HomeView from './views/HomeView'
 import CreationView from './views/CreationView'
@@ -66,35 +67,45 @@ export default function App() {
 
   return (
     <BrowserRouter>
-      <div className="min-h-screen bg-background flex flex-col">
-        <AppHeader />
-        <main className="flex-1">
-          <Routes>
-            <Route path="/" element={<HomeView />} />
-            <Route path="/creation" element={<CreationView />} />
-            <Route path="/gallery" element={<GalleryView />} />
-            <Route path="/home" element={<HomeRedirect />} />
-            <Route path="/login" element={<LoginView />} />
-
-            <Route path="/admin" element={<AdminLayout />}>
-              <Route index element={<AdminOverviewView />} />
-              <Route path="users" element={<AdminUsersView />} />
-              <Route path="users/:id" element={<AdminUserDetailView />} />
-              <Route path="pages" element={<AdminPagesView />} />
-              <Route path="pages/:pk" element={<AdminPageDetailView />} />
-              <Route path="traces" element={<AdminTracesView />} />
-              <Route path="traces/:id" element={<AdminTraceDetailView />} />
-              <Route path="audit-logs" element={<AdminAuditLogsView />} />
-              <Route path="llm-configs" element={<AdminLLMConfigsView />} />
-              <Route path="system-prompts" element={<AdminSystemPromptsView />} />
-              <Route path="test-bench" element={<AdminTestBenchView />} />
-              <Route path="chat" element={<AdminChatView />} />
-            </Route>
-
-            <Route path="/:userId" element={<UserProfileView />} />
-          </Routes>
-        </main>
-      </div>
+      <AppLayout />
     </BrowserRouter>
+  )
+}
+
+/** 应用外壳：/login 独占全屏（无 header），其余页面带 header */
+function AppLayout() {
+  const location = useLocation()
+  const isAuthPage = location.pathname === '/login'
+
+  return (
+    <div className="min-h-screen bg-background flex flex-col">
+      {!isAuthPage && <AppHeader />}
+      <main className={cn('flex-1', isAuthPage && 'flex flex-col')}>
+        <Routes>
+          <Route path="/" element={<HomeView />} />
+          <Route path="/creation" element={<CreationView />} />
+          <Route path="/gallery" element={<GalleryView />} />
+          <Route path="/home" element={<HomeRedirect />} />
+          <Route path="/login" element={<LoginView />} />
+
+          <Route path="/admin" element={<AdminLayout />}>
+            <Route index element={<AdminOverviewView />} />
+            <Route path="users" element={<AdminUsersView />} />
+            <Route path="users/:id" element={<AdminUserDetailView />} />
+            <Route path="pages" element={<AdminPagesView />} />
+            <Route path="pages/:pk" element={<AdminPageDetailView />} />
+            <Route path="traces" element={<AdminTracesView />} />
+            <Route path="traces/:id" element={<AdminTraceDetailView />} />
+            <Route path="audit-logs" element={<AdminAuditLogsView />} />
+            <Route path="llm-configs" element={<AdminLLMConfigsView />} />
+            <Route path="system-prompts" element={<AdminSystemPromptsView />} />
+            <Route path="test-bench" element={<AdminTestBenchView />} />
+            <Route path="chat" element={<AdminChatView />} />
+          </Route>
+
+          <Route path="/:userId" element={<UserProfileView />} />
+        </Routes>
+      </main>
+    </div>
   )
 }
