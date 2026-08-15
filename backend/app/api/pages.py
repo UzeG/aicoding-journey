@@ -11,7 +11,6 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_current_user, get_db, get_optional_user
-from app.config import settings
 from app.models import (
     AuditLog,
     Follow,
@@ -250,7 +249,8 @@ async def publish_page(
     return PublishResponse(
         id=str(page.id),
         page_id=page.page_id,
-        url=f"{settings.PUBLIC_BASE_URL}/{user.user_id}/{page.page_id}",
+        # 相对 URL：应用与发布页同源（dev Vite proxy / 生产 Cloudflare 同域代理），不用绝对 base
+        url=f"/{user.user_id}/{page.page_id}",
     )
 
 
@@ -288,7 +288,7 @@ async def update_page_id(
 
     page.page_id = new_id
     await db.commit()
-    return {"page_id": page.page_id, "url": f"{settings.PUBLIC_BASE_URL}/{user.user_id}/{page.page_id}"}
+    return {"page_id": page.page_id, "url": f"/{user.user_id}/{page.page_id}"}
 
 
 @router.post("/{pk}/save-draft")

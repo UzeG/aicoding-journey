@@ -9,8 +9,6 @@ import { getAdminPage } from '../../api/admin'
 import type { AdminPageDetail } from '../../types/admin'
 import { formatDateTime, formatBytes } from '../../lib/utils'
 
-const BACKEND_URL = import.meta.env.VITE_PUBLIC_BASE_URL || 'http://localhost:8000'
-
 function Field({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="flex flex-col gap-1">
@@ -66,7 +64,7 @@ export default function AdminPageDetailView() {
         <h1 className="text-2xl font-bold text-foreground">{page.title || '未命名页面'}</h1>
         {page.is_published && page.page_id && (
           <Button size="sm" variant="outline" asChild>
-            <a href={`${BACKEND_URL}/${page.user_id}/${page.page_id}`} target="_blank" rel="noreferrer">
+            <a href={`/${page.user_id}/${page.page_id}`} target="_blank" rel="noreferrer">
               <ExternalLink className="size-4" />
               打开
             </a>

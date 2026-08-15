@@ -3,7 +3,6 @@ from sqlalchemy import exists, func, select, true
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_db
-from app.config import settings
 from app.models import Page, PageFavorite, PageLike, User
 from app.schemas import (
     GalleryAuthor,
@@ -82,7 +81,7 @@ async def get_gallery(
             title=p.title,
             cover_url=p.cover_url,
             tags=normalize_tags(p.tags) or [],
-            url=f"{settings.PUBLIC_BASE_URL}/{u.user_id}/{p.page_id}",
+            url=f"/{u.user_id}/{p.page_id}",
             created_at=p.created_at,
             like_count=like_count,
             favorite_count=favorite_count,

@@ -21,7 +21,7 @@ cd backend && uvicorn app.main:app --port 8000 --reload
 cd frontend && npm run dev
 ```
 
-前端 dev server 已配置 proxy：`/api` 自动转发到 `localhost:8000`。已发布页面直接访问 `http://localhost:8000/{user_id}/{page_id}`（PUBLIC_BASE_URL 指向 8000）。
+前端 dev server 已配置 proxy：`/api` 自动转发到 `localhost:8000`。已发布页面与应用**同源**访问 `/{user_id}/{page_id}`（Vite proxy 把该段路径转发到 8000；生产用 Cloudflare 同域代理）。
 
 ## 环境
 
@@ -69,7 +69,7 @@ cd frontend && npm run dev
 ## 关键设计决策 & 已知陷阱
 
 - **Snowflake ID 精度**：17 位 ID 超过 JS `Number.MAX_SAFE_INTEGER`（16 位），全程用 `string` 传递，禁止 `parseInt`。Pydantic schema 用 `@field_validator("id", mode="before")` 做 int→str 转换
-- **PUBLIC_BASE_URL**：开发环境配 `http://localhost:8000`（已发布页面由后端直接 serve，前端通过 `VITE_PUBLIC_BASE_URL` 拼绝对地址访问）
+- **同源相对 URL**：应用与已发布页面同源（dev 走 Vite proxy 把 `/{user_id}/{page_id}` 转发到 8000，生产走 Cloudflare 同域代理）。发布/编辑/gallery/卡片等页面链接一律用**相对路径** `/{user_id}/{page_id}`，不写死 base URL（避免 localhost 在公网失效）
 - **CDN 库**：LLM 生成的 HTML 使用 UnoCSS runtime（`@unocss/runtime`），不是 Tailwind CSS CDN（那个文件 404）
 - **ECharts**：用 `ResizeObserver` 监听容器尺寸（不要用 `window.resize` 事件，首次加载不触发）
 - **LLM 输出过滤**：后端流式输出会缓冲直到检测到 HTML 开始标记（`\`\`\`html` / `<!DOCTYPE` / `<html>`），再转发 token 给前端。流结束后发送 `final` 事件用精确提取的 HTML 替换 Monaco 内容

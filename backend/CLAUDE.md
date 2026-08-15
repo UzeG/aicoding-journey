@@ -131,7 +131,7 @@ backend/
 - **get_optional_user**: 公开端点的可选鉴权依赖（有 token 解析用户，无则 None）。`get_user_profile` 用它判断是否本人，本人返回 `is_published OR is_saved`（含草稿），他人只返回已发布
 - **page_id**: 发布时可自定义，同用户内唯一（大小写不敏感）。修改时旧 page_id 记录到 `page_id_redirects` 表，访问旧链接 301 重定向
 - **passlib/bcrypt**: 需 `bcrypt<4.1.0`（新版不兼容 passlib）
-- **PUBLIC_BASE_URL**: 开发环境配 `http://localhost:8000`（已发布页面由后端直接 serve）
+- **同源相对 URL**: `publish`/`update_page_id`/`gallery` 返回的页面链接一律**相对路径** `/{user_id}/{page_id}`（应用与发布页同源，dev 走 Vite proxy、生产同域代理）。`config.PUBLIC_BASE_URL` 仅因 `backend/.env` 仍含该变量而保留（pydantic-settings 默认禁多余 env），代码已不再用于拼 URL
 - **max_tokens**: 32768（DeepSeek V4 支持最大 384K，32K 足够大部分 HTML 页面）
 - **System Prompt**: UnoCSS runtime CDN（非 Tailwind！后者 npm 包无预编译 CSS），ECharts 强制 `ResizeObserver` 监听容器
 - **Mock API**: `/api/mock/generate`（`app/api/mock.py`）返回硬编码样本 HTML，与正式端点 SSE 协议一致，同样创建 DB 记录。前端通过 `npm run dev:mock` 启用（Vite proxy rewrite `/api/generate` → `/api/mock/generate`）。Mock 端点跳过 content filter

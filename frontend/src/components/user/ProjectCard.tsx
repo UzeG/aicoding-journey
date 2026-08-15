@@ -7,8 +7,6 @@ import DownloadButton from '../common/DownloadButton'
 import { getPage } from '../../api/endpoints'
 import type { PageItem } from '../../types'
 
-const BACKEND_URL = import.meta.env.VITE_PUBLIC_BASE_URL || 'http://localhost:8000'
-
 interface Props {
   page: PageItem
   user_id: string
@@ -43,7 +41,7 @@ export default function ProjectCard({ page, user_id, isOwn, onDelete }: Props) {
               <span>{new Date(page.created_at).toLocaleDateString('zh-CN')}</span>
               {page.is_published && page.page_id && (
                 <a
-                  href={`${BACKEND_URL}/${user_id}/${page.page_id}`}
+                  href={`/${user_id}/${page.page_id}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-primary hover:underline inline-flex items-center gap-0.5"
