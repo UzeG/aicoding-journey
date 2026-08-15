@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { ArrowLeft, Loader2, Phone, Lock, User, AtSign, Check, X, Camera, Trash2, Zap } from 'lucide-react'
 import { useAuthStore } from '../stores/auth'
 import { checkUserId, uploadAvatar } from '../api/endpoints'
@@ -35,6 +35,22 @@ export default function LoginView() {
   const [searchParams] = useSearchParams()
   const redirect = searchParams.get('redirect')
   const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+
+  // 返回上一地址：优先 redirect（进入登录页的原始地址），否则浏览器历史回退，兜底首页
+  const handleBack = () => {
+    if (redirect && redirect.startsWith('/')) {
+      const pathOnly = redirect.split('?')[0]
+      if (PUBLISHED_PAGE_RE.test(pathOnly)) {
+        window.location.href = redirect
+      } else {
+        navigate(redirect)
+      }
+    } else if (window.history.length > 1) {
+      navigate(-1)
+    } else {
+      navigate('/')
+    }
+  }
 
   const validateUserId = useCallback((val: string) => {
     if (!val) {
@@ -135,14 +151,15 @@ export default function LoginView() {
 
   return (
     <>
-      {/* 登录页全屏无 header：右上角固定返回首页入口，避免回不去 */}
-      <Link
-        to="/"
+      {/* 登录页全屏无 header：右上角固定返回入口（回上一地址，不一定是首页） */}
+      <button
+        type="button"
+        onClick={handleBack}
         className="fixed top-4 right-4 z-50 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
       >
         <ArrowLeft className="size-4" />
-        返回首页
-      </Link>
+        返回
+      </button>
     <div className="flex-1 flex min-h-0">
       {/* 左：品牌 + 实时身份卡（lg+） */}
       <IdentityCard
