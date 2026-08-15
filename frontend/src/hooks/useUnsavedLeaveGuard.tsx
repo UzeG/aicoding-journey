@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef } from 'react'
 import { useBlocker } from 'react-router-dom'
+import { useGenerationStore } from '../stores/generation'
 import { Button } from '../components/ui/button'
 import {
   Dialog,
@@ -43,7 +44,11 @@ export function useUnsavedLeaveGuard(dirty: boolean) {
   }, [dirty])
 
   const stay = () => blocker.reset?.()
-  const confirmLeave = () => blocker.proceed?.()
+  const confirmLeave = () => {
+    // 确认离开 → 丢弃未保存内容（否则 store 存活，返回 /creation 内容还在）
+    useGenerationStore.getState().reset()
+    blocker.proceed?.()
+  }
 
   const leaveGuardModal = (
     <Dialog open={blocker.state === 'blocked'} onOpenChange={(o) => !o && stay()}>

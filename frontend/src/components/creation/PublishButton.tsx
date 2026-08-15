@@ -73,7 +73,7 @@ export default function PublishButton({ pageId, disabled }: Props) {
 
   return (
     <div>
-      <Button onClick={handleClick} disabled={disabled || publishing || !pageId}>
+      <Button onClick={handleClick} disabled={disabled || publishing}>
         {publishing ? <Loader2 className="size-4 animate-spin" /> : <Upload className="size-4" />}
         {publishing ? '部署中...' : '部署页面'}
       </Button>
