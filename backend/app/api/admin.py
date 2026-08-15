@@ -25,7 +25,7 @@ from app.schemas import (
     PaginatedResponse,
     TestGenerateRequest,
 )
-from app.services.llm_service import _build_client, _get_default, create_generation_stream
+from app.services.llm_service import _build_client, _get_default, _thinking_extra_body, create_generation_stream
 from app.services.system_prompt import get_step1_prompt, get_step2_prompt
 
 router = APIRouter(dependencies=[Depends(get_current_admin)])
@@ -502,6 +502,7 @@ async def admin_chat(req: ChatRequest):
                 model=model,
                 messages=messages,
                 stream=True,
+                extra_body=_thinking_extra_body(),
             )
             async for chunk in stream:
                 if chunk.choices and chunk.choices[0].delta and chunk.choices[0].delta.content:

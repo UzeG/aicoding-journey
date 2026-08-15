@@ -117,6 +117,7 @@ backend/
 - **Page 复用**: `GenerateRequest.page_id` 可选字段——前端重新生成时传入已有 pageId，后端在 `create_llm_stream` 中检查：若页面存在、属于当前用户且 `is_published=False`，则 UPDATE 该记录而非 INSERT 新记录；已发布的页面不会被覆盖（会创建新 Page）
 - **is_saved 机制**: 生成时 `is_saved=False`，页面不会出现在列表（`list_pages` 过滤 `is_published OR is_saved`）。用户主动点击"保存草稿"后 `is_saved=True`，页面才在用户主页中可见
 - **LLM 优先级**: 用户配置 > `.env` 平台默认（api_key 由 `_build_client` 统一解密，仅一处）
+- **思考模式**: 默认**关闭**（`config.LLM_THINKING=False`）。所有 LLM 调用（Step1/Step2/单步/admin chat）经 `_thinking_extra_body()` 传 `extra_body={"thinking":{"type":"disabled"}}`（SDK 会扁平化为顶层字段，DeepSeek V4 默认思考的模型据此关闭）。`.env` 设 `LLM_THINKING=true` 即开启
 - **user_id**: 注册必填，大小写不敏感匹配（存储保留原始大小写），保留字禁止注册。支持作为登录凭据
 - **头像存储**: 上传端点 `POST /api/auth/me/avatar`（multipart），格式按 magic bytes 校验（jpg/png/webp/gif），存 `static/avatars/{user_id}_{ts}.{ext}`，换头像删旧文件，DB 存相对 URL。`main.py` mount `/static`
 - **关注体系**: `Follow` 表（`follower_id`/`following_id` 唯一约束 `uq_follow_pair`，禁自关注）。follow/unfollow 幂等、返回最新 `follower_count`；followers/following 列表用 `Follow JOIN User` + `_build_follow_items` 批量算 viewer 的 `is_following`。新表由 `create_all` 自动建，无需迁移脚本

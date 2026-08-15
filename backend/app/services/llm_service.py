@@ -221,6 +221,7 @@ async def _run_step1_understand(prompt: str, user_config: dict) -> dict:
         temperature=0.3,
         max_tokens=1024,
         response_format={"type": "json_object"},
+        extra_body=_thinking_extra_body(),
     )
 
     content = response.choices[0].message.content or "{}"
@@ -277,6 +278,7 @@ async def _run_step2_generate(
             max_tokens=32768,
             stream=True,
             stream_options={"include_usage": True},
+            extra_body=_thinking_extra_body(),
         )
 
         chunk_count = 0
@@ -412,6 +414,7 @@ async def _run_single_step_generate(
             max_tokens=32768,
             stream=True,
             stream_options={"include_usage": True},
+            extra_body=_thinking_extra_body(),
         )
 
         chunk_count = 0
@@ -711,6 +714,15 @@ def _build_client(user_config: dict):
 def _get_default(key: str) -> str:
     from app.config import settings
     return getattr(settings, key, "")
+
+
+def _thinking_extra_body() -> dict | None:
+    """DeepSeek thinking-mode toggle. Returns 'disabled' body when thinking is off (default)."""
+    from app.config import settings
+
+    if settings.LLM_THINKING:
+        return None
+    return {"thinking": {"type": "disabled"}}
 
 
 def _distill_title(prompt: str) -> str:

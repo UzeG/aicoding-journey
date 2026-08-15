@@ -29,6 +29,9 @@ class Settings(BaseSettings):
     # HTML generation strategy — "two_step" (Step1 refine+select libs → Step2) | "single_step" (LLM writes full page incl. CDN)
     GENERATION_STRATEGY: str = "two_step"
 
+    # DeepSeek thinking mode — default OFF. Set LLM_THINKING=true in .env to enable (V4 models think by default).
+    LLM_THINKING: bool = False
+
     # Admin accounts: comma-separated phone numbers or user_ids with admin privileges
     ADMIN_USER_IDS: str = ""
 
