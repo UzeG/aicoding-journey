@@ -66,7 +66,7 @@ export default function UploadToEditorButton({ disabled, onLoaded }: Props) {
           <DialogHeader>
             <DialogTitle>覆盖编辑器内容？</DialogTitle>
             <DialogDescription>
-              上传「{pending?.name}」将覆盖当前编辑器内容（当前页面未发布的生成内容会丢失），并新建一个草稿。
+              上传「{pending?.name}」将覆盖当前编辑器内容（当前页面未发布的生成内容会丢失）。发布或存草稿时才需要登录。
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

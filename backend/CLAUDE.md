@@ -66,6 +66,7 @@ backend/
 | POST | /api/generate | JWT | SSE 流式生成 HTML（策略按 GENERATION_STRATEGY：two_step 默认 / single_step 实验） |
 | POST | /api/mock/generate | JWT | Mock SSE 流式（开发用，跳过 LLM） |
 | GET | /api/pages | JWT | 页面列表 |
+| POST | /api/pages | JWT | 建草稿（body: title/html_content；pageId 为空时发布/存草稿前的建页入口，is_saved=True） |
 | GET / PUT / DELETE | /api/pages/{pk} | JWT | 页面 CRUD（pk 为 DB 主键；PUT 支持 tags） |
 | POST | /api/pages/{pk}/publish | JWT | 发布（可选自定义 page_id + tags + html_content；tags 未传保留 AI 生成，html_content 未传保留原内容——编辑器可编辑后发布以编辑器为准） |
 | POST | /api/pages/{pk}/save-draft | JWT | 保存草稿（is_saved=True；可携带 html_content 覆盖内容，派生副本也带） |

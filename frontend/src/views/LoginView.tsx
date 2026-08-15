@@ -12,6 +12,8 @@ import IdentityCard from '../components/login/IdentityCard'
 
 const USER_ID_PATTERN = /^[a-zA-Z0-9_-]{3,30}$/
 const MAX_AVATAR_BYTES = 2 * 1024 * 1024
+// 发布页路径（/{user}/{page} 两段，排除 admin/api/static）——与 vite proxy 正则一致
+const PUBLISHED_PAGE_RE = /^\/(?!admin|api|static)[a-zA-Z0-9_-]{3,30}\/[a-zA-Z0-9_-]{1,50}$/
 
 export default function LoginView() {
   const [mode, setMode] = useState<'login' | 'register'>('login')
@@ -100,8 +102,15 @@ export default function LoginView() {
       // Load user data before navigating so header avatar/menu shows correctly
       await fetchUser()
       if (redirect && redirect.startsWith('/')) {
-        // 发布页是后端渲染的非 React 路由，必须整页跳回（不能用 navigate()）
-        window.location.href = redirect
+        // 发布页（/{user}/{page} 两段）是后端渲染的非 React 路由，必须整页跳回；
+        // 其余是 SPA 路由，用 navigate() 跳回（保留 Zustand store，如 /creation 上传的本地内容）
+        const pathOnly = redirect.split('?')[0]
+        const isPublishedPage = PUBLISHED_PAGE_RE.test(pathOnly)
+        if (isPublishedPage) {
+          window.location.href = redirect
+        } else {
+          navigate(redirect)
+        }
       } else {
         navigate('/')
       }

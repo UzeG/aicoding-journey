@@ -9,12 +9,16 @@ import SaveDraftButton from '../components/creation/SaveDraftButton'
 import UploadToEditorButton from '../components/creation/UploadToEditorButton'
 import DownloadButton from '../components/common/DownloadButton'
 import { useSSE } from '../hooks/useSSE'
+import { useLoginPrompt } from '../hooks/useLoginPrompt'
 import { useGenerationStore } from '../stores/generation'
-import { getPage, uploadHtml } from '../api/endpoints'
+import { useAuthStore } from '../stores/auth'
+import { getPage } from '../api/endpoints'
 
 export default function CreationView() {
   const [searchParams] = useSearchParams()
-  const { isStreaming, codeContent, pageId, title, error, progressStep, progressMessage, setCode, setPageId, setTitle, setTags, setSaved } = useGenerationStore()
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
+  const { askLogin, loginModal } = useLoginPrompt()
+  const { isStreaming, codeContent, pageId, title, error, progressStep, progressMessage, setCode, setTitle, setTags } = useGenerationStore()
   const { startGeneration } = useSSE()
   const abortRef = useRef<AbortController | null>(null)
   const initialPrompt = searchParams.get('prompt') || ''
@@ -22,11 +26,16 @@ export default function CreationView() {
   const loadedRef = useRef(false)
 
   const handleGenerate = useCallback(async (prompt: string) => {
+    // 生成需要登录态：未登录弹窗提示，确认后去登录
+    if (!isAuthenticated) {
+      askLogin()
+      return
+    }
     abortRef.current?.abort()
     const currentPageId = useGenerationStore.getState().pageId
     const controller = await startGeneration(prompt, currentPageId)
     if (controller) abortRef.current = controller
-  }, [startGeneration])
+  }, [isAuthenticated, askLogin, startGeneration])
 
   // Load existing page for editing
   useEffect(() => {
@@ -51,22 +60,19 @@ export default function CreationView() {
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // 上传 HTML → 后端建草稿 → 覆盖编辑器内容
+  // 上传 HTML → 本地读取覆盖编辑器（无需登录）；后续发布/存草稿才需要登录
   const handleUploaded = useCallback(async (file: File) => {
     try {
-      const res = await uploadHtml(file)
-      const page = res.data
       const content = await file.text()
-      setPageId(page.id)
+      const name = (file.name || '').replace(/\.html?$/i, '') || '未命名页面'
       setCode(content)
-      setTitle(page.title || '')
+      setTitle(name)
       setTags([])
-      setSaved()
       useGenerationStore.getState().setError('')
-    } catch (err: any) {
-      useGenerationStore.getState().setError(err.response?.data?.detail || '上传失败，请重试')
+    } catch {
+      useGenerationStore.getState().setError('文件读取失败，请重试')
     }
-  }, [setPageId, setCode, setTitle, setTags, setSaved])
+  }, [setCode, setTitle, setTags])
 
   return (
     <div className="h-[calc(100vh-56px)] flex flex-col">
@@ -76,7 +82,7 @@ export default function CreationView() {
           <PromptInput onGenerate={handleGenerate} disabled={isStreaming} initialValue={!isStreaming ? initialPrompt : undefined} />
         </div>
         <UploadToEditorButton disabled={isStreaming} onLoaded={handleUploaded} />
-        <SaveDraftButton pageId={pageId} disabled={isStreaming || !codeContent || !pageId} />
+        <SaveDraftButton pageId={pageId} disabled={isStreaming || !codeContent} />
         <DownloadButton
           variant="outline"
           size="default"
@@ -84,7 +90,7 @@ export default function CreationView() {
           getContent={() => codeContent}
           disabled={isStreaming || !codeContent}
         />
-        <PublishButton pageId={pageId} disabled={isStreaming || !codeContent || !pageId} />
+        <PublishButton pageId={pageId} disabled={isStreaming || !codeContent} />
       </div>
 
       {/* Error */}
@@ -115,6 +121,8 @@ export default function CreationView() {
           <PreviewPanel htmlContent={codeContent} isStreaming={isStreaming} />
         </div>
       </div>
+
+      {loginModal}
     </div>
   )
 }

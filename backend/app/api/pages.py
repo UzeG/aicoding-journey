@@ -33,6 +33,7 @@ from app.schemas import (
     InteractionPageInfo,
     InteractionResponse,
     InteractionViewer,
+    PageCreate,
     PageListItem,
     PageResponse,
     PageUpdate,
@@ -74,6 +75,34 @@ async def list_pages(
         .order_by(Page.updated_at.desc())
     )
     return result.scalars().all()
+
+
+@router.post("", response_model=PageResponse)
+async def create_page(
+    req: PageCreate,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Create a draft page from content (JWT). Used when publishing/saving with no existing pageId
+    (e.g. uploaded-then-publish flow where upload stays local)."""
+    from app.utils.snowflake import generate_id
+
+    content = (req.html_content or "").strip()
+    if not content:
+        raise HTTPException(status_code=400, detail="html_content is required")
+    page = Page(
+        id=generate_id(),
+        user_id=user.id,
+        title=req.title,
+        html_content=content,
+        prompt=req.prompt,
+        file_size=len(content.encode("utf-8")),
+        is_saved=True,
+    )
+    db.add(page)
+    await db.commit()
+    await db.refresh(page)
+    return page
 
 
 @router.get("/check-id", response_model=CheckPageIdResponse)

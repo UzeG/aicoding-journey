@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Upload, Loader2, PartyPopper, Clipboard, ExternalLink } from 'lucide-react'
-import { publishPage } from '../../api/endpoints'
+import { createPage, publishPage } from '../../api/endpoints'
+import { useLoginPrompt } from '../../hooks/useLoginPrompt'
 import { useAuthStore } from '../../stores/auth'
 import { useGenerationStore } from '../../stores/generation'
 import { Button } from '../ui/button'
@@ -30,20 +31,32 @@ export default function PublishButton({ pageId, disabled }: Props) {
   const setTitle = useGenerationStore((s) => s.setTitle)
   const tags = useGenerationStore((s) => s.tags)
   const codeContent = useGenerationStore((s) => s.codeContent)
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
   const currentUserId = useAuthStore((s) => s.user?.user_id)
   const navigate = useNavigate()
+  const { askLogin, loginModal } = useLoginPrompt()
 
   const handleClick = () => {
-    if (!pageId) return
+    // 发布需要登录态：未登录弹窗提示，确认后去登录
+    if (!isAuthenticated) {
+      askLogin()
+      return
+    }
     setDialogOpen(true)
   }
 
   const handleConfirm = async (values: { title: string; page_id: string; tags: string[] }) => {
-    if (!pageId) return
+    if (!codeContent) return
     setPublishing(true)
     setError(null)
     try {
-      const res = await publishPage(pageId, values.title, values.page_id || undefined, values.tags, codeContent)
+      // 无已有页面（如上传后未生成）：先建草稿再发布
+      let targetId = pageId
+      if (!targetId) {
+        const created = await createPage({ title: values.title, html_content: codeContent })
+        targetId = created.data.id
+      }
+      const res = await publishPage(targetId, values.title, values.page_id || undefined, values.tags, codeContent)
       setTitle(values.title)
       setDialogOpen(false)
       setResult(res.data)
@@ -110,6 +123,8 @@ export default function PublishButton({ pageId, disabled }: Props) {
       </Dialog>
 
       {error && <p className="text-destructive text-sm mt-2">{error}</p>}
+
+      {loginModal}
     </div>
   )
 }

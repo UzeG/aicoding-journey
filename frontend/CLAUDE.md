@@ -56,7 +56,7 @@ frontend/src/
 │   │   ├── PreviewPanel.tsx      # iframe sandbox (500ms 防抖 srcdoc)
 │   │   ├── PublishButton.tsx     # 发布 + 新窗口打开 + 跳转用户主页
 │   │   ├── SaveDraftButton.tsx   # 保存草稿 (is_saved=True 后列表可见；携带编辑器 html_content)
-│   │   ├── UploadToEditorButton.tsx # 上传 html → 确认覆盖编辑器 → 上层建草稿并覆盖内容
+│   │   ├── UploadToEditorButton.tsx # 上传 html → 确认覆盖编辑器 → 上层**本地读取**覆盖内容（无需登录；发布/存草稿才需登录）
 │   │   └── SavePageDialog.tsx    # 发布/保存表单 (标题 + page_id 实时校验；发布时含 tags 编辑：AI 预填、回车/逗号添加、chips 删除，≤5×20)
 │   ├── user/                     # 个人主页专属组件
 │   │   ├── ProjectCard.tsx        # 项目卡片（16:9 封面 + 下载/编辑/删除）
@@ -133,6 +133,7 @@ UserProfileView 点击编辑 → navigate("/creation?pageId={id}")
 - **测试台 SSE**: `AdminTestBenchView` 本地实现 fetch+ReadableStream（不复用 `useSSE`，其与 generation store 耦合），消费 `step1`/`step1_prompt`/`step2_prompt`/`token_raw`/`token`/`final`/`done`/`error` 事件。`token_raw` 是 HTML 过滤前的原始流（正式生成会丢弃）。`step1_prompt`/`step2_prompt` 分别展示后端**实际发给 Step 1 / Step 2 LLM 的完整 system+user 消息**。流水线布局：原始 prompt → Step1（输入/输出）→ Step2（输入/输出）→ HTML（代码/页面）。测试台顶部可选**生成策略**（two_step/single_step，透传 `strategy`），single_step 时无 `step1`/`step1_prompt` 事件
 - **LLM 聊天测试**: `AdminChatView`（`/admin/chat`）单轮 prompt → 流式回复（`chatSSE` 消费 `token`/`done`/`error`）；配置选择平台默认/自定义（model/base_url/api_key，仅本次请求不落库），Enter 发送 / 停止中止 / 清空
 - **SSE 消费**: 使用 fetch + ReadableStream 而非 EventSource（需要 POST）
+- **创作页登录态**: **生成/发布/存草稿都需要登录**——未登录点击时弹窗提示（`useLoginPrompt`：确认→`/login?redirect=/creation`，取消→留在原页）；登录后 SPA navigate 跳回，store 保留编辑器内容。**上传 HTML 本地读取覆盖编辑器，无需登录**（pageId 为空时发布/存草稿先 `POST /api/pages` 建草稿再操作）。`LoginView` 的 `?redirect=` 区分 SPA 路由（`navigate`，保留 store）vs 发布页两段路径（`location.href` 整页跳回，正则 `PUBLISHED_PAGE_RE` 与 vite proxy 一致）。**发布/存草稿按钮在有编辑器内容时可用**（AI 生成或上传均可发布），无内容/生成中禁用
 - **SSE 事件类型**: `progress`（步骤进度）、`token`（追加代码）、`final`（替换为精确 HTML）、`done`（结束）、`error`（错误）
 - **iframe 预览**: `sandbox="allow-scripts"`（不加 allow-same-origin 防 XSS），500ms 防抖更新避免流式时过度重渲染。`key={debouncedHtml.length}` 强制内容变化时 iframe 重挂载（解决 srcDoc 不刷新的问题）
 - **Monaco**: `@monaco-editor/react`，vs-dark 主题。**编辑器可编辑**（生成中 `readOnly=isStreaming`），`onChange` 回写 `generationStore.codeContent`（iframe 预览 500ms 防抖随之实时刷新）。**发布/保存以编辑器内容为准**：`publishPage`/`saveDraft` 携带 `html_content`，后端 `PublishRequest`/`SaveDraftRequest` 新增该字段。**输入提示**：启用 VSCode-like IntelliSense（quickSuggestions / Emmet 缩写展开 / tab 补全 / snippet 优先 / 参数提示 / 自动配对），CDN 全量构建自带 HTML/CSS/JS 语言服务；`emmet` 运行时支持但缺类型声明，用 `as Partial<editor.IStandaloneEditorConstructionOptions>` 断言补充。**`!` → HTML5 骨架**：Monaco 自带 Emmet 对单个 `!` 缩写触发不稳，`handleMount(editor, monaco)` 里手动 `registerCompletionItemProvider('html')` 注册（snippet 制表位 `$1` 标题 / `$2` body），模块级标志防 StrictMode 重复注册

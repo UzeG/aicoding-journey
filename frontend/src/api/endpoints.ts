@@ -35,6 +35,8 @@ export const generateSSE = (prompt: string, pageId?: string | null, signal?: Abo
 
 // Pages
 export const listPages = () => api.get<PageItem[]>('/pages')
+export const createPage = (data: { title?: string; html_content: string }) =>
+  api.post<PageDetail>('/pages', data)
 export const getPage = (id: string) => api.get<PageDetail>(`/pages/${id}`)
 export const updatePage = (id: string, data: { title?: string; html_content?: string; tags?: string[] }) =>
   api.put<PageDetail>(`/pages/${id}`, data)
