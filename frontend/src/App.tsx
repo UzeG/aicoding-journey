@@ -2,7 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { useEffect } from 'react'
 import AppHeader from './components/layout/AppHeader'
 import HomeView from './views/HomeView'
-import GeneratorView from './views/GeneratorView'
+import CreationView from './views/CreationView'
 import GalleryView from './views/GalleryView'
 import UserProfileView from './views/UserProfileView'
 import LoginView from './views/LoginView'
@@ -71,7 +71,7 @@ export default function App() {
         <main className="flex-1">
           <Routes>
             <Route path="/" element={<HomeView />} />
-            <Route path="/generator" element={<GeneratorView />} />
+            <Route path="/creation" element={<CreationView />} />
             <Route path="/gallery" element={<GalleryView />} />
             <Route path="/home" element={<HomeRedirect />} />
             <Route path="/login" element={<LoginView />} />

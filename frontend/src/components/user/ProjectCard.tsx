@@ -70,7 +70,7 @@ export default function ProjectCard({ page, user_id, isOwn, onDelete }: Props) {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => navigate(`/generator?pageId=${page.id}`)}
+                onClick={() => navigate(`/creation?pageId=${page.id}`)}
               >
                 <Pencil className="size-4" />
                 编辑

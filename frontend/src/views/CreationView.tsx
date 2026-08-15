@@ -1,17 +1,17 @@
 import { useCallback, useEffect, useRef } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { CircleAlert, Loader2 } from 'lucide-react'
-import CodePanel from '../components/generator/CodePanel'
-import PreviewPanel from '../components/generator/PreviewPanel'
-import PromptInput from '../components/generator/PromptInput'
-import PublishButton from '../components/generator/PublishButton'
-import SaveDraftButton from '../components/generator/SaveDraftButton'
+import CodePanel from '../components/creation/CodePanel'
+import PreviewPanel from '../components/creation/PreviewPanel'
+import PromptInput from '../components/creation/PromptInput'
+import PublishButton from '../components/creation/PublishButton'
+import SaveDraftButton from '../components/creation/SaveDraftButton'
 import DownloadButton from '../components/common/DownloadButton'
 import { useSSE } from '../hooks/useSSE'
 import { useGenerationStore } from '../stores/generation'
 import { getPage } from '../api/endpoints'
 
-export default function GeneratorView() {
+export default function CreationView() {
   const [searchParams] = useSearchParams()
   const { isStreaming, codeContent, pageId, title, error, progressStep, progressMessage } = useGenerationStore()
   const { startGeneration } = useSSE()

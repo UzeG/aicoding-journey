@@ -134,7 +134,13 @@ html.pi-open #pi-trigger{opacity:0;pointer-events:none;}
 #pi-panel{position:fixed;left:0;right:0;bottom:0;z-index:3004;transform:translateY(100%);height:78vh;background:var(--pi-surface);border-radius:1rem 1rem 0 0;box-shadow:0 -3px 14px rgba(0,0,0,.12);display:flex;flex-direction:column;overflow:hidden;font-family:system-ui,-apple-system,sans-serif;color:var(--pi-text);opacity:0;visibility:hidden;transition:transform .3s ease,opacity .3s ease,visibility 0s linear .3s;touch-action:none;}
 #pi-panel.open{transform:translateY(0);opacity:1;visibility:visible;transition:transform .3s ease,opacity .3s ease,visibility 0s;}
 #pi-panel .pi-head{display:flex;align-items:center;gap:.8rem;padding:.8rem 1.1rem;border-bottom:1px solid var(--pi-border);flex-shrink:0;}
-#pi-panel .pi-title{font-weight:600;font-size:1rem;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;}
+#pi-panel .pi-head-meta{flex:1;min-width:0;}
+#pi-panel .pi-title{font-weight:600;font-size:1rem;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+#pi-panel .pi-meta-line{display:flex;align-items:center;gap:.55rem;margin-top:.15rem;min-width:0;}
+#pi-panel .pi-time{font-size:.75rem;color:var(--pi-muted);white-space:nowrap;flex-shrink:0;}
+#pi-panel .pi-tags{display:flex;flex-wrap:wrap;gap:.3rem;min-width:0;}
+#pi-panel .pi-tag{font-size:.75rem;color:var(--pi-theme);text-decoration:none;border-radius:999px;padding:.05rem .5rem;background:color-mix(in srgb, var(--pi-theme) 10%, transparent);white-space:nowrap;line-height:1.4;}
+#pi-panel .pi-tag:hover{background:color-mix(in srgb, var(--pi-theme) 20%, transparent);}
 #pi-panel .pi-btn{display:inline-flex;align-items:center;gap:.3rem;padding:.4rem .7rem;border:1px solid var(--pi-border);border-radius:999px;background:color-mix(in srgb, var(--pi-theme) 10%, transparent);cursor:pointer;font:inherit;font-size:.85rem;color:var(--pi-text);white-space:nowrap;flex-shrink:0;}
 #pi-panel .pi-btn .pi-count{min-width:1em;text-align:left;}
 #pi-panel .pi-btn.on{background:var(--pi-theme);color:var(--pi-theme-fg);border-color:var(--pi-theme);}
@@ -218,16 +224,28 @@ html.pi-open #pi-trigger{opacity:0;pointer-events:none;}
   grabber.className = 'pi-grabber'
   panel.appendChild(grabber)
 
-  // head: current work title + like/favorite
+  // head: current work title + publish time/tags + like/favorite
   var head = document.createElement('div')
   head.className = 'pi-head'
+  var headMeta = document.createElement('div')
+  headMeta.className = 'pi-head-meta'
   var titleEl = document.createElement('div')
   titleEl.className = 'pi-title'
+  var metaLine = document.createElement('div')
+  metaLine.className = 'pi-meta-line'
+  var timeEl = document.createElement('span')
+  timeEl.className = 'pi-time'
+  var tagsEl = document.createElement('div')
+  tagsEl.className = 'pi-tags'
+  metaLine.appendChild(timeEl)
+  metaLine.appendChild(tagsEl)
+  headMeta.appendChild(titleEl)
+  headMeta.appendChild(metaLine)
   var likeBtn = makeBtn('')
   var favBtn = makeBtn('')
   likeBtn.addEventListener('click', toggleLike)
   favBtn.addEventListener('click', toggleFavorite)
-  head.appendChild(titleEl)
+  head.appendChild(headMeta)
   head.appendChild(likeBtn)
   head.appendChild(favBtn)
   panel.appendChild(head)
@@ -387,6 +405,18 @@ html.pi-open #pi-trigger{opacity:0;pointer-events:none;}
     var p = state.page
     titleEl.textContent = p && p.title ? p.title : ''
     titleEl.title = p && p.title ? p.title : ''
+    timeEl.textContent = p && p.created_at ? '发布于 ' + formatDate(p.created_at) : ''
+    tagsEl.innerHTML = ''
+    if (p && p.tags && p.tags.length) {
+      p.tags.forEach(function (t) {
+        var a = document.createElement('a')
+        a.className = 'pi-tag'
+        a.href = '/gallery?tag=' + encodeURIComponent(t)
+        a.textContent = '#' + t
+        a.title = '在作品广场搜索：' + t
+        tagsEl.appendChild(a)
+      })
+    }
     setLikeButton()
     setFavButton()
   }
@@ -597,6 +627,18 @@ html.pi-open #pi-trigger{opacity:0;pointer-events:none;}
   function formatTime(iso) {
     try {
       return new Date(iso).toLocaleString('zh-CN', { hour12: false })
+    } catch (e) {
+      return iso || ''
+    }
+  }
+
+  function formatDate(iso) {
+    try {
+      var d = new Date(iso)
+      var y = d.getFullYear()
+      var m = String(d.getMonth() + 1).padStart(2, '0')
+      var day = String(d.getDate()).padStart(2, '0')
+      return y + '-' + m + '-' + day
     } catch (e) {
       return iso || ''
     }

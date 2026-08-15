@@ -50,7 +50,7 @@ export default function HomeView() {
       navigate('/login')
       return
     }
-    navigate(`/generator?prompt=${encodeURIComponent(prompt)}`)
+    navigate(`/creation?prompt=${encodeURIComponent(prompt)}`)
   }
 
   const handleUploaded = (name: string) => {

@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowRight, CheckCircle2, CircleAlert, Loader2, Sparkles, Upload } from 'lucide-react'
-import PromptInput from '../generator/PromptInput'
+import PromptInput from '../creation/PromptInput'
 import { uploadHtml } from '../../api/endpoints'
 import { useAuthStore } from '../../stores/auth'
 import { cn } from '../../lib/utils'

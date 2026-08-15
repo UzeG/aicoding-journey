@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { LogOut, LogIn, User, FolderOpen, Settings, Shield, LayoutGrid } from 'lucide-react'
+import { Link, NavLink, useNavigate } from 'react-router-dom'
+import { LogOut, LogIn, User, FolderOpen, Settings, Shield, LayoutGrid, SquarePen } from 'lucide-react'
 import { useAuthStore } from '../../stores/auth'
+import { cn } from '../../lib/utils'
 import { Button } from '../ui/button'
 import Avatar from '../common/Avatar'
 
@@ -48,14 +49,31 @@ export default function AppHeader() {
           <Link to="/" className="flex items-center text-foreground no-underline">
             <span className="text-base font-bold tracking-tight">Manifest</span>
           </Link>
-          <nav className="flex items-center">
-            <Link
+          <nav className="flex items-center gap-1">
+            <NavLink
+              to="/creation"
+              className={({ isActive }) =>
+                cn(
+                  'flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-sm transition-colors',
+                  isActive ? 'text-primary bg-accent' : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+                )
+              }
+            >
+              <SquarePen className="size-4" />
+              创作
+            </NavLink>
+            <NavLink
               to="/gallery"
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-sm text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+              className={({ isActive }) =>
+                cn(
+                  'flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-sm transition-colors',
+                  isActive ? 'text-primary bg-accent' : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+                )
+              }
             >
               <LayoutGrid className="size-4" />
               作品广场
-            </Link>
+            </NavLink>
           </nav>
         </div>
 

@@ -432,6 +432,8 @@ async def get_page_interactions(
     page_info = InteractionPageInfo(
         title=page.title,
         page_id=page.page_id,
+        created_at=page.created_at,
+        tags=page.tags,
         author=CommentUser(
             user_id=owner.user_id if owner else "",
             nickname=owner.nickname if owner else None,
@@ -595,11 +597,20 @@ async def serve_user_profile(
     return HTMLResponse(content=html, status_code=200)
 
 
+_WIDGET_JS_PATH = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "static", "interactions.js"
+)
+
+
 def build_interaction_widget(page_pk: str) -> str:
-    """HTML fragment injected into served published pages (not stored / not snapshotted)."""
+    """HTML fragment injected into served published pages (not stored / not snapshotted).
+
+    script src 带 ?v= 文件 mtime 缓存失效参数——widget 迭代频繁，避免浏览器缓存旧版 JS。
+    """
+    version = int(os.path.getmtime(_WIDGET_JS_PATH) * 1000)
     return (
         f'<div id="platform-interactions" data-pk="{page_pk}"></div>\n'
-        '<script src="/static/interactions.js" defer></script>'
+        f'<script src="/static/interactions.js?v={version}" defer></script>'
     )
 
 

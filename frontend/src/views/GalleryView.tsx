@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
 import { Clock, FileText, Flame, Heart, LayoutGrid, Search, Star } from 'lucide-react'
 import { getGallery } from '../api/endpoints'
 import Avatar from '../components/common/Avatar'
@@ -18,36 +18,65 @@ const SORT_OPTIONS: { key: SortKey; label: string; icon: typeof Clock }[] = [
 ]
 
 export default function GalleryView() {
+  const [searchParams, setSearchParams] = useSearchParams()
+  const searchParamsRef = useRef(searchParams)
+  searchParamsRef.current = searchParams
+
+  // URL 是唯一数据源：tag / q / sort / page 全部可从 query 恢复（可分享、可后退、可刷新）
+  const tag = searchParams.get('tag') || ''
+  const sort: SortKey = searchParams.get('sort') === 'hot' ? 'hot' : 'latest'
+  const rawPage = parseInt(searchParams.get('page') || '', 10)
+  const page = Number.isFinite(rawPage) && rawPage > 0 ? rawPage : 1
+  const urlQ = searchParams.get('q') || ''
+
   const [data, setData] = useState<GalleryResponse | null>(null)
-  const [tag, setTag] = useState('')
-  const [sort, setSort] = useState<SortKey>('latest')
-  const [page, setPage] = useState(1)
-  const [searchText, setSearchText] = useState('')
-  const [q, setQ] = useState('')
+  const [searchInput, setSearchInput] = useState(urlQ) // 输入框本地显示值（防抖后写回 URL）
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
-  // 搜索输入防抖
+  // URL 外部变化（后退 / 分享链接打开）→ 回写搜索框（不打断正在输入：仅在 urlQ 真正变化时触发）
+  useEffect(() => {
+    setSearchInput((prev) => (prev === urlQ ? prev : urlQ))
+  }, [urlQ])
+
+  // 搜索防抖 → 写回 URL
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current)
     debounceRef.current = setTimeout(() => {
-      setQ(searchText.trim())
-      setPage(1)
+      const nextQ = searchInput.trim()
+      const params = new URLSearchParams(searchParamsRef.current)
+      if (nextQ === (params.get('q') || '')) return
+      if (nextQ) params.set('q', nextQ)
+      else params.delete('q')
+      params.set('page', '1')
+      setSearchParams(params, { replace: true })
     }, 300)
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current) }
-  }, [searchText])
+  }, [searchInput, setSearchParams])
+
+  // 合并式更新 URL（replace，避免筛选/搜索堆积历史记录）
+  const updateParams = useCallback((next: Record<string, string | null>) => {
+    const params = new URLSearchParams(searchParamsRef.current)
+    for (const [k, v] of Object.entries(next)) {
+      if (v === null || v === '') params.delete(k)
+      else params.set(k, v)
+    }
+    setSearchParams(params, { replace: true })
+  }, [setSearchParams])
 
   useEffect(() => {
     setLoading(true)
-    getGallery({ tag: tag || undefined, q: q || undefined, sort, page, page_size: PAGE_SIZE })
+    getGallery({ tag: tag || undefined, q: urlQ || undefined, sort, page, page_size: PAGE_SIZE })
       .then((res) => { setData(res.data); setError(null) })
       .catch(() => setError('加载失败，请稍后重试'))
       .finally(() => setLoading(false))
-  }, [tag, sort, q, page])
+  }, [tag, urlQ, sort, page])
 
-  const selectTag = (t: string) => { setTag(t === tag ? '' : t); setPage(1) }
-  const selectSort = (s: SortKey) => { setSort(s); setPage(1) }
+  const selectTag = (t: string) => updateParams({ tag: t === tag ? null : t, page: '1' })
+  const selectSort = (s: SortKey) => updateParams({ sort: s, page: '1' })
+  const changePage = (p: number) => updateParams({ page: String(p) })
+  const clearFilters = () => updateParams({ tag: null, q: null, page: '1' })
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8 min-h-[60vh]">
@@ -66,8 +95,8 @@ export default function GalleryView() {
           <div className="relative flex-1 min-w-48 max-w-sm">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
             <Input
-              value={searchText}
-              onChange={(e) => setSearchText(e.target.value)}
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
               placeholder="搜索页面名称..."
               className="pl-8 h-9"
             />
@@ -127,8 +156,8 @@ export default function GalleryView() {
       ) : !data || data.items.length === 0 ? (
         <div className="text-center py-20">
           <p className="text-muted-foreground text-sm">没有符合条件的作品</p>
-          {(tag || q) && (
-            <button onClick={() => { setTag(''); setSearchText(''); setQ('') }} className="mt-2 text-sm text-primary hover:underline">
+          {(tag || urlQ) && (
+            <button onClick={clearFilters} className="mt-2 text-sm text-primary hover:underline">
               清除筛选
             </button>
           )}
@@ -192,7 +221,7 @@ export default function GalleryView() {
 
           {data.total > PAGE_SIZE && (
             <div className="mt-8">
-              <Pagination page={page} pageSize={PAGE_SIZE} total={data.total} onPageChange={setPage} />
+              <Pagination page={page} pageSize={PAGE_SIZE} total={data.total} onPageChange={changePage} />
             </div>
           )}
         </>

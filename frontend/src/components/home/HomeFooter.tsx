@@ -3,7 +3,7 @@ import { Sparkles } from 'lucide-react'
 import { Button } from '../ui/button'
 import Reveal from '../common/Reveal'
 
-/** 首页专属 CTA + Footer。仅在此组件内渲染，不放进 App.tsx 全局（避免与 /generator 全屏页冲突） */
+/** 首页专属 CTA + Footer。仅在此组件内渲染，不放进 App.tsx 全局（避免与 /creation 全屏页冲突） */
 export default function HomeFooter() {
   return (
     <div>
@@ -19,7 +19,7 @@ export default function HomeFooter() {
               上传你的 HTML，或让 AI 生成一个——一键部署上线，分享给所有人使用
             </p>
             <Button size="lg" className="mt-6" asChild>
-              <Link to="/generator">
+              <Link to="/creation">
                 <Sparkles className="size-4" /> 开始部署
               </Link>
             </Button>

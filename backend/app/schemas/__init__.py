@@ -288,7 +288,14 @@ class InteractionViewer(BaseModel):
 class InteractionPageInfo(BaseModel):
     title: Optional[str] = None
     page_id: Optional[str] = None
+    created_at: Optional[datetime] = None  # 发布时间（页面创建时间）
+    tags: list[str] = []
     author: CommentUser
+
+    @field_validator("tags", mode="before")
+    @classmethod
+    def coerce_tags(cls, v: Any) -> list[str]:
+        return normalize_tags(v) or []
 
 
 class InteractionResponse(BaseModel):
