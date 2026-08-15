@@ -56,7 +56,7 @@ frontend/src/
 │   │   ├── PreviewPanel.tsx      # iframe sandbox (500ms 防抖 srcdoc)
 │   │   ├── PublishButton.tsx     # 发布 + 新窗口打开 + 跳转用户主页
 │   │   ├── SaveDraftButton.tsx   # 保存草稿 (is_saved=True 后列表可见)
-│   │   └── SavePageDialog.tsx    # 发布/保存表单 (标题 + page_id 实时校验)
+│   │   └── SavePageDialog.tsx    # 发布/保存表单 (标题 + page_id 实时校验；发布时含 tags 编辑：AI 预填、回车/逗号添加、chips 删除，≤5×20)
 │   ├── user/                     # 个人主页专属组件
 │   │   ├── ProjectCard.tsx        # 项目卡片（16:9 封面 + 下载/编辑/删除）
 │   │   └── FollowList.tsx         # 关注者/正在关注列表（可回关）
@@ -122,7 +122,7 @@ UserProfileView 点击编辑 → navigate("/generator?pageId={id}")
 | Store | 关键字段 |
 |---|---|
 | `useAuthStore` | user, isAuthenticated, loading, login(), register(), fetchUser(), logout() |
-| `useGenerationStore` | isStreaming, codeContent, pageId, isSaved, title, progressStep, error, startStreaming(), appendCode(), setCode(), loadPage(), finishStreaming(), setSaved(), setTitle() |
+| `useGenerationStore` | isStreaming, codeContent, pageId, isSaved, title, tags, progressStep, error, startStreaming(), appendCode(), setCode(), loadPage(), finishStreaming(), setTags(), setSaved(), setTitle() |
 
 ## 关键设计决策
 

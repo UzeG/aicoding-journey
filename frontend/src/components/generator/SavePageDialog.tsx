@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Loader2, Check, X } from 'lucide-react'
+import { Loader2, Check, X, Plus } from 'lucide-react'
 import { checkPageId } from '../../api/endpoints'
+import { Badge } from '../ui/badge'
 import { Button } from '../ui/button'
 import {
   Dialog,
@@ -16,6 +17,7 @@ import { Label } from '../ui/label'
 interface PageFormValues {
   title: string
   page_id: string
+  tags: string[]
 }
 
 interface Props {
@@ -28,9 +30,12 @@ interface Props {
   description: string
   confirmLabel: string
   showPageId?: boolean
+  showTags?: boolean
 }
 
 const PAGE_ID_PATTERN = /^[a-zA-Z0-9_-]{1,50}$/
+const MAX_TAGS = 5
+const MAX_TAG_LEN = 20
 
 export default function SavePageDialog({
   open,
@@ -42,17 +47,51 @@ export default function SavePageDialog({
   description,
   confirmLabel,
   showPageId = false,
+  showTags = false,
 }: Props) {
   const [values, setValues] = useState<PageFormValues>(defaultValues)
+  const [tagInput, setTagInput] = useState('')
   const [pageIdStatus, setPageIdStatus] = useState<'idle' | 'checking' | 'available' | 'taken' | 'invalid'>('idle')
   const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
   useEffect(() => {
     if (open) {
       setValues(defaultValues)
+      setTagInput('')
       setPageIdStatus('idle')
     }
   }, [open, defaultValues])
+
+  const addTag = useCallback(() => {
+    const t = tagInput.trim().slice(0, MAX_TAG_LEN)
+    if (!t) return
+    setValues((prev) => {
+      if (prev.tags.length >= MAX_TAGS || prev.tags.includes(t)) return prev
+      return { ...prev, tags: [...prev.tags, t] }
+    })
+    setTagInput('')
+  }, [tagInput])
+
+  const handleTagInputChange = useCallback((raw: string) => {
+    // 逗号（中英文）即分隔输入，一次性加入多个
+    if (raw.includes(',') || raw.includes('，')) {
+      const parts = raw.split(/[,，]/).map((s) => s.trim().slice(0, MAX_TAG_LEN)).filter(Boolean)
+      setValues((prev) => {
+        const next = [...prev.tags]
+        for (const p of parts) {
+          if (p && !next.includes(p) && next.length < MAX_TAGS) next.push(p)
+        }
+        return { ...prev, tags: next }
+      })
+      setTagInput('')
+    } else {
+      setTagInput(raw.slice(0, MAX_TAG_LEN))
+    }
+  }, [])
+
+  const removeTag = useCallback((t: string) => {
+    setValues((prev) => ({ ...prev, tags: prev.tags.filter((x) => x !== t) }))
+  }, [])
 
   const validatePageId = useCallback(async (val: string) => {
     if (!val) {
@@ -125,6 +164,53 @@ export default function SavePageDialog({
                 {pageIdStatus === 'taken' && '❌ 已被占用，请换一个'}
                 {pageIdStatus === 'invalid' && '格式：字母、数字、连字符、下划线'}
               </p>
+            </div>
+          )}
+
+          {showTags && (
+            <div className="space-y-2">
+              <Label htmlFor="page-tags">标签（可选）</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="page-tags"
+                  value={tagInput}
+                  onChange={(e) => handleTagInputChange(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
+                      e.preventDefault()
+                      addTag()
+                    }
+                  }}
+                  maxLength={MAX_TAG_LEN}
+                  placeholder="输入标签，回车或逗号添加"
+                  disabled={loading || values.tags.length >= MAX_TAGS}
+                />
+                <Button type="button" variant="outline" size="icon" onClick={addTag} disabled={loading || !tagInput.trim() || values.tags.length >= MAX_TAGS}>
+                  <Plus className="size-4" />
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {values.tags.length}/{MAX_TAGS} 个，每个最多 {MAX_TAG_LEN} 字
+              </p>
+              <div className="flex flex-wrap gap-1.5 min-h-8">
+                {values.tags.length === 0 && (
+                  <span className="text-xs text-muted-foreground py-1">暂无标签</span>
+                )}
+                {values.tags.map((t) => (
+                  <Badge key={t} variant="muted" className="gap-1 text-xs">
+                    {t}
+                    <button
+                      type="button"
+                      onClick={() => removeTag(t)}
+                      disabled={loading}
+                      className="text-muted-foreground hover:text-foreground disabled:opacity-40"
+                      aria-label={`删除标签 ${t}`}
+                    >
+                      <X className="size-3" />
+                    </button>
+                  </Badge>
+                ))}
+              </div>
             </div>
           )}
         </div>

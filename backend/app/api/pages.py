@@ -1,4 +1,5 @@
 import asyncio
+import json
 import logging
 import os
 from datetime import datetime, timedelta
@@ -43,6 +44,7 @@ from app.schemas import (
     UpdatePageIdRequest,
     UserProfileResponse,
     UserPublicResponse,
+    normalize_tags,
 )
 from app.services.page_id import generate_page_id, validate_page_id_format
 from app.services.publish_scanner import scan_html
@@ -175,6 +177,8 @@ async def update_page(
     if req.html_content is not None:
         page.html_content = req.html_content
         page.file_size = len(req.html_content.encode("utf-8"))
+    if "tags" in req.model_fields_set:
+        page.tags = json.dumps(normalize_tags(req.tags) or [], ensure_ascii=False)
 
     await db.commit()
     await db.refresh(page)
@@ -195,6 +199,9 @@ async def publish_page(
 
     if req.title is not None:
         page.title = req.title
+    # tags：发布时用户可改（未传则保留 AI 生成的结果）
+    if "tags" in req.model_fields_set:
+        page.tags = json.dumps(normalize_tags(req.tags) or [], ensure_ascii=False)
 
     # Resolve page_id: user-provided → validate + check uniqueness; otherwise auto-generate
     if req.page_id and req.page_id.strip():
@@ -304,6 +311,7 @@ async def save_draft(
             html_content=page.html_content,
             prompt=page.prompt,
             step1_output=page.step1_output,
+            tags=page.tags,
             file_size=page.file_size,
             is_saved=True,
         )

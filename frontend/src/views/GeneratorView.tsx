@@ -33,7 +33,7 @@ export default function GeneratorView() {
     loadedRef.current = true
     const loadPage = useGenerationStore.getState().loadPage
     getPage(editPageId).then((res) => {
-      loadPage(editPageId, res.data.html_content, res.data.prompt || '', res.data.is_saved, res.data.title || '')
+      loadPage(editPageId, res.data.html_content, res.data.prompt || '', res.data.is_saved, res.data.title || '', res.data.tags || [])
     }).catch(() => {
       useGenerationStore.getState().setError('加载页面失败')
     })

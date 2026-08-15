@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 import { ExternalLink, FileText, Pencil, Trash2 } from 'lucide-react'
+import { Badge } from '../ui/badge'
 import { Button } from '../ui/button'
 import { Card, CardContent } from '../ui/card'
 import DownloadButton from '../common/DownloadButton'
@@ -52,6 +53,13 @@ export default function ProjectCard({ page, user_id, isOwn, onDelete }: Props) {
                 </a>
               )}
             </div>
+            {page.tags && page.tags.length > 0 && (
+              <div className="flex flex-wrap gap-1 mt-1.5">
+                {page.tags.map((t) => (
+                  <Badge key={t} variant="muted" className="text-[11px] font-normal">{t}</Badge>
+                ))}
+              </div>
+            )}
           </div>
           {isOwn && (
             <div className="flex items-center gap-2 ml-4 shrink-0">

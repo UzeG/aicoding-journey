@@ -36,10 +36,10 @@ export const generateSSE = (prompt: string, pageId?: string | null, signal?: Abo
 // Pages
 export const listPages = () => api.get<PageItem[]>('/pages')
 export const getPage = (id: string) => api.get<PageDetail>(`/pages/${id}`)
-export const updatePage = (id: string, data: { title?: string; html_content?: string }) =>
+export const updatePage = (id: string, data: { title?: string; html_content?: string; tags?: string[] }) =>
   api.put<PageDetail>(`/pages/${id}`, data)
-export const publishPage = (id: string, title?: string, page_id?: string) =>
-  api.post<PublishResult>(`/pages/${id}/publish`, { title, page_id })
+export const publishPage = (id: string, title?: string, page_id?: string, tags?: string[]) =>
+  api.post<PublishResult>(`/pages/${id}/publish`, { title, page_id, tags })
 export const checkPageId = (page_id: string) =>
   api.get<CheckPageIdResponse>('/pages/check-id', { params: { page_id } })
 export const updatePageId = (id: string, page_id: string) =>

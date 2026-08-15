@@ -43,6 +43,7 @@ class Page(Base):
     html_content: Mapped[str] = mapped_column(Text, nullable=False, default="")
     prompt: Mapped[str | None] = mapped_column(Text, default=None)
     step1_output: Mapped[str | None] = mapped_column(Text, default=None)
+    tags: Mapped[str | None] = mapped_column(Text, default=None)  # JSON array string，AI 生成 + 用户可改
     file_size: Mapped[int | None] = mapped_column(Integer, default=None)
     is_published: Mapped[bool] = mapped_column(Boolean, default=False)
     is_saved: Mapped[bool] = mapped_column(Boolean, default=False)

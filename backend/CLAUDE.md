@@ -20,7 +20,7 @@ backend/
 │   ├── config.py            # pydantic-settings, 读 .env
 │   ├── database.py          # SQLAlchemy async engine + session
 │   ├── seed.py              # 种子数据（推荐提示词 + demo 用户）
-│   ├── models/__init__.py   # User(avatar_url/bio/readme/theme), Page(cover_url), Follow, PageIdRedirect, RecommendedPrompt, AuditLog ORM
+│   ├── models/__init__.py   # User(avatar_url/bio/readme/theme), Page(cover_url/tags), Follow, PageIdRedirect, RecommendedPrompt, AuditLog ORM
 │   ├── schemas/__init__.py  # Pydantic 请求/响应模型
 │   ├── api/                 # 路由层
 │   │   ├── __init__.py      # 路由注册
@@ -65,8 +65,8 @@ backend/
 | POST | /api/generate | JWT | SSE 流式生成 HTML（策略按 GENERATION_STRATEGY：two_step 默认 / single_step 实验） |
 | POST | /api/mock/generate | JWT | Mock SSE 流式（开发用，跳过 LLM） |
 | GET | /api/pages | JWT | 页面列表 |
-| GET / PUT / DELETE | /api/pages/{pk} | JWT | 页面 CRUD（pk 为 DB 主键） |
-| POST | /api/pages/{pk}/publish | JWT | 发布（可选自定义 page_id） |
+| GET / PUT / DELETE | /api/pages/{pk} | JWT | 页面 CRUD（pk 为 DB 主键；PUT 支持 tags） |
+| POST | /api/pages/{pk}/publish | JWT | 发布（可选自定义 page_id + tags，未传 tags 保留 AI 生成） |
 | POST | /api/pages/{pk}/save-draft | JWT | 保存草稿（is_saved=True） |
 | GET | /api/pages/{pk}/render | JWT | 内部渲染端点（返回完整 HTML，快照截图用，仅本人） |
 | GET | /api/pages/check-id?page_id= | JWT | 检查 page_id 可用性 |
@@ -114,7 +114,7 @@ backend/
 - **封面快照**: 生成完成后 `asyncio.create_task(capture_snapshot(...))` 异步截图（不阻塞 SSE）。用 Playwright 复用系统 Chrome（`executable_path`，headless），JWT 通过 context `extra_http_headers` 传给内部渲染端点。**陷阱**：`get_current_user` 只读 Authorization header 不读 query；`page.goto` 无 headers 参数必须用 `new_context(extra_http_headers=...)`；等待用 `load` + sleep 而非 `networkidle`（无限动画页面永不空闲）。依赖 `playwright` 包 + 系统 Chrome，缺失时快照自动禁用
 - **发布页互动**: 3 张表 `page_likes/page_comments/page_favorites`（UNIQUE(page_fk,user_fk)）。互动端点 `GET /{pk}/interactions`（可选鉴权，返回计数+评论+viewer+`page`(标题/作者)）、`POST /{pk}/like|favorite`（toggle）、`POST /{pk}/comments`、`DELETE /{pk}/comments/{cid}`（仅本人）。`serve_page` **服务期注入** `build_interaction_widget`（`<div id="platform-interactions" data-pk>` + `/static/interactions.js`），不改存储 html；`render_page`（快照）不注入。组件读 `localStorage.access_token`（同源前提：dev 用 Vite proxy 把两段 `{user_id}/{page_id}` 字符集路径代理到 8000，见 frontend/vite.config.ts；`PUBLIC_BASE_URL` 指向 5173），未登录弹窗→`/login?redirect=`
 - **互动 UI（底部上滑 bottom sheet，PC/移动端统一）**: `interactions.js` 右下角圆形触发按钮（常态 `opacity:.35`，打开后淡出并被抽屉盖住）；抽屉从底部上滑（`translateY(100%)→0`），顶部横杠点击/拖拽收起；PC（≥641px）收窄锚右下角（`min(92vw,420px)`）、移动端全宽 78vh。两个 tab：**作者**（头像/昵称/@id/bio + **N 关注者 + 关注/已关注按钮**（读 `GET /api/users/{author}` 的 `follower_count`/`is_following`，`viewer.is_self`=true 即自己的页时隐藏；乐观更新） + TA 的其他已发布作品：封面+名+url；**点击作者信息栏 → `/{author_user_id}` 打开作者主页**）+ **评论**（列表/表单/删自己的）。overlay 层级在页之上、**不影响页面布局**（项目不缩放）。点赞/收藏在面板头部。**全部 append 到 `documentElement`**，`textContent` 防 XSS，未登录弹窗→`/login?redirect=`。`InteractionViewer` 新增 `is_self`（viewer 是否页面作者）
-- **Page 复用**: `GenerateRequest.page_id` 可选字段——前端重新生成时传入已有 pageId，后端在 `create_llm_stream` 中检查：若页面存在、属于当前用户且 `is_published=False`，则 UPDATE 该记录而非 INSERT 新记录；已发布的页面不会被覆盖（会创建新 Page）
+- **页面 tags**: `pages.tags` TEXT（JSON 数组字符串，迁移补列）。two_step 由 **Step 1 一并生成**（≤5 个、每个 ≤20 字符，`get_step1_prompt()` 输出格式含 `tags`）；single_step 无 Step 1 兜底 `[]`。**tags 不进 Step 2 提示词**（只存库+透出）。用户可在发布弹窗增删改：`POST /{pk}/publish` 传 `tags` 覆盖 AI 结果（未传保留 AI 生成），`PUT /api/pages/{pk}` 支持更新；`save_draft` 派生副本复制 tags。`PageListItem`/`PageResponse` 透出（JSON 字符串→list 的 before-validator）；`done` SSE 事件带 `tags`（前端 store 预填）。后端统一 `normalize_tags()`（去重/trim/≤5/≤20，容忍 JSON 字符串或列表）
 - **is_saved 机制**: 生成时 `is_saved=False`，页面不会出现在列表（`list_pages` 过滤 `is_published OR is_saved`）。用户主动点击"保存草稿"后 `is_saved=True`，页面才在用户主页中可见
 - **LLM 优先级**: 用户配置 > `.env` 平台默认（api_key 由 `_build_client` 统一解密，仅一处）
 - **思考模式**: 默认**关闭**（`config.LLM_THINKING=False`）。所有 LLM 调用（Step1/Step2/单步/admin chat）经 `_thinking_extra_body()` 传 `extra_body={"thinking":{"type":"disabled"}}`（SDK 会扁平化为顶层字段，DeepSeek V4 默认思考的模型据此关闭）。`.env` 设 `LLM_THINKING=true` 即开启

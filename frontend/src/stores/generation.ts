@@ -6,6 +6,7 @@ interface GenerationState {
   pageId: string | null
   prompt: string
   title: string
+  tags: string[]
   isSaved: boolean
   error: string | null
   progressStep: string | null
@@ -14,10 +15,11 @@ interface GenerationState {
   startStreaming: (prompt: string) => void
   appendCode: (content: string) => void
   setCode: (content: string) => void
-  loadPage: (pageId: string, codeContent: string, prompt: string, isSaved?: boolean, title?: string) => void
-  finishStreaming: (pageId: string, title?: string) => void
+  loadPage: (pageId: string, codeContent: string, prompt: string, isSaved?: boolean, title?: string, tags?: string[]) => void
+  finishStreaming: (pageId: string, title?: string, tags?: string[]) => void
   setPageId: (pageId: string) => void
   setTitle: (title: string) => void
+  setTags: (tags: string[]) => void
   setProgress: (step: string, message: string) => void
   setSaved: () => void
   setError: (error: string) => void
@@ -30,13 +32,14 @@ export const useGenerationStore = create<GenerationState>((set) => ({
   pageId: null,
   prompt: '',
   title: '',
+  tags: [],
   isSaved: false,
   error: null,
   progressStep: null,
   progressMessage: '',
 
   startStreaming: (prompt) =>
-    set({ isStreaming: true, codeContent: '', pageId: null, prompt, title: '', isSaved: false, error: null, progressStep: null, progressMessage: '' }),
+    set({ isStreaming: true, codeContent: '', pageId: null, prompt, title: '', tags: [], isSaved: false, error: null, progressStep: null, progressMessage: '' }),
 
   appendCode: (content) =>
     set((state) => ({ codeContent: state.codeContent + content })),
@@ -44,17 +47,20 @@ export const useGenerationStore = create<GenerationState>((set) => ({
   setCode: (content: string) =>
     set({ codeContent: content }),
 
-  loadPage: (pageId, codeContent, prompt, isSaved = false, title = '') =>
-    set({ pageId, codeContent, prompt, isSaved, title, isStreaming: false, error: null }),
+  loadPage: (pageId, codeContent, prompt, isSaved = false, title = '', tags = []) =>
+    set({ pageId, codeContent, prompt, isSaved, title, tags, isStreaming: false, error: null }),
 
-  finishStreaming: (pageId, title = '') =>
-    set({ isStreaming: false, pageId, title, progressStep: null, progressMessage: '' }),
+  finishStreaming: (pageId, title = '', tags = []) =>
+    set({ isStreaming: false, pageId, title, tags, progressStep: null, progressMessage: '' }),
 
   setPageId: (pageId) =>
     set({ pageId }),
 
   setTitle: (title) =>
     set({ title }),
+
+  setTags: (tags) =>
+    set({ tags }),
 
   setProgress: (step, message) =>
     set({ progressStep: step, progressMessage: message }),
@@ -66,5 +72,5 @@ export const useGenerationStore = create<GenerationState>((set) => ({
     set({ isStreaming: false, error }),
 
   reset: () =>
-    set({ isStreaming: false, codeContent: '', pageId: null, prompt: '', title: '', isSaved: false, error: null, progressStep: null, progressMessage: '' }),
+    set({ isStreaming: false, codeContent: '', pageId: null, prompt: '', title: '', tags: [], isSaved: false, error: null, progressStep: null, progressMessage: '' }),
 }))

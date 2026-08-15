@@ -66,7 +66,7 @@ export default function SaveDraftButton({ pageId, disabled }: Props) {
         open={dialogOpen}
         onClose={() => setDialogOpen(false)}
         onConfirm={handleConfirm}
-        defaultValues={{ title, page_id: '' }}
+        defaultValues={{ title, page_id: '', tags: [] }}
         loading={saving}
         title="保存草稿"
         description="给页面起个名字，方便在列表中识别。"

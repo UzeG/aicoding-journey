@@ -1,8 +1,42 @@
+import json
+import re
 import uuid
 from datetime import datetime
 from typing import Any, Generic, Optional, TypeVar
 
 from pydantic import BaseModel, Field, field_validator
+
+
+def normalize_tags(tags: Any) -> list[str] | None:
+    """Normalize a tags value into a clean list.
+
+    Accepts a list[str] or a JSON-encoded string (DB column). Trims each tag,
+    drops empties/duplicates, caps at 5 tags, each ≤20 chars. Returns None when
+    the input is None or normalizes to nothing (callers store '[]' / treat as empty).
+    """
+    if tags is None:
+        return None
+    if isinstance(tags, str):
+        s = tags.strip()
+        if not s:
+            return None
+        try:
+            parsed = json.loads(s)
+            items = parsed if isinstance(parsed, list) else [parsed]
+        except json.JSONDecodeError:
+            items = [x for x in re.split(r"[,，;]", s) if x.strip()]
+    elif isinstance(tags, (list, tuple)):
+        items = tags
+    else:
+        return None
+    out: list[str] = []
+    for t in items:
+        x = str(t).strip()
+        if x and x not in out:
+            out.append(x[:20])
+        if len(out) >= 5:
+            break
+    return out or None
 
 
 # ── Auth ──
@@ -74,6 +108,12 @@ class PageCreate(BaseModel):
 class PageUpdate(BaseModel):
     title: Optional[str] = None
     html_content: Optional[str] = None
+    tags: Optional[list[str]] = None
+
+    @field_validator("tags", mode="before")
+    @classmethod
+    def coerce_tags(cls, v: Any) -> Optional[list[str]]:
+        return normalize_tags(v)
 
 
 class PageResponse(BaseModel):
@@ -83,6 +123,7 @@ class PageResponse(BaseModel):
     cover_url: Optional[str] = None
     html_content: str = ""
     prompt: Optional[str]
+    tags: list[str] = []
     file_size: Optional[int]
     is_published: bool
     is_saved: bool
@@ -98,12 +139,18 @@ class PageResponse(BaseModel):
     def coerce_id(cls, v: Any) -> str:
         return str(v)
 
+    @field_validator("tags", mode="before")
+    @classmethod
+    def coerce_tags(cls, v: Any) -> list[str]:
+        return normalize_tags(v) or []
+
 
 class PageListItem(BaseModel):
     id: str
     page_id: Optional[str]
     title: Optional[str]
     cover_url: Optional[str] = None
+    tags: list[str] = []
     is_published: bool
     is_saved: bool
     visibility: str
@@ -117,6 +164,11 @@ class PageListItem(BaseModel):
     @classmethod
     def coerce_id(cls, v: Any) -> str:
         return str(v)
+
+    @field_validator("tags", mode="before")
+    @classmethod
+    def coerce_tags(cls, v: Any) -> list[str]:
+        return normalize_tags(v) or []
 
 
 class PublishResponse(BaseModel):
@@ -137,6 +189,12 @@ class SaveDraftRequest(BaseModel):
 class PublishRequest(BaseModel):
     title: Optional[str] = None
     page_id: Optional[str] = Field(default=None, max_length=50)
+    tags: Optional[list[str]] = None
+
+    @field_validator("tags", mode="before")
+    @classmethod
+    def coerce_tags(cls, v: Any) -> Optional[list[str]]:
+        return normalize_tags(v)
 
 
 class UpdatePageIdRequest(BaseModel):

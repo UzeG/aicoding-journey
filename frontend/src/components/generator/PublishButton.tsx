@@ -28,6 +28,7 @@ export default function PublishButton({ pageId, disabled }: Props) {
   const [error, setError] = useState<string | null>(null)
   const title = useGenerationStore((s) => s.title)
   const setTitle = useGenerationStore((s) => s.setTitle)
+  const tags = useGenerationStore((s) => s.tags)
   const currentUserId = useAuthStore((s) => s.user?.user_id)
   const navigate = useNavigate()
 
@@ -36,12 +37,12 @@ export default function PublishButton({ pageId, disabled }: Props) {
     setDialogOpen(true)
   }
 
-  const handleConfirm = async (values: { title: string; page_id: string }) => {
+  const handleConfirm = async (values: { title: string; page_id: string; tags: string[] }) => {
     if (!pageId) return
     setPublishing(true)
     setError(null)
     try {
-      const res = await publishPage(pageId, values.title, values.page_id || undefined)
+      const res = await publishPage(pageId, values.title, values.page_id || undefined, values.tags)
       setTitle(values.title)
       setDialogOpen(false)
       setResult(res.data)
@@ -65,12 +66,13 @@ export default function PublishButton({ pageId, disabled }: Props) {
         open={dialogOpen}
         onClose={() => setDialogOpen(false)}
         onConfirm={handleConfirm}
-        defaultValues={{ title, page_id: '' }}
+        defaultValues={{ title, page_id: '', tags }}
         loading={publishing}
         title="部署页面"
         description="确认页面名称后部署到公网。"
         confirmLabel="部署"
         showPageId
+        showTags
       />
 
       <Dialog open={!!result} onOpenChange={(open) => !open && setResult(null)}>

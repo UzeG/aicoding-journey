@@ -31,10 +31,11 @@ def get_step1_prompt() -> str:
 ## OUTPUT FORMAT
 Respond with ONLY this JSON (no other text):
 
-{{"refined_prompt": "the clarified and detailed prompt in Chinese", "libraries": ["key1", "key2"]}}
+{{"refined_prompt": "the clarified and detailed prompt in Chinese", "libraries": ["key1", "key2"], "tags": ["标签1", "标签2"]}}
 
 - refined_prompt: 200-400 characters in Chinese, add layout/style details the user omitted
 - libraries: array of library keys from the list above. Empty array [] if none needed
+- tags: 2-5 short Chinese tags, each ≤20 characters, describing the page's TYPE/THEME/USE (e.g. 计算器、图表、游戏、贺卡、工具、表单、博客、个人主页、三维). These are for a public gallery to browse & filter by — pick the most accurate, searchable keywords. Prefer fewer, more precise tags over generic ones
 """
 
 

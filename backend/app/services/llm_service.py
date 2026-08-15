@@ -5,6 +5,7 @@ import re
 import time
 from typing import AsyncGenerator
 
+from app.schemas import normalize_tags
 from app.services.library_registry import build_cdn_includes
 from app.services.system_prompt import get_single_step_prompt, get_step1_prompt, get_step2_prompt
 
@@ -53,10 +54,11 @@ async def create_two_step_stream(
                 raise ValueError(f"Step 1 returned empty/missing refined_prompt: {step1}")
             refined_prompt = step1.get("refined_prompt", prompt)
             libraries = step1.get("libraries", [])
+            tags = normalize_tags(step1.get("tags")) or []
             trace["refined_prompt"] = refined_prompt
             trace["libraries"] = json.dumps(libraries, ensure_ascii=False)
             trace["step1_output"] = json.dumps(step1, ensure_ascii=False)
-            logger.info(f"Step 1 result: libraries={libraries}, refined_prompt={refined_prompt[:100]}")
+            logger.info(f"Step 1 result: libraries={libraries}, tags={tags}, refined_prompt={refined_prompt[:100]}")
         except Exception as e:
             trace["status"] = "error"
             trace["error_message"] = f"需求分析失败: {e}"[:1000]
@@ -65,7 +67,7 @@ async def create_two_step_stream(
             return
 
         if verbose:
-            yield {"type": "step1", "refined_prompt": refined_prompt, "libraries": libraries}
+            yield {"type": "step1", "refined_prompt": refined_prompt, "libraries": libraries, "tags": tags}
             yield {"type": "step1_prompt", "system": get_step1_prompt(), "user": prompt}
 
         # ── Step 2: Generate ──
@@ -75,7 +77,7 @@ async def create_two_step_stream(
 
         async for event in _run_step2_generate(
             refined_prompt, libraries, user_config, user_id, step1_output, request, page_id,
-            trace=trace, persist=persist, verbose=verbose,
+            trace=trace, persist=persist, verbose=verbose, tags=tags,
         ):
             yield event
     finally:
@@ -248,6 +250,7 @@ async def _run_step2_generate(
     trace: dict,
     persist: bool = True,
     verbose: bool = False,
+    tags: list[str] | None = None,
 ) -> AsyncGenerator[dict, None]:
     """SSE streaming HTML fragment generation + assembly with CDN includes."""
     from openai import AsyncOpenAI
@@ -355,11 +358,11 @@ async def _run_step2_generate(
         # Persist page record (skipped for admin test runs)
         final_page_id = None
         if persist:
-            final_page_id = await _persist_page(assembled, refined_prompt, step1_output, user_id, page_id, llm_title)
+            final_page_id = await _persist_page(assembled, refined_prompt, step1_output, user_id, page_id, llm_title, tags)
         trace["page_fk"] = final_page_id
 
         yield {"type": "final", "content": assembled}
-        yield {"type": "done", "page_id": str(final_page_id), "tokens_used": total_tokens, "title": llm_title}
+        yield {"type": "done", "page_id": str(final_page_id), "tokens_used": total_tokens, "title": llm_title, "tags": tags or []}
 
     except Exception as e:
         logger.exception("Step 2 LLM call failed")
@@ -474,14 +477,14 @@ async def _run_single_step_generate(
         trace["tokens_used"] = total_tokens
         trace["final_html"] = assembled
 
-        # Persist page record (skipped for admin test runs)
+        # Persist page record (skipped for admin test runs); single-stage has no tags source → []
         final_page_id = None
         if persist:
-            final_page_id = await _persist_page(assembled, prompt, None, user_id, page_id, llm_title)
+            final_page_id = await _persist_page(assembled, prompt, None, user_id, page_id, llm_title, [])
         trace["page_fk"] = final_page_id
 
         yield {"type": "final", "content": assembled}
-        yield {"type": "done", "page_id": str(final_page_id), "tokens_used": total_tokens, "title": llm_title}
+        yield {"type": "done", "page_id": str(final_page_id), "tokens_used": total_tokens, "title": llm_title, "tags": []}
 
     except Exception as e:
         logger.exception("Single-stage LLM call failed")
@@ -499,6 +502,7 @@ async def _persist_page(
     user_id: str,
     page_id: int | None,
     llm_title: str,
+    tags: list[str] | None = None,
 ) -> int | None:
     """Insert or update a Page record from a generated page + schedule its cover snapshot.
 
@@ -526,6 +530,7 @@ async def _persist_page(
             existing_page.html_content = assembled
             existing_page.prompt = prompt_text
             existing_page.step1_output = step1_output
+            existing_page.tags = json.dumps(tags or [], ensure_ascii=False)
             existing_page.file_size = len(assembled.encode("utf-8"))
             final_page_id = existing_page.id
         else:
@@ -537,6 +542,7 @@ async def _persist_page(
                 html_content=assembled,
                 prompt=prompt_text,
                 step1_output=step1_output,
+                tags=json.dumps(tags or [], ensure_ascii=False),
                 file_size=len(assembled.encode("utf-8")),
             )
             db.add(page)
