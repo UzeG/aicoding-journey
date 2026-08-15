@@ -94,6 +94,7 @@ frontend/src/
 | `/admin/llm-configs` | AdminLLMConfigsView | 平台默认 + 用户自定义 LLM 配置 |
 | `/admin/system-prompts` | AdminSystemPromptsView | 当前 Step 1/2 System Prompt 现文 |
 | `/admin/test-bench` | AdminTestBenchView | 测试台：prompt + 配置 → 实时看 Step1/Step2 中间输出 |
+| `/admin/chat` | AdminChatView | LLM 聊天测试：单轮 prompt → 流式回复（平台默认/自定义配置，测连通性） |
 
 ## 核心数据流（GeneratorView）
 
@@ -127,6 +128,7 @@ UserProfileView 点击编辑 → navigate("/generator?pageId={id}")
 
 - **后台权限**: `User.is_admin`（来自 `GET /api/auth/me`，后端按 `ADMIN_USER_IDS` 计算）。`AppHeader` 下拉仅管理员显示「后台管理」；`AdminLayout` 做路由守卫。Admin API 全部走 `api/admin.ts`（axios 自动带 JWT、401 跳登录）
 - **测试台 SSE**: `AdminTestBenchView` 本地实现 fetch+ReadableStream（不复用 `useSSE`，其与 generation store 耦合），消费 `step1`/`token_raw`/`token`/`final`/`done`/`error` 事件。`token_raw` 是 HTML 过滤前的原始流（正式生成会丢弃）。测试台顶部可选**生成策略**（two_step/single_step，透传 `strategy`），single_step 时无 `step1` 事件、step1 面板为空
+- **LLM 聊天测试**: `AdminChatView`（`/admin/chat`）单轮 prompt → 流式回复（`chatSSE` 消费 `token`/`done`/`error`）；配置选择平台默认/自定义（model/base_url/api_key，仅本次请求不落库），Enter 发送 / 停止中止 / 清空
 - **SSE 消费**: 使用 fetch + ReadableStream 而非 EventSource（需要 POST）
 - **SSE 事件类型**: `progress`（步骤进度）、`token`（追加代码）、`final`（替换为精确 HTML）、`done`（结束）、`error`（错误）
 - **iframe 预览**: `sandbox="allow-scripts"`（不加 allow-same-origin 防 XSS），500ms 防抖更新避免流式时过度重渲染。`key={debouncedHtml.length}` 强制内容变化时 iframe 重挂载（解决 srcDoc 不刷新的问题）

@@ -53,3 +53,18 @@ export const testGenerateSSE = (
     body: JSON.stringify(body),
     signal,
   })
+
+// Raw LLM chat (single-turn connectivity/reply testing)
+export const chatSSE = (
+  body: { messages: { role: string; content: string }[]; config?: { model?: string; base_url?: string; api_key?: string } },
+  signal?: AbortSignal,
+) =>
+  fetch('/api/admin/chat', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${localStorage.getItem('access_token')}`,
+    },
+    body: JSON.stringify(body),
+    signal,
+  })

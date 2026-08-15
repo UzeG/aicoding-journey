@@ -293,6 +293,16 @@ class TestGenerateRequest(BaseModel):
     strategy: str = "two_step"  # "two_step" | "single_step"
 
 
+class ChatMessage(BaseModel):
+    role: str = Field(..., pattern="^(system|user|assistant)$")
+    content: str = Field(..., min_length=1, max_length=20000)
+
+
+class ChatRequest(BaseModel):
+    messages: list[ChatMessage]
+    config: Optional[TestConfig] = None
+
+
 class AdminUserListItem(BaseModel):
     id: str
     phone: str

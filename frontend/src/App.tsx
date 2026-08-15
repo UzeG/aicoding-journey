@@ -17,6 +17,7 @@ import AdminAuditLogsView from './views/admin/AdminAuditLogsView'
 import AdminLLMConfigsView from './views/admin/AdminLLMConfigsView'
 import AdminSystemPromptsView from './views/admin/AdminSystemPromptsView'
 import AdminTestBenchView from './views/admin/AdminTestBenchView'
+import AdminChatView from './views/admin/AdminChatView'
 
 import { useAuthStore } from './stores/auth'
 import { applyTheme, cacheTheme, getCachedTheme } from './lib/theme'
@@ -84,6 +85,7 @@ export default function App() {
               <Route path="llm-configs" element={<AdminLLMConfigsView />} />
               <Route path="system-prompts" element={<AdminSystemPromptsView />} />
               <Route path="test-bench" element={<AdminTestBenchView />} />
+              <Route path="chat" element={<AdminChatView />} />
             </Route>
 
             <Route path="/:userId" element={<UserProfileView />} />

@@ -6,6 +6,7 @@ import {
   FlaskConical,
   History,
   LayoutDashboard,
+  MessageSquare,
   ScrollText,
   Shield,
   Users,
@@ -23,6 +24,7 @@ const NAV_ITEMS = [
   { to: '/admin/llm-configs', label: 'LLM 配置', icon: Cpu },
   { to: '/admin/system-prompts', label: '系统提示词', icon: FileCode2 },
   { to: '/admin/test-bench', label: '测试台', icon: FlaskConical },
+  { to: '/admin/chat', label: 'LLM 聊天', icon: MessageSquare },
 ]
 
 export default function AdminLayout() {

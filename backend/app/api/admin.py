@@ -20,11 +20,12 @@ from app.schemas import (
     AdminTraceListItem,
     AdminUserDetail,
     AdminUserListItem,
+    ChatRequest,
     LLMSettingsResponse,
     PaginatedResponse,
     TestGenerateRequest,
 )
-from app.services.llm_service import create_generation_stream
+from app.services.llm_service import _build_client, _get_default, create_generation_stream
 from app.services.system_prompt import get_step1_prompt, get_step2_prompt
 
 router = APIRouter(dependencies=[Depends(get_current_admin)])
@@ -458,6 +459,56 @@ async def admin_test_generate(
                 yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
         except Exception as e:
             logger.exception("Admin test-generate stream error")
+            yield f"data: {json.dumps({'type': 'error', 'message': str(e)}, ensure_ascii=False)}\n\n"
+
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+            "Connection": "keep-alive",
+        },
+    )
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# Raw LLM chat (admin-only, single-turn, SSE stream — connectivity/reply testing)
+# ─────────────────────────────────────────────────────────────────────────
+
+
+@router.post("/chat")
+async def admin_chat(req: ChatRequest):
+    """Stream a raw single LLM chat reply for connectivity / reply testing.
+
+    Unlike /api/generate and /api/admin/test-generate: NO content filter, NO Page,
+    NO trace, NO audit. api_key (if provided) lives only in this request — never stored.
+    The frontend sends the full message array (single-turn for now, multi-turn capable).
+    """
+    cfg = req.config
+    user_config = {
+        "api_key": cfg.api_key if cfg else None,
+        "model": cfg.model if cfg else None,
+        "base_url": cfg.base_url if cfg else None,
+    }
+    messages = [m.model_dump() for m in req.messages]
+
+    async def event_stream():
+        try:
+            client = _build_client(user_config)
+            model = user_config.get("model") or _get_default("LLM_MODEL")
+
+            stream = await client.chat.completions.create(
+                model=model,
+                messages=messages,
+                stream=True,
+            )
+            async for chunk in stream:
+                if chunk.choices and chunk.choices[0].delta and chunk.choices[0].delta.content:
+                    yield f"data: {json.dumps({'type': 'token', 'content': chunk.choices[0].delta.content}, ensure_ascii=False)}\n\n"
+            yield f"data: {json.dumps({'type': 'done'}, ensure_ascii=False)}\n\n"
+        except Exception as e:
+            logger.exception("Admin chat stream error")
             yield f"data: {json.dumps({'type': 'error', 'message': str(e)}, ensure_ascii=False)}\n\n"
 
     return StreamingResponse(

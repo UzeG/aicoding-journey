@@ -98,6 +98,7 @@ backend/
 | GET | /api/admin/llm-configs | Admin | 平台默认 + 用户自定义 LLM 配置（key 脱敏） |
 | GET | /api/admin/system-prompts | Admin | 当前 Step 1/2 System Prompt 现文 |
 | POST | /api/admin/test-generate | Admin | SSE 测试台：verbose 流，不走 content filter、不落 Page，记录 source=test 轨迹；`strategy` 字段可选 two_step/single_step 按次切换 |
+| POST | /api/admin/chat | Admin | 原始 LLM 单轮聊天（SSE 流式 token/done/error，测连通性/回复）；可选自定义 model/base_url/api_key（仅本次不落库），不走 filter/不落 Page/trace/audit |
 
 ## 关键设计决策
 
