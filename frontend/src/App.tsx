@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
+import { createBrowserRouter, Navigate, Outlet, RouterProvider, useLocation } from 'react-router-dom'
 import { useEffect } from 'react'
 import { cn } from './lib/utils'
 import AppHeader from './components/layout/AppHeader'
@@ -65,11 +65,7 @@ export default function App() {
     }
   }, [user?.appearance, user?.theme, isAuthenticated])
 
-  return (
-    <BrowserRouter>
-      <AppLayout />
-    </BrowserRouter>
-  )
+  return <RouterProvider router={router} />
 }
 
 /** 应用外壳：/login 独占全屏（无 header），其余页面带 header */
@@ -81,31 +77,42 @@ function AppLayout() {
     <div className="min-h-screen bg-background flex flex-col">
       {!isAuthPage && <AppHeader />}
       <main className={cn('flex-1', isAuthPage && 'flex flex-col')}>
-        <Routes>
-          <Route path="/" element={<HomeView />} />
-          <Route path="/creation" element={<CreationView />} />
-          <Route path="/gallery" element={<GalleryView />} />
-          <Route path="/home" element={<HomeRedirect />} />
-          <Route path="/login" element={<LoginView />} />
-
-          <Route path="/admin" element={<AdminLayout />}>
-            <Route index element={<AdminOverviewView />} />
-            <Route path="users" element={<AdminUsersView />} />
-            <Route path="users/:id" element={<AdminUserDetailView />} />
-            <Route path="pages" element={<AdminPagesView />} />
-            <Route path="pages/:pk" element={<AdminPageDetailView />} />
-            <Route path="traces" element={<AdminTracesView />} />
-            <Route path="traces/:id" element={<AdminTraceDetailView />} />
-            <Route path="audit-logs" element={<AdminAuditLogsView />} />
-            <Route path="llm-configs" element={<AdminLLMConfigsView />} />
-            <Route path="system-prompts" element={<AdminSystemPromptsView />} />
-            <Route path="test-bench" element={<AdminTestBenchView />} />
-            <Route path="chat" element={<AdminChatView />} />
-          </Route>
-
-          <Route path="/:userId" element={<UserProfileView />} />
-        </Routes>
+        <Outlet />
       </main>
     </div>
   )
 }
+
+// data router（useBlocker 等需要）：迁移自 <BrowserRouter><Routes>，路由匹配按 path 特异性，
+// /:userId 兜底放最后不会被 /creation 等遮蔽
+const router = createBrowserRouter([
+  {
+    element: <AppLayout />,
+    children: [
+      { path: '/', element: <HomeView /> },
+      { path: '/creation', element: <CreationView /> },
+      { path: '/gallery', element: <GalleryView /> },
+      { path: '/home', element: <HomeRedirect /> },
+      { path: '/login', element: <LoginView /> },
+      {
+        path: '/admin',
+        element: <AdminLayout />,
+        children: [
+          { index: true, element: <AdminOverviewView /> },
+          { path: 'users', element: <AdminUsersView /> },
+          { path: 'users/:id', element: <AdminUserDetailView /> },
+          { path: 'pages', element: <AdminPagesView /> },
+          { path: 'pages/:pk', element: <AdminPageDetailView /> },
+          { path: 'traces', element: <AdminTracesView /> },
+          { path: 'traces/:id', element: <AdminTraceDetailView /> },
+          { path: 'audit-logs', element: <AdminAuditLogsView /> },
+          { path: 'llm-configs', element: <AdminLLMConfigsView /> },
+          { path: 'system-prompts', element: <AdminSystemPromptsView /> },
+          { path: 'test-bench', element: <AdminTestBenchView /> },
+          { path: 'chat', element: <AdminChatView /> },
+        ],
+      },
+      { path: '/:userId', element: <UserProfileView /> },
+    ],
+  },
+])

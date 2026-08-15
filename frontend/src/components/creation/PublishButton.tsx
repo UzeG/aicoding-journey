@@ -31,6 +31,7 @@ export default function PublishButton({ pageId, disabled }: Props) {
   const setTitle = useGenerationStore((s) => s.setTitle)
   const tags = useGenerationStore((s) => s.tags)
   const codeContent = useGenerationStore((s) => s.codeContent)
+  const markClean = useGenerationStore((s) => s.markClean)
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
   const currentUserId = useAuthStore((s) => s.user?.user_id)
   const navigate = useNavigate()
@@ -58,6 +59,7 @@ export default function PublishButton({ pageId, disabled }: Props) {
       }
       const res = await publishPage(targetId, values.title, values.page_id || undefined, values.tags, codeContent)
       setTitle(values.title)
+      markClean() // 已发布持久化，避免跳个人页时误弹"未保存"
       setDialogOpen(false)
       setResult(res.data)
       window.open(res.data.url, '_blank')

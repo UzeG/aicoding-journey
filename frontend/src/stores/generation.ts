@@ -8,6 +8,8 @@ interface GenerationState {
   title: string
   tags: string[]
   isSaved: boolean
+  /** 编辑器内容与已持久化版本是否不一致（未保存）——离开页面守卫用 */
+  dirty: boolean
   error: string | null
   progressStep: string | null
   progressMessage: string
@@ -22,6 +24,7 @@ interface GenerationState {
   setTags: (tags: string[]) => void
   setProgress: (step: string, message: string) => void
   setSaved: () => void
+  markClean: () => void
   setError: (error: string) => void
   reset: () => void
 }
@@ -34,21 +37,22 @@ export const useGenerationStore = create<GenerationState>((set) => ({
   title: '',
   tags: [],
   isSaved: false,
+  dirty: false,
   error: null,
   progressStep: null,
   progressMessage: '',
 
   startStreaming: (prompt) =>
-    set({ isStreaming: true, codeContent: '', pageId: null, prompt, title: '', tags: [], isSaved: false, error: null, progressStep: null, progressMessage: '' }),
+    set({ isStreaming: true, codeContent: '', pageId: null, prompt, title: '', tags: [], isSaved: false, dirty: false, error: null, progressStep: null, progressMessage: '' }),
 
   appendCode: (content) =>
-    set((state) => ({ codeContent: state.codeContent + content })),
+    set((state) => ({ codeContent: state.codeContent + content, dirty: true })),
 
   setCode: (content: string) =>
-    set({ codeContent: content }),
+    set({ codeContent: content, dirty: true }),
 
   loadPage: (pageId, codeContent, prompt, isSaved = false, title = '', tags = []) =>
-    set({ pageId, codeContent, prompt, isSaved, title, tags, isStreaming: false, error: null }),
+    set({ pageId, codeContent, prompt, isSaved, title, tags, dirty: false, isStreaming: false, error: null }),
 
   finishStreaming: (pageId, title = '', tags = []) =>
     set({ isStreaming: false, pageId, title, tags, progressStep: null, progressMessage: '' }),
@@ -66,11 +70,14 @@ export const useGenerationStore = create<GenerationState>((set) => ({
     set({ progressStep: step, progressMessage: message }),
 
   setSaved: () =>
-    set({ isSaved: true }),
+    set({ isSaved: true, dirty: false }),
+
+  markClean: () =>
+    set({ dirty: false }),
 
   setError: (error) =>
     set({ isStreaming: false, error }),
 
   reset: () =>
-    set({ isStreaming: false, codeContent: '', pageId: null, prompt: '', title: '', tags: [], isSaved: false, error: null, progressStep: null, progressMessage: '' }),
+    set({ isStreaming: false, codeContent: '', pageId: null, prompt: '', title: '', tags: [], isSaved: false, dirty: false, error: null, progressStep: null, progressMessage: '' }),
 }))

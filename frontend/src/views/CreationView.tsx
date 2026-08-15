@@ -10,6 +10,7 @@ import UploadToEditorButton from '../components/creation/UploadToEditorButton'
 import DownloadButton from '../components/common/DownloadButton'
 import { useSSE } from '../hooks/useSSE'
 import { useLoginPrompt } from '../hooks/useLoginPrompt'
+import { useUnsavedLeaveGuard } from '../hooks/useUnsavedLeaveGuard'
 import { useGenerationStore } from '../stores/generation'
 import { useAuthStore } from '../stores/auth'
 import { getPage } from '../api/endpoints'
@@ -17,7 +18,9 @@ import { getPage } from '../api/endpoints'
 export default function CreationView() {
   const [searchParams] = useSearchParams()
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
+  const dirty = useGenerationStore((s) => s.dirty)
   const { askLogin, loginModal } = useLoginPrompt()
+  const { leaveGuardModal } = useUnsavedLeaveGuard(dirty)
   const { isStreaming, codeContent, pageId, title, error, progressStep, progressMessage, setCode, setTitle, setTags } = useGenerationStore()
   const { startGeneration } = useSSE()
   const abortRef = useRef<AbortController | null>(null)
@@ -123,6 +126,7 @@ export default function CreationView() {
       </div>
 
       {loginModal}
+      {leaveGuardModal}
     </div>
   )
 }
