@@ -66,7 +66,7 @@ frontend/src/
 │       ├── LoadingSpinner.tsx
 │       ├── ConfirmDialog.tsx
 │       ├── DownloadButton.tsx    # 下载 HTML（同步/异步 getContent，自带 loading）
-│       ├── UploadHtmlButton.tsx  # 上传 .html/.htm 为草稿（提示"仅支持单个 html/htm 文件"）
+│       ├── UploadHtmlButton.tsx  # 【已停用】上传 .html/.htm 为草稿（个人页上传入口已改为「去创作」→ /creation）
 │       ├── FollowButton.tsx      # 关注/取关（乐观更新 + 未登录跳 /login）
 │       ├── ContributionHeatmap.tsx # 活跃度贡献热力图（纯 CSS，52×7 格）
 │       └── Markdown.tsx          # react-markdown + remark-gfm 封装（.markdown-body 样式）
@@ -156,7 +156,7 @@ UserProfileView 点击编辑 → navigate("/creation?pageId={id}")
 - **关注体系**: `FollowButton` 乐观更新（点击立即翻转 is_following/计数，失败回滚）；未登录点击跳 /login。粉丝/正在关注计数在左卡片可点击，打开 `FollowList` 弹窗（`followDialog` state，Radix Dialog 关闭卸载内容、每次打开重新拉取）；列表项内嵌 FollowButton 支持回关（`u.id !== currentUser?.id` 才显示）
 - **头像**: `Avatar` 组件展示 `user.avatar_url`（相对路径 `/static/...`，经 Vite proxy 加载），无头像显示首字母。上传走 `POST /api/auth/me/avatar`
 - **页面封面**: `PageItem.cover_url`（相对路径 `/static/snapshots/...`，经 Vite proxy 加载）。项目卡片左侧 `aspect-video`（16:9）显示封面，无封面显示占位图标
-- **下载/上传闭环**: `DownloadButton` + `lib/download.ts`（Blob + `<a download>`，中文文件名安全）；`UploadHtmlButton`（`accept=".html,.htm"` 单选 + 提示文案，上传即草稿 `is_saved=True`，成功回调刷新列表）
+- **下载/上传闭环**: `DownloadButton` + `lib/download.ts`（Blob + `<a download>`，中文文件名安全）。**个人页 projects tab 上传入口已改为「去创作」**（导航 `/creation`，上传/编辑在创作页完成）；`UploadHtmlButton`（`accept=".html,.htm"`，上传即草稿 `is_saved=True`）停用未删
 
 ## 首页 TODO（静态展示数据待接入后端）
 

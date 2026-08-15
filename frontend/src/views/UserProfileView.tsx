@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import {
-  Activity, BookOpen, Camera, CircleAlert, FileText, Pencil, Plus, User,
+  Activity, BookOpen, Camera, CircleAlert, FileText, Pencil, Plus, SquarePen, User,
 } from 'lucide-react'
 import { deletePage, getUserActivity, getUserProfile, updateProfile, uploadAvatar } from '../api/endpoints'
 import { useAuthStore } from '../stores/auth'
@@ -11,7 +11,6 @@ import Avatar from '../components/common/Avatar'
 import FollowButton from '../components/common/FollowButton'
 import ContributionHeatmap from '../components/common/ContributionHeatmap'
 import Markdown from '../components/common/Markdown'
-import UploadHtmlButton from '../components/common/UploadHtmlButton'
 import FollowList from '../components/user/FollowList'
 import ProjectCard from '../components/user/ProjectCard'
 import SettingsView from './SettingsView'
@@ -342,7 +341,10 @@ export default function UserProfileView() {
                         </button>
                       ))}
                     </div>
-                    <UploadHtmlButton onUploaded={fetchProfile} />
+                    <Button variant="outline" onClick={() => navigate('/creation')}>
+                      <SquarePen className="size-4" />
+                      去创作
+                    </Button>
                   </div>
                 )}
 
@@ -362,10 +364,10 @@ export default function UserProfileView() {
                       </p>
                       {isOwnProfile && filter === 'all' && (
                         <div className="flex flex-col items-center gap-3">
-                          <Button variant="outline" onClick={() => navigate('/')}>
-                            去首页开始创作
+                          <Button variant="outline" onClick={() => navigate('/creation')}>
+                            <SquarePen className="size-4" />
+                            去创作
                           </Button>
-                          <UploadHtmlButton onUploaded={fetchProfile} className="items-center" />
                         </div>
                       )}
                     </CardContent>
