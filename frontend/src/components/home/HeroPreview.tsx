@@ -161,7 +161,7 @@ export default function HeroPreview({
 
   return (
     <div
-      className="rounded-xl border border-border bg-white shadow-[0_28px_60px_-28px_rgba(24,32,28,0.28)] overflow-hidden"
+      className="rounded-xl border border-border bg-card shadow-[0_28px_60px_-28px_rgba(24,32,28,0.28)] overflow-hidden"
       role="img"
       aria-label="产品演示：上传或生成，一键部署上线"
     >
@@ -237,7 +237,7 @@ export default function HeroPreview({
       </div>
 
       {/* 底部：公网链接 */}
-      <div className="px-4 py-3 border-t border-border bg-white flex items-center justify-between gap-3">
+      <div className="px-4 py-3 border-t border-border bg-card flex items-center justify-between gap-3">
         <span className="font-mono text-xs text-muted-foreground">$ 上传或生成 → 部署 → 链接</span>
         {deployed && (
           <span className="flex items-center gap-1 font-mono text-xs text-success">

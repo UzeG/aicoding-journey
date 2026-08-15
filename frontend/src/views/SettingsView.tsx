@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
-import { Settings, Save, Loader2, Lightbulb, CheckCircle2, CircleAlert, Palette, Check } from 'lucide-react'
+import { Settings, Save, Loader2, Lightbulb, CheckCircle2, CircleAlert, Palette, Check, Sun, Moon, Monitor } from 'lucide-react'
 import { getLLMSettings, updateLLMSettings, updateProfile } from '../api/endpoints'
 import { useAuthStore } from '../stores/auth'
-import { THEME_ACCENTS, DEFAULT_THEME, applyTheme, cacheTheme } from '../lib/theme'
+import { cn } from '../lib/utils'
+import { THEME_ACCENTS, DEFAULT_THEME, applyTheme, cacheTheme, applyAppearance, activeAppearance, type AppearanceMode } from '../lib/theme'
 import { Button } from '../components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
 import { Input } from '../components/ui/input'
@@ -18,6 +19,12 @@ import type { LLMSettings } from '../types'
 
 // 用哨兵值代替空字符串，radix Select 不允许空字符串 item value
 const CUSTOM = '__custom__'
+
+const APPEARANCE_OPTIONS: Array<{ key: AppearanceMode; label: string; icon: typeof Sun }> = [
+  { key: 'light', label: '浅色', icon: Sun },
+  { key: 'dark', label: '深色', icon: Moon },
+  { key: 'system', label: '跟随设备', icon: Monitor },
+]
 
 const MODEL_OPTIONS = [
   { value: 'deepseek-chat', label: 'DeepSeek V3' },
@@ -82,7 +89,7 @@ export default function SettingsView() {
   const handleThemeChange = async (hex: string) => {
     const current = useAuthStore.getState().user
     if (!current) return
-    const prev = current.theme ?? DEFAULT_THEME
+    const prev = current.theme ?? DEFAULT_THEME.hex
     useAuthStore.setState({ user: { ...current, theme: hex } })
     applyTheme(hex)
     cacheTheme(hex)
@@ -95,7 +102,23 @@ export default function SettingsView() {
     }
   }
 
-  const currentTheme = user?.theme ?? DEFAULT_THEME
+  /** 切换外观模式：乐观应用 → 持久化 → 失败回滚 */
+  const handleAppearanceChange = async (mode: AppearanceMode) => {
+    const current = useAuthStore.getState().user
+    if (!current) return
+    const prev: AppearanceMode = activeAppearance(current.appearance)
+    useAuthStore.setState({ user: { ...current, appearance: mode } })
+    applyAppearance(mode, current.theme)
+    try {
+      await updateProfile({ appearance: mode })
+    } catch {
+      useAuthStore.setState({ user: { ...current, appearance: prev } })
+      applyAppearance(prev, current.theme)
+    }
+  }
+
+  const currentTheme = user?.theme ?? DEFAULT_THEME.hex
+  const currentAppearance = activeAppearance(user?.appearance)
 
   return (
     <div className="max-w-lg mx-auto px-4 py-8">
@@ -104,18 +127,42 @@ export default function SettingsView() {
         <h1 className="text-2xl font-bold text-foreground">设置</h1>
       </div>
 
-      {/* 个人主题色：只换主色，纸面/墨色保持统一；看别人主页仍用自己的色 */}
+      {/* 外观与主题：深浅色 × 主题色 */}
       <Card className="mb-6">
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
             <Palette className="size-4 text-primary" />
-            主题色
+            外观与主题
           </CardTitle>
           <CardDescription>
-            选一个个人主题色，整个界面会跟随改变。浏览他人主页时仍使用你自己的主题色。
+            选择深浅色外观，再选一个主题色——深浅色下都有全部主题色可选。浏览他人主页时仍使用你自己的主题。
           </CardDescription>
         </CardHeader>
         <CardContent>
+          {/* 外观：浅色 / 深色 / 跟随设备 */}
+          <div className="flex rounded-lg bg-muted p-0.5 mb-6" role="tablist" aria-label="外观模式">
+            {APPEARANCE_OPTIONS.map((o) => {
+              const active = currentAppearance === o.key
+              return (
+                <button
+                  key={o.key}
+                  type="button"
+                  role="tab"
+                  aria-selected={active}
+                  onClick={() => handleAppearanceChange(o.key)}
+                  className={cn(
+                    'flex-1 inline-flex items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
+                    active ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
+                  )}
+                >
+                  <o.icon className="size-4" />
+                  {o.label}
+                </button>
+              )
+            })}
+          </div>
+
+          {/* 主题色：深浅色下都可用 */}
           <div className="flex flex-wrap gap-3">
             {THEME_ACCENTS.map((a) => {
               // 后端存小写，比较时忽略大小写
@@ -136,7 +183,9 @@ export default function SettingsView() {
               )
             })}
           </div>
-          <p className="mt-3 text-xs text-muted-foreground">只换主色（标签色），纸面与墨色保持平台统一。</p>
+          <p className="mt-3 text-xs text-muted-foreground">
+            深色模式下主色会自动使用亮色变体（跟随设备时按系统深浅自动切换）。
+          </p>
         </CardContent>
       </Card>
 
@@ -217,10 +266,10 @@ export default function SettingsView() {
             )}
           </div>
 
-          <div className="flex items-start gap-2 p-3 bg-amber-50 rounded-lg text-xs text-amber-700">
+          <div className="flex items-start gap-2 p-3 bg-live/10 rounded-lg text-xs text-live">
             <Lightbulb className="size-4 shrink-0 mt-0.5" />
             <span>
-              提示：可在 <code className="bg-amber-100 px-1 rounded">backend/.env</code> 中配置平台级默认值；此页面设的是你的个人配置，优先级更高。API Key 加密存储。
+              提示：可在 <code className="bg-live/15 px-1 rounded">backend/.env</code> 中配置平台级默认值；此页面设的是你的个人配置，优先级更高。API Key 加密存储。
             </span>
           </div>
 

@@ -74,7 +74,7 @@ cd frontend && npm run dev
 - **URL 方案**：`/{user_id}` 用户主页，`/{user_id}/{page_id}` 已发布页面，支持 page_id 修改后 301 重定向。主页 tab 用 query 驱动（`?tab=overview|projects|settings`，默认 overview），避免与发布页路径冲突；粉丝/关注列表不在 tab，走左侧卡片计数触发的弹窗
 - **关注体系**：`follows` 表（follower_id/following_id 唯一约束、禁自关注）。`GET /api/users/{user_id}` 返回 `follower_count`/`following_count`/`is_following`（viewer 依赖，`get_optional_user`）。关注/取关返回最新 `follower_count`，前端乐观更新 + 失败回滚
 - **README**：存 `users.readme`（TEXT，≤20000 字符，编辑资料弹窗录入）。渲染用 `react-markdown` + `remark-gfm`（默认禁 raw HTML，防 XSS）——**禁止 dangerouslySetInnerHTML**
-- **个人主题色**：存 `users.theme`（`#RRGGBB`，迁移补列，`PUT /api/auth/me` 正则校验并落库小写）。前端 `lib/theme.ts` 覆盖 CSS 变量 `--primary/--ring/--live` 实现全站换主色（只换主色，纸面/墨色保持统一），设置页 7 色色卡，localStorage 缓存加速首帧
+- **外观与主题**：存 `users.theme`（`#RRGGBB`）+ `users.appearance`（`light/dark/system`），`PUT /api/auth/me` 正则校验落库。前端「外观（浅/深/设备）× 主题色（7 色）」矩阵（参考 Chrome 外观设置）：`lib/theme.ts` 按深浅选主色变体、切根元素 `.dark` 类（深色调色板在 `index.css` `:root.dark`），设置页外观三段切换 + 色卡，localStorage 缓存加速首帧
 - **活跃度贡献图**：`GET /api/users/{user_id}/activity?year=` 按 `pages.created_at` 每日聚合（UTC `strftime('%Y-%m-%d')`），响应含 `years` 供年份选择。前端纯 CSS 热力图（52×7 格，flex-1 铺满对齐图例；hover 自定义 tooltip；月份标签；年份选择 PC 右上 / 手机下方下拉）
 - **user_id / page_id**：大小写不敏感匹配，存储保留原始大小写
 - **头像存储**：后端文件存储（方案 C）——`POST /api/auth/me/avatar` 上传，存 `backend/static/avatars/`，DB 存相对 URL `/static/avatars/xxx.png`。前端经 Vite proxy `/static` 加载。文件格式按 magic bytes 校验（防改扩展名），≤2MB

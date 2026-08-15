@@ -122,7 +122,7 @@ backend/
 - **头像存储**: 上传端点 `POST /api/auth/me/avatar`（multipart），格式按 magic bytes 校验（jpg/png/webp/gif），存 `static/avatars/{user_id}_{ts}.{ext}`，换头像删旧文件，DB 存相对 URL。`main.py` mount `/static`
 - **关注体系**: `Follow` 表（`follower_id`/`following_id` 唯一约束 `uq_follow_pair`，禁自关注）。follow/unfollow 幂等、返回最新 `follower_count`；followers/following 列表用 `Follow JOIN User` + `_build_follow_items` 批量算 viewer 的 `is_following`。新表由 `create_all` 自动建，无需迁移脚本
 - **README**: `users.readme` TEXT 列（迁移在 `_run_migration_sync` 加 `ALTER TABLE users ADD COLUMN readme TEXT`）。`GET /api/users/{user_id}` 与 `PUT /api/auth/me` 均带 readme；空串存为 NULL
-- **个人主题色**: `users.theme` 存 `#RRGGBB`（迁移补 `ALTER TABLE users ADD COLUMN theme VARCHAR(7)`，空为 NULL）。`PUT /api/auth/me` 可更新，`UpdateProfileRequest.theme` 正则校验 `^#[0-9a-fA-F]{6}$`，落库统一小写；`UserResponse` 透出。前端据此覆盖 CSS 变量，只换主色
+- **外观与主题**: `users.theme`（`#RRGGBB`，正则校验落库小写）+ `users.appearance`（`light/dark/system`，正则校验），均在迁移补列、`PUT /api/auth/me` 更新、`UserResponse` 透出。前端据此切深浅（`.dark` 类）与选主色变体
 - **活跃度**: `GET /api/users/{user_id}/activity?year=` 按 `strftime('%Y-%m-%d', pages.created_at)` 每日聚合（UTC，`datetime.utcnow()`）。返回某自然年完整日历天数（当前年到今日）；`years` 列出所有有数据年份（最新在前），默认取最新年份；口径 = 每天创建页面数
 - **get_optional_user**: 公开端点的可选鉴权依赖（有 token 解析用户，无则 None）。`get_user_profile` 用它判断是否本人，本人返回 `is_published OR is_saved`（含草稿），他人只返回已发布
 - **page_id**: 发布时可自定义，同用户内唯一（大小写不敏感）。修改时旧 page_id 记录到 `page_id_redirects` 表，访问旧链接 301 重定向

@@ -72,6 +72,9 @@ def _run_migration_sync(conn):
     if "theme" not in user_columns:
         logger.info("Migrating: adding theme column to users")
         conn.execute(text("ALTER TABLE users ADD COLUMN theme VARCHAR(7)"))
+    if "appearance" not in user_columns:
+        logger.info("Migrating: adding appearance column to users")
+        conn.execute(text("ALTER TABLE users ADD COLUMN appearance VARCHAR(10)"))
 
     # ── pages: cover_url (snapshot/cover image) ──
     if "cover_url" not in columns:

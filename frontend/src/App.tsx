@@ -20,7 +20,7 @@ import AdminTestBenchView from './views/admin/AdminTestBenchView'
 import AdminChatView from './views/admin/AdminChatView'
 
 import { useAuthStore } from './stores/auth'
-import { applyTheme, cacheTheme, getCachedTheme } from './lib/theme'
+import { activeAppearance, applyAppearance, cacheAppearance, cacheTheme, getCachedAppearance, getCachedTheme } from './lib/theme'
 
 function HomeRedirect() {
   const user = useAuthStore((s) => s.user)
@@ -39,10 +39,9 @@ export default function App() {
   const { fetchUser, isAuthenticated } = useAuthStore()
   const user = useAuthStore((s) => s.user)
 
-  // 首帧用缓存主题色，避免刷新时闪一下默认色
+  // 首帧用缓存的外观 + 主题色，避免刷新时闪默认
   useEffect(() => {
-    const cached = getCachedTheme()
-    if (cached) applyTheme(cached)
+    applyAppearance(getCachedAppearance(), getCachedTheme())
   }, [])
 
   useEffect(() => {
@@ -51,16 +50,18 @@ export default function App() {
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // 用户加载后以服务端主题为准；登出（user 变 null）则回落到平台默认
+  // 用户加载后以服务端为准；登出（user 变 null）回落缓存/默认
   useEffect(() => {
-    if (user?.theme) {
-      applyTheme(user.theme)
-      cacheTheme(user.theme)
+    if (user) {
+      const mode = activeAppearance(user.appearance)
+      applyAppearance(mode, user.theme)
+      cacheAppearance(mode)
+      cacheTheme(user.theme ?? null)
     } else if (!isAuthenticated) {
-      applyTheme(null)
+      applyAppearance(getCachedAppearance(), null)
       cacheTheme(null)
     }
-  }, [user?.theme, isAuthenticated])
+  }, [user?.appearance, user?.theme, isAuthenticated])
 
   return (
     <BrowserRouter>

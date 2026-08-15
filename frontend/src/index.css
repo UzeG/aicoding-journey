@@ -56,6 +56,47 @@
   --chart-5: #d8d5ca;
 }
 
+/* 墨水与光 · 深色：暖炭底，主色用亮色变体（由 applyTheme 覆盖），纸面/墨色反转 */
+:root.dark {
+  --background: #151712;
+  --foreground: #e9e5d8;
+
+  --card: #1c1e18;
+  --card-foreground: #e9e5d8;
+
+  --popover: #1c1e18;
+  --popover-foreground: #e9e5d8;
+
+  --primary: #3cc2ab;
+  --primary-foreground: #10110d;
+
+  --secondary: #22312c;
+  --secondary-foreground: #9fd2c5;
+
+  --muted: #21241d;
+  --muted-foreground: #98937f;
+
+  --accent: #24271f;
+  --accent-foreground: #e9e5d8;
+
+  --destructive: #e06b60;
+  --destructive-foreground: #10110d;
+
+  --success: #74ae82;
+
+  --border: #2c3026;
+  --input: #383b30;
+  --ring: #3cc2ab;
+
+  --live: #d2955e;
+
+  --chart-1: #3cc2ab;
+  --chart-2: #7ba3d2;
+  --chart-3: #e3a45e;
+  --chart-4: #be85ae;
+  --chart-5: #383b30;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
