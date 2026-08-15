@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
-import { Loader2, Phone, Lock, User, AtSign, Check, X, Camera, Trash2, Zap } from 'lucide-react'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { ArrowLeft, Loader2, Phone, Lock, User, AtSign, Check, X, Camera, Trash2, Zap } from 'lucide-react'
 import { useAuthStore } from '../stores/auth'
 import { checkUserId, uploadAvatar } from '../api/endpoints'
 import { Button } from '../components/ui/button'
@@ -125,6 +125,15 @@ export default function LoginView() {
   const isRegister = mode === 'register'
 
   return (
+    <>
+      {/* 登录页全屏无 header：右上角固定返回首页入口，避免回不去 */}
+      <Link
+        to="/"
+        className="fixed top-4 right-4 z-50 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+      >
+        <ArrowLeft className="size-4" />
+        返回首页
+      </Link>
     <div className="flex-1 flex min-h-0">
       {/* 左：品牌 + 实时身份卡（lg+） */}
       <IdentityCard
@@ -310,5 +319,6 @@ export default function LoginView() {
         </div>
       </div>
     </div>
+    </>
   )
 }

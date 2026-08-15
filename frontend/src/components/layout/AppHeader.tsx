@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, NavLink, useNavigate } from 'react-router-dom'
-import { LogOut, LogIn, User, FolderOpen, Settings, Shield, LayoutGrid, SquarePen } from 'lucide-react'
+import { LogOut, LogIn, User, FolderOpen, Settings, Shield, LayoutGrid, SquarePen, Zap } from 'lucide-react'
 import { useAuthStore } from '../../stores/auth'
 import { cn } from '../../lib/utils'
 import { Button } from '../ui/button'
@@ -46,7 +46,10 @@ export default function AppHeader() {
     <header className="bg-card border-b border-border sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 h-(--header-height) flex items-center justify-between">
         <div className="flex items-center gap-6">
-          <Link to="/" className="flex items-center text-foreground no-underline">
+          <Link to="/" className="flex items-center gap-2 text-foreground no-underline">
+            <span className="inline-flex items-center justify-center size-8 rounded-lg bg-primary text-primary-foreground">
+              <Zap className="size-4" fill="currentColor" />
+            </span>
             <span className="text-base font-bold tracking-tight">Manifest</span>
           </Link>
           <nav className="flex items-center gap-1">
