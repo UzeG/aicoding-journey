@@ -43,7 +43,7 @@ export default function HeroBackground() {
 
       const css = (name: string) =>
         getComputedStyle(document.documentElement).getPropertyValue(name).trim()
-      // 网格线/点色 = 主色与墨色混合（避免纸白等浅主色在浅纸上看不见）
+      // 网格线/点色 = 主色与墨色混合（避免浅主色在浅纸上看不见）
       const hexMix = (a: string, b: string, t: number) => {
         const pa = parseInt(a.slice(1), 16)
         const pb = parseInt(b.slice(1), 16)
@@ -52,7 +52,7 @@ export default function HeroBackground() {
         const bl = Math.round((pa & 255) * t + (pb & 255) * (1 - t))
         return '#' + ((1 << 24) | (r << 16) | (g << 8) | bl).toString(16).slice(1)
       }
-      let themeHex = hexMix(css('--primary') || '#0E7A6C', css('--foreground') || '#20221F', 0.72)
+      let themeHex = hexMix(css('--primary') || '#3D5A80', css('--foreground') || '#20221F', 0.72)
 
       // ── 网格：线段端点内缩留空隙 + 交叉处圆点 ──
       const CELL = 0.8
@@ -214,7 +214,7 @@ export default function HeroBackground() {
         applyBulge()
       }
       const onTheme = () => {
-        const c = hexMix(css('--primary') || '#0E7A6C', css('--foreground') || '#20221F', 0.72)
+        const c = hexMix(css('--primary') || '#3D5A80', css('--foreground') || '#20221F', 0.72)
         if (c !== themeHex) {
           themeHex = c
           lineMat.color.set(c)

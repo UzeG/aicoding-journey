@@ -34,7 +34,7 @@
       if (m === 'light' || m === 'dark' || m === 'system') mode = m
     } catch (e) {}
     var dark = mode === 'dark' || (mode === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)
-    var theme = '#0e7a6c'
+    var theme = '#3d5a80'
     try {
       var t = localStorage.getItem('manifest.theme')
       if (t && HEX_RE.test(t)) theme = t.toLowerCase()
@@ -120,7 +120,7 @@
   var style = document.createElement('style')
   style.textContent = `
 :root{
-  --pi-theme:#0E7A6C;
+  --pi-theme:#3D5A80;
   --pi-theme-fg:#fff;
   --pi-surface:#fff;
   --pi-text:#20221f;

@@ -22,8 +22,8 @@
   --popover: color-mix(in oklab, #ffffff 89%, var(--primary));
   --popover-foreground: #20221f;
 
-  /* 主色：深青 */
-  --primary: #0e7a6c;
+  /* 主色：石板蓝（平台默认，未登录/未设置主题时生效） */
+  --primary: #3d5a80;
   --primary-foreground: #ffffff;
 
   /* 次级：明显带主色相的表面 */
@@ -44,12 +44,12 @@
 
   --border: color-mix(in oklab, #e3e0d7 79%, var(--primary));
   --input: color-mix(in oklab, #d8d5ca 78%, var(--primary));
-  --ring: #0e7a6c;
+  --ring: #3d5a80;
 
   /* 运行中/编译中：深琥珀 */
   --live: #a8580f;
 
-  --chart-1: color-mix(in oklab, #0e7a6c 80%, var(--primary));
+  --chart-1: color-mix(in oklab, #3d5a80 80%, var(--primary));
   --chart-2: color-mix(in oklab, #5f9a8e 75%, var(--primary));
   --chart-3: #a8580f;
   --chart-4: #46549c;
@@ -67,7 +67,7 @@
   --popover: color-mix(in oklab, #1c1e18 89%, var(--primary));
   --popover-foreground: #e9e5d8;
 
-  --primary: #3cc2ab;
+  --primary: #7ba3d2;
   --primary-foreground: #10110d;
 
   --secondary: color-mix(in oklab, #22312c 78%, var(--primary));
@@ -86,11 +86,11 @@
 
   --border: color-mix(in oklab, #2c3026 79%, var(--primary));
   --input: color-mix(in oklab, #383b30 78%, var(--primary));
-  --ring: #3cc2ab;
+  --ring: #7ba3d2;
 
   --live: #d2955e;
 
-  --chart-1: color-mix(in oklab, #3cc2ab 80%, var(--primary));
+  --chart-1: color-mix(in oklab, #7ba3d2 80%, var(--primary));
   --chart-2: color-mix(in oklab, #7ba3d2 75%, var(--primary));
   --chart-3: #e3a45e;
   --chart-4: #be85ae;
