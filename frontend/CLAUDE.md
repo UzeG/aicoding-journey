@@ -135,7 +135,7 @@ UserProfileView 点击编辑 → navigate("/creation?pageId={id}")
 - **SSE 消费**: 使用 fetch + ReadableStream 而非 EventSource（需要 POST）
 - **SSE 事件类型**: `progress`（步骤进度）、`token`（追加代码）、`final`（替换为精确 HTML）、`done`（结束）、`error`（错误）
 - **iframe 预览**: `sandbox="allow-scripts"`（不加 allow-same-origin 防 XSS），500ms 防抖更新避免流式时过度重渲染。`key={debouncedHtml.length}` 强制内容变化时 iframe 重挂载（解决 srcDoc 不刷新的问题）
-- **Monaco**: `@monaco-editor/react`，vs-dark 主题。**编辑器可编辑**（生成中 `readOnly=isStreaming`），`onChange` 回写 `generationStore.codeContent`（iframe 预览 500ms 防抖随之实时刷新）。**发布/保存以编辑器内容为准**：`publishPage`/`saveDraft` 携带 `html_content`，后端 `PublishRequest`/`SaveDraftRequest` 新增该字段
+- **Monaco**: `@monaco-editor/react`，vs-dark 主题。**编辑器可编辑**（生成中 `readOnly=isStreaming`），`onChange` 回写 `generationStore.codeContent`（iframe 预览 500ms 防抖随之实时刷新）。**发布/保存以编辑器内容为准**：`publishPage`/`saveDraft` 携带 `html_content`，后端 `PublishRequest`/`SaveDraftRequest` 新增该字段。**输入提示**：启用 VSCode-like IntelliSense（quickSuggestions / Emmet 缩写展开 / tab 补全 / snippet 优先 / 参数提示 / 自动配对），CDN 全量构建自带 HTML/CSS/JS 语言服务；`emmet` 运行时支持但缺类型声明，用 `as Partial<editor.IStandaloneEditorConstructionOptions>` 断言补充。**`!` → HTML5 骨架**：Monaco 自带 Emmet 对单个 `!` 缩写触发不稳，`handleMount(editor, monaco)` 里手动 `registerCompletionItemProvider('html')` 注册（snippet 制表位 `$1` 标题 / `$2` body），模块级标志防 StrictMode 重复注册
 - **LLM 配置**: Settings 页面存到后端 users 表，API Key 使用 password 输入框
 - **401 处理**: axios 拦截器自动清除 token 并跳转 /login
 - **TailwindCSS 4**: 使用 `@tailwindcss/vite` 插件，CSS-first 配置

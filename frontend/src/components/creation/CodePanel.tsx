@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import Editor, { type OnMount } from '@monaco-editor/react'
-import type { editor } from 'monaco-editor'
+import type { Position, editor } from 'monaco-editor'
 import { Code2, Loader2 } from 'lucide-react'
 
 interface Props {
@@ -10,11 +10,47 @@ interface Props {
   onChange?: (value: string) => void
 }
 
+// `!` → HTML5 骨架（Emmet 缩写；`${1:xxx}` 为 Monaco snippet 制表位）
+const HTML_SKELETON =
+  '<!DOCTYPE html>\n<html lang="zh-CN">\n<head>\n  <meta charset="UTF-8">\n  <meta name="viewport" content="width=device-width, initial-scale=1.0">\n  <title>${1:页面标题}</title>\n</head>\n<body>\n  ${2}\n</body>\n</html>'
+
+let skeletonProviderRegistered = false
+
 export default function CodePanel({ code, isStreaming, onChange }: Props) {
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null)
 
-  const handleMount: OnMount = (editor) => {
+  const handleMount: OnMount = (editor, monaco) => {
     editorRef.current = editor
+    // `!` → HTML5 骨架：Monaco 自带 Emmet 对单个 `!` 缩写触发不稳，手动补 provider 保证 VSCode 行为。
+    // 注册在 monaco 实例上（全局、按页一次），用模块级标志防 StrictMode 双挂载重复注册。
+    if (!skeletonProviderRegistered) {
+      skeletonProviderRegistered = true
+      monaco.languages.registerCompletionItemProvider('html', {
+        triggerCharacters: ['!'],
+        provideCompletionItems: (model: editor.ITextModel, position: Position) => {
+          const line = model.getLineContent(position.lineNumber)
+          const before = line.slice(0, position.column - 1)
+          if (!before.endsWith('!')) return { suggestions: [] }
+          return {
+            suggestions: [
+              {
+                label: '! HTML5 骨架',
+                kind: monaco.languages.CompletionItemKind.Snippet,
+                insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
+                insertText: HTML_SKELETON,
+                range: new monaco.Range(
+                  position.lineNumber,
+                  position.column - 1,
+                  position.lineNumber,
+                  position.column
+                ),
+                documentation: { value: '插入 HTML5 文档骨架' },
+              },
+            ],
+          }
+        },
+      })
+    }
   }
 
   // 流式追加时自动滚动：最后一行停在距视口底部 1/3 处
@@ -61,6 +97,19 @@ export default function CodePanel({ code, isStreaming, onChange }: Props) {
           scrollBeyondLastLine: true,
           automaticLayout: true,
           padding: { top: 36 },
+          // 输入提示（VSCode-like IntelliSense；CDN 全量构建自带 HTML/CSS/JS 语言服务 + Emmet）
+          quickSuggestions: { other: true, comments: false, strings: true },
+          suggestOnTriggerCharacters: true,
+          tabCompletion: 'on',
+          snippetSuggestions: 'top',
+          wordBasedSuggestions: 'currentDocument',
+          parameterHints: { enabled: true },
+          autoClosingBrackets: 'always',
+          autoClosingQuotes: 'always',
+          // emmet 运行时支持但缺类型声明，断言补充（! → HTML5 骨架：内联预览 + 补全列表均可见）
+          ...({
+            emmet: { showExpandedAbbreviation: 'always', showAbbreviationSuggestions: true },
+          } as Partial<editor.IStandaloneEditorConstructionOptions>),
         }}
         loading={<div className="flex items-center justify-center h-full text-gray-400">加载编辑器...</div>}
       />
