@@ -10,6 +10,10 @@ def inject_sdk(html: str, page_pk: str, page_id: str) -> str:
         page_id: Public page slug.
     """
 
+    # 防重复注入：编辑器内容可能已含 SDK（如编辑已发布页后重新发布）
+    if "window.platform" in html or "AI 辅助生成" in html:
+        return html
+
     sdk_script = f"""
 <script>
 (function() {{

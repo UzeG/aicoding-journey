@@ -29,6 +29,7 @@ export default function PublishButton({ pageId, disabled }: Props) {
   const title = useGenerationStore((s) => s.title)
   const setTitle = useGenerationStore((s) => s.setTitle)
   const tags = useGenerationStore((s) => s.tags)
+  const codeContent = useGenerationStore((s) => s.codeContent)
   const currentUserId = useAuthStore((s) => s.user?.user_id)
   const navigate = useNavigate()
 
@@ -42,7 +43,7 @@ export default function PublishButton({ pageId, disabled }: Props) {
     setPublishing(true)
     setError(null)
     try {
-      const res = await publishPage(pageId, values.title, values.page_id || undefined, values.tags)
+      const res = await publishPage(pageId, values.title, values.page_id || undefined, values.tags, codeContent)
       setTitle(values.title)
       setDialogOpen(false)
       setResult(res.data)

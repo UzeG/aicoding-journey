@@ -38,14 +38,14 @@ export const listPages = () => api.get<PageItem[]>('/pages')
 export const getPage = (id: string) => api.get<PageDetail>(`/pages/${id}`)
 export const updatePage = (id: string, data: { title?: string; html_content?: string; tags?: string[] }) =>
   api.put<PageDetail>(`/pages/${id}`, data)
-export const publishPage = (id: string, title?: string, page_id?: string, tags?: string[]) =>
-  api.post<PublishResult>(`/pages/${id}/publish`, { title, page_id, tags })
+export const publishPage = (id: string, title?: string, page_id?: string, tags?: string[], html_content?: string) =>
+  api.post<PublishResult>(`/pages/${id}/publish`, { title, page_id, tags, html_content })
 export const checkPageId = (page_id: string) =>
   api.get<CheckPageIdResponse>('/pages/check-id', { params: { page_id } })
 export const updatePageId = (id: string, page_id: string) =>
   api.put<{ page_id: string; url: string }>(`/pages/${id}/page-id`, { page_id })
-export const saveDraft = (id: string, title?: string) =>
-  api.post<{ ok: boolean; page_id?: string; derived?: boolean }>(`/pages/${id}/save-draft`, { title })
+export const saveDraft = (id: string, title?: string, html_content?: string) =>
+  api.post<{ ok: boolean; page_id?: string; derived?: boolean }>(`/pages/${id}/save-draft`, { title, html_content })
 export const deletePage = (id: string) => api.delete(`/pages/${id}`)
 export const uploadHtml = (file: File) => {
   const form = new FormData()

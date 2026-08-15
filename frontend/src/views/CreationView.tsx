@@ -6,14 +6,15 @@ import PreviewPanel from '../components/creation/PreviewPanel'
 import PromptInput from '../components/creation/PromptInput'
 import PublishButton from '../components/creation/PublishButton'
 import SaveDraftButton from '../components/creation/SaveDraftButton'
+import UploadToEditorButton from '../components/creation/UploadToEditorButton'
 import DownloadButton from '../components/common/DownloadButton'
 import { useSSE } from '../hooks/useSSE'
 import { useGenerationStore } from '../stores/generation'
-import { getPage } from '../api/endpoints'
+import { getPage, uploadHtml } from '../api/endpoints'
 
 export default function CreationView() {
   const [searchParams] = useSearchParams()
-  const { isStreaming, codeContent, pageId, title, error, progressStep, progressMessage } = useGenerationStore()
+  const { isStreaming, codeContent, pageId, title, error, progressStep, progressMessage, setCode, setPageId, setTitle, setTags, setSaved } = useGenerationStore()
   const { startGeneration } = useSSE()
   const abortRef = useRef<AbortController | null>(null)
   const initialPrompt = searchParams.get('prompt') || ''
@@ -50,6 +51,23 @@ export default function CreationView() {
     }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // 上传 HTML → 后端建草稿 → 覆盖编辑器内容
+  const handleUploaded = useCallback(async (file: File) => {
+    try {
+      const res = await uploadHtml(file)
+      const page = res.data
+      const content = await file.text()
+      setPageId(page.id)
+      setCode(content)
+      setTitle(page.title || '')
+      setTags([])
+      setSaved()
+      useGenerationStore.getState().setError('')
+    } catch (err: any) {
+      useGenerationStore.getState().setError(err.response?.data?.detail || '上传失败，请重试')
+    }
+  }, [setPageId, setCode, setTitle, setTags, setSaved])
+
   return (
     <div className="h-[calc(100vh-56px)] flex flex-col">
       {/* Top bar */}
@@ -57,6 +75,7 @@ export default function CreationView() {
         <div className="flex-1 max-w-2xl">
           <PromptInput onGenerate={handleGenerate} disabled={isStreaming} initialValue={!isStreaming ? initialPrompt : undefined} />
         </div>
+        <UploadToEditorButton disabled={isStreaming} onLoaded={handleUploaded} />
         <SaveDraftButton pageId={pageId} disabled={isStreaming || !codeContent || !pageId} />
         <DownloadButton
           variant="outline"
@@ -90,7 +109,7 @@ export default function CreationView() {
       {/* Split panels */}
       <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
         <div className="flex-1 border-r border-border overflow-hidden">
-          <CodePanel code={codeContent} isStreaming={isStreaming} />
+          <CodePanel code={codeContent} isStreaming={isStreaming} onChange={setCode} />
         </div>
         <div className="flex-1 overflow-hidden">
           <PreviewPanel htmlContent={codeContent} isStreaming={isStreaming} />

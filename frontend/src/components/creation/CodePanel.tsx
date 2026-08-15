@@ -6,9 +6,11 @@ import { Code2, Loader2 } from 'lucide-react'
 interface Props {
   code: string
   isStreaming: boolean
+  /** 用户编辑编辑器内容（生成中只读，不触发） */
+  onChange?: (value: string) => void
 }
 
-export default function CodePanel({ code, isStreaming }: Props) {
+export default function CodePanel({ code, isStreaming, onChange }: Props) {
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null)
 
   const handleMount: OnMount = (editor) => {
@@ -49,8 +51,9 @@ export default function CodePanel({ code, isStreaming }: Props) {
         value={code}
         theme="vs-dark"
         onMount={handleMount}
+        onChange={(value) => onChange?.(value ?? '')}
         options={{
-          readOnly: true,
+          readOnly: isStreaming,
           minimap: { enabled: false },
           fontSize: 13,
           lineNumbers: 'on',

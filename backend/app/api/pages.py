@@ -202,6 +202,10 @@ async def publish_page(
     # tags：发布时用户可改（未传则保留 AI 生成的结果）
     if "tags" in req.model_fields_set:
         page.tags = json.dumps(normalize_tags(req.tags) or [], ensure_ascii=False)
+    # html_content：编辑器可编辑后，发布以编辑器内容为准（未传保留原内容）
+    if req.html_content is not None:
+        page.html_content = req.html_content
+        page.file_size = len(req.html_content.encode("utf-8"))
 
     # Resolve page_id: user-provided → validate + check uniqueness; otherwise auto-generate
     if req.page_id and req.page_id.strip():
@@ -308,11 +312,11 @@ async def save_draft(
             id=draft_id,
             user_id=user.id,
             title=req.title if req.title is not None else page.title,
-            html_content=page.html_content,
+            html_content=req.html_content if req.html_content is not None else page.html_content,
             prompt=page.prompt,
             step1_output=page.step1_output,
             tags=page.tags,
-            file_size=page.file_size,
+            file_size=len((req.html_content if req.html_content is not None else page.html_content).encode("utf-8")),
             is_saved=True,
         )
         db.add(draft)
@@ -322,6 +326,9 @@ async def save_draft(
     # 草稿 → 原地更新
     if req.title is not None:
         page.title = req.title
+    if req.html_content is not None:
+        page.html_content = req.html_content
+        page.file_size = len(req.html_content.encode("utf-8"))
     page.is_saved = True
     await db.commit()
     return {"ok": True, "page_id": str(page.id), "derived": False}

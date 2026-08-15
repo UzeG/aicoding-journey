@@ -184,12 +184,14 @@ class PublishResponse(BaseModel):
 
 class SaveDraftRequest(BaseModel):
     title: Optional[str] = None
+    html_content: Optional[str] = None  # 编辑器内容（可编辑后发布/保存以编辑器为准）
 
 
 class PublishRequest(BaseModel):
     title: Optional[str] = None
     page_id: Optional[str] = Field(default=None, max_length=50)
     tags: Optional[list[str]] = None
+    html_content: Optional[str] = None  # 编辑器内容（可编辑后发布以编辑器为准）
 
     @field_validator("tags", mode="before")
     @classmethod

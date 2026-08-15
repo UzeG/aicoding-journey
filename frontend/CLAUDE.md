@@ -52,10 +52,11 @@ frontend/src/
 │   │   └── HomeFooter.tsx         # 首页 CTA + footer
 │   ├── creation/
 │   │   ├── PromptInput.tsx       # textarea + 发送按钮
-│   │   ├── CodePanel.tsx         # Monaco Editor (readOnly, 流式追加)
+│   │   ├── CodePanel.tsx         # Monaco Editor (生成中只读，否则可编辑 onChange 回写 store)
 │   │   ├── PreviewPanel.tsx      # iframe sandbox (500ms 防抖 srcdoc)
 │   │   ├── PublishButton.tsx     # 发布 + 新窗口打开 + 跳转用户主页
-│   │   ├── SaveDraftButton.tsx   # 保存草稿 (is_saved=True 后列表可见)
+│   │   ├── SaveDraftButton.tsx   # 保存草稿 (is_saved=True 后列表可见；携带编辑器 html_content)
+│   │   ├── UploadToEditorButton.tsx # 上传 html → 确认覆盖编辑器 → 上层建草稿并覆盖内容
 │   │   └── SavePageDialog.tsx    # 发布/保存表单 (标题 + page_id 实时校验；发布时含 tags 编辑：AI 预填、回车/逗号添加、chips 删除，≤5×20)
 │   ├── user/                     # 个人主页专属组件
 │   │   ├── ProjectCard.tsx        # 项目卡片（16:9 封面 + 下载/编辑/删除）
@@ -134,7 +135,7 @@ UserProfileView 点击编辑 → navigate("/creation?pageId={id}")
 - **SSE 消费**: 使用 fetch + ReadableStream 而非 EventSource（需要 POST）
 - **SSE 事件类型**: `progress`（步骤进度）、`token`（追加代码）、`final`（替换为精确 HTML）、`done`（结束）、`error`（错误）
 - **iframe 预览**: `sandbox="allow-scripts"`（不加 allow-same-origin 防 XSS），500ms 防抖更新避免流式时过度重渲染。`key={debouncedHtml.length}` 强制内容变化时 iframe 重挂载（解决 srcDoc 不刷新的问题）
-- **Monaco**: `@monaco-editor/react`，readOnly 模式，vs-dark 主题。编辑页面目前只能查看/重新生成，不能直接修改代码
+- **Monaco**: `@monaco-editor/react`，vs-dark 主题。**编辑器可编辑**（生成中 `readOnly=isStreaming`），`onChange` 回写 `generationStore.codeContent`（iframe 预览 500ms 防抖随之实时刷新）。**发布/保存以编辑器内容为准**：`publishPage`/`saveDraft` 携带 `html_content`，后端 `PublishRequest`/`SaveDraftRequest` 新增该字段
 - **LLM 配置**: Settings 页面存到后端 users 表，API Key 使用 password 输入框
 - **401 处理**: axios 拦截器自动清除 token 并跳转 /login
 - **TailwindCSS 4**: 使用 `@tailwindcss/vite` 插件，CSS-first 配置
