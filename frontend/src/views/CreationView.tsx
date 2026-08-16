@@ -79,21 +79,23 @@ export default function CreationView() {
 
   return (
     <div className="h-[calc(100vh-56px)] flex flex-col">
-      {/* Top bar */}
-      <div className="px-4 py-3 bg-card border-b border-border flex items-center gap-4">
-        <div className="flex-1 max-w-2xl">
+      {/* Top bar：移动端纵向（PromptInput 全宽 + 按钮行），桌面横向 */}
+      <div className="px-3 py-3 md:px-4 bg-card border-b border-border shrink-0 flex flex-col gap-2 md:flex-row md:items-center md:gap-4">
+        <div className="flex-1 max-w-2xl w-full">
           <PromptInput onGenerate={handleGenerate} disabled={isStreaming} initialValue={!isStreaming ? initialPrompt : undefined} />
         </div>
-        <UploadToEditorButton disabled={isStreaming} onLoaded={handleUploaded} />
-        <SaveDraftButton pageId={pageId} disabled={isStreaming || !codeContent} />
-        <DownloadButton
-          variant="outline"
-          size="default"
-          fileName={title}
-          getContent={() => codeContent}
-          disabled={isStreaming || !codeContent}
-        />
-        <PublishButton pageId={pageId} disabled={isStreaming || !codeContent} />
+        <div className="flex flex-wrap items-center gap-2 md:gap-4">
+          <UploadToEditorButton disabled={isStreaming} onLoaded={handleUploaded} />
+          <SaveDraftButton pageId={pageId} disabled={isStreaming || !codeContent} />
+          <DownloadButton
+            variant="outline"
+            size="default"
+            fileName={title}
+            getContent={() => codeContent}
+            disabled={isStreaming || !codeContent}
+          />
+          <PublishButton pageId={pageId} disabled={isStreaming || !codeContent} />
+        </div>
       </div>
 
       {/* Error */}

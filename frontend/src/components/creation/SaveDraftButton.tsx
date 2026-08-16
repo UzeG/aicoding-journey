@@ -77,7 +77,7 @@ export default function SaveDraftButton({ pageId, disabled }: Props) {
         ) : (
           <Save className="size-4" />
         )}
-        {saving ? '保存中...' : isSaved ? '已保存' : '保存草稿'}
+        <span className="hidden sm:inline">{saving ? '保存中...' : isSaved ? '已保存' : '保存草稿'}</span>
       </Button>
 
       <SavePageDialog

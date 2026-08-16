@@ -75,7 +75,7 @@ export default function PublishButton({ pageId, disabled }: Props) {
     <div>
       <Button onClick={handleClick} disabled={disabled || publishing}>
         {publishing ? <Loader2 className="size-4 animate-spin" /> : <Upload className="size-4" />}
-        {publishing ? '部署中...' : '部署页面'}
+        <span className="hidden sm:inline">{publishing ? '部署中...' : '部署页面'}</span>
       </Button>
 
       <SavePageDialog

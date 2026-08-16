@@ -30,7 +30,7 @@ export default function DownloadButton({ getContent, fileName, disabled, variant
   return (
     <Button variant={variant} size={size} onClick={handleClick} disabled={disabled || downloading}>
       {downloading ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}
-      {downloading ? '下载中...' : '下载'}
+      <span className="hidden sm:inline">{downloading ? '下载中...' : '下载'}</span>
     </Button>
   )
 }

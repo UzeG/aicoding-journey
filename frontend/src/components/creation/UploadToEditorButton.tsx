@@ -58,7 +58,7 @@ export default function UploadToEditorButton({ disabled, onLoaded }: Props) {
         onClick={() => inputRef.current?.click()}
       >
         {reading ? <Loader2 className="size-4 animate-spin" /> : <FileUp className="size-4" />}
-        上传 HTML
+        <span className="hidden sm:inline">上传 HTML</span>
       </Button>
 
       <Dialog open={!!pending} onOpenChange={(o) => !o && setPending(null)}>
