@@ -24,7 +24,9 @@ export default defineConfig(({ mode }) => {
         // 与主应用相同的 localStorage JWT。Vite 支持 key 以 `^` 开头的正则代理。
         // 限定 user_id/page_id 字符集（均不含点）——避免命中 Vite 源码模块路径
         // （如 /src/main.tsx、/@vite/client），那些必须留给 Vite 自己 serve。
-        '^\\/(?!admin|api|static)[a-zA-Z0-9_-]{3,30}\\/[a-zA-Z0-9_-]{1,50}$': 'http://localhost:8000',
+        // 允许可选 query（(?\\?.*)?）：页面 JS 可能读 location.search 做个性化，否则
+        // /{user}/{page}?x=1 会被当 SPA 路由 → React Router 404
+        '^\\/(?!admin|api|static)[a-zA-Z0-9_-]{3,30}\\/[a-zA-Z0-9_-]{1,50}(\\?.*)?$': 'http://localhost:8000',
       },
     },
   }

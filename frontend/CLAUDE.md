@@ -11,7 +11,7 @@ npm run dev        # http://localhost:5173（正式模式，真实 LLM 调用）
 npm run dev:mock   # Mock 模式（跳过 LLM，使用样本 HTML，零 Token 消耗）
 ```
 
-Vite proxy 配置：`/api`、`/static` 转发到 `http://localhost:8000`；**发布页同源**——`'/'` 代理用 `bypass` 把两段非 `/admin` 路径（`/{user}/{page}`）转发到 8000，其余走 SPA。Mock 模式下 `/api/generate` 被 rewrite 为 `/api/mock/generate`。**页面链接一律相对路径** `/{user_id}/{page_id}`（不再用 `VITE_PUBLIC_BASE_URL` 拼绝对地址；发布页与应用同源，互动组件才能读到 JWT）。
+Vite proxy 配置：`/api`、`/static` 转发到 `http://localhost:8000`；**发布页同源**——正则代理 `^/(?!admin|api|static){user}/{page}(?\\?.*)?$` 把两段非 `/admin` 路径（`/{user}/{page}`，**允许可选 query**——页面 JS 可能读 `location.search` 做个性化，否则带 query 会被 SPA 兜底成 React Router 404）转发到 8000，其余走 SPA。Mock 模式下 `/api/generate` 被 rewrite 为 `/api/mock/generate`。**页面链接一律相对路径** `/{user_id}/{page_id}`（不再用 `VITE_PUBLIC_BASE_URL` 拼绝对地址；发布页与应用同源，互动组件才能读到 JWT）。
 
 ## 目录结构
 
