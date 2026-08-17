@@ -91,6 +91,11 @@ def _run_migration_sync(conn):
         logger.info("Migrating: adding description column to pages")
         conn.execute(text("ALTER TABLE pages ADD COLUMN description TEXT"))
 
+    # ── pages: view_count (访问量，serve_page 每次自增) ──
+    if "view_count" not in columns:
+        logger.info("Migrating: adding view_count column to pages")
+        conn.execute(text("ALTER TABLE pages ADD COLUMN view_count INTEGER DEFAULT 0"))
+
     # ── generation_traces: strategy (single_step / two_step) ──
     result = conn.execute(text("PRAGMA table_info('generation_traces')"))
     gt_columns = {row[1] for row in result.fetchall()}

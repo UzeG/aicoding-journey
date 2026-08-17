@@ -46,6 +46,7 @@ class Page(Base):
     step1_output: Mapped[str | None] = mapped_column(Text, default=None)
     tags: Mapped[str | None] = mapped_column(Text, default=None)  # JSON array string，AI 生成 + 用户可改
     file_size: Mapped[int | None] = mapped_column(Integer, default=None)
+    view_count: Mapped[int] = mapped_column(Integer, default=0)  # 访问量（serve_page 每次自增）
     is_published: Mapped[bool] = mapped_column(Boolean, default=False)
     is_saved: Mapped[bool] = mapped_column(Boolean, default=False)
     visibility: Mapped[str] = mapped_column(String(20), default="public")

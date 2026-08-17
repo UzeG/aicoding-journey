@@ -67,7 +67,7 @@
   }
   if (piMq.addEventListener) piMq.addEventListener('change', onSchemeChange)
   var OPEN = false
-  var state = { liked: false, favorited: false, likeCount: 0, favCount: 0, comments: [], page: null, isFollowing: false, followerCount: 0, viewerIsSelf: false }
+  var state = { liked: false, favorited: false, likeCount: 0, favCount: 0, comments: [], page: null, isFollowing: false, followerCount: 0, worksCount: 0, viewerIsSelf: false }
 
   function getToken() {
     try { return localStorage.getItem(TOKEN_KEY) || '' } catch (e) { return '' }
@@ -115,6 +115,12 @@
     '<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>'
   var TRASH_ICON =
     '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>'
+  var SHARE_ICON =
+    '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" x2="15.42" y1="13.51" y2="17.49"/><line x1="15.41" x2="8.59" y1="6.51" y2="10.49"/></svg>'
+  var REPORT_ICON =
+    '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" x2="4" y1="22" y2="15"/></svg>'
+  var EYE_ICON =
+    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>'
 
   // ── styles ──
   var style = document.createElement('style')
@@ -133,17 +139,23 @@ html.pi-open #pi-trigger{opacity:0;pointer-events:none;}
 /* 抽屉：底部上滑 bottom sheet（PC/移动端统一；打开时盖住右下角触发按钮） */
 #pi-panel{position:fixed;left:0;right:0;bottom:0;z-index:3004;transform:translateY(100%);height:78vh;background:var(--pi-surface);border-radius:1rem 1rem 0 0;box-shadow:0 -3px 14px rgba(0,0,0,.12);display:flex;flex-direction:column;overflow:hidden;font-family:system-ui,-apple-system,sans-serif;color:var(--pi-text);opacity:0;visibility:hidden;transition:transform .3s ease,opacity .3s ease,visibility 0s linear .3s;touch-action:none;}
 #pi-panel.open{transform:translateY(0);opacity:1;visibility:visible;transition:transform .3s ease,opacity .3s ease,visibility 0s;}
-#pi-panel .pi-head{display:flex;align-items:center;gap:.8rem;padding:.8rem 1.1rem;border-bottom:1px solid var(--pi-border);flex-shrink:0;}
-#pi-panel .pi-head-meta{flex:1;min-width:0;}
-#pi-panel .pi-title{font-weight:600;font-size:1rem;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-#pi-panel .pi-meta-line{display:flex;align-items:center;gap:.55rem;margin-top:.15rem;min-width:0;}
-#pi-panel .pi-time{font-size:.75rem;color:var(--pi-muted);white-space:nowrap;flex-shrink:0;}
-#pi-panel .pi-tags{display:flex;flex-wrap:wrap;gap:.3rem;min-width:0;}
-#pi-panel .pi-tag{font-size:.75rem;color:var(--pi-theme);text-decoration:none;border-radius:999px;padding:.05rem .5rem;background:color-mix(in srgb, var(--pi-theme) 10%, transparent);white-space:nowrap;line-height:1.4;}
+/* 简介区：项目名 / 发布时间 / 描述（每项一行） */
+#pi-panel .pi-proj-title{font-weight:700;font-size:1.15rem;line-height:1.3;margin-bottom:.35rem;word-break:break-word;}
+#pi-panel .pi-proj-time{display:flex;align-items:center;gap:.4rem;font-size:.8rem;color:var(--pi-muted);margin-bottom:.5rem;}
+#pi-panel .pi-proj-time svg{width:14px;height:14px;flex-shrink:0;}
+#pi-panel .pi-proj-desc{font-size:.85rem;color:var(--pi-muted);white-space:pre-wrap;word-break:break-word;margin-bottom:.75rem;}
+/* 描述下 tags：可换行、左排、tag 间 gap */
+#pi-panel .pi-tags{display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:0;}
+#pi-panel .pi-tag{font-size:.78rem;color:var(--pi-theme);text-decoration:none;border-radius:999px;padding:.1rem .55rem;background:color-mix(in srgb, var(--pi-theme) 10%, transparent);white-space:nowrap;line-height:1.4;}
 #pi-panel .pi-tag:hover{background:color-mix(in srgb, var(--pi-theme) 20%, transparent);}
-#pi-panel .pi-btn{display:inline-flex;align-items:center;gap:.3rem;padding:.4rem .7rem;border:1px solid var(--pi-border);border-radius:999px;background:color-mix(in srgb, var(--pi-theme) 10%, transparent);cursor:pointer;font:inherit;font-size:.85rem;color:var(--pi-text);white-space:nowrap;flex-shrink:0;}
-#pi-panel .pi-btn .pi-count{min-width:1em;text-align:left;}
-#pi-panel .pi-btn.on{background:var(--pi-theme);color:var(--pi-theme-fg);border-color:var(--pi-theme);}
+/* 简介区：点赞/收藏/转发（icon+数字上下居中，项间 justify-around） */
+#pi-panel .pi-actions{display:flex;justify-content:space-around;align-items:stretch;padding:1rem 0 .8rem;border-bottom:1px solid var(--pi-border);margin-bottom:1rem;}
+/* 按钮等高（stretch）+ 内容顶部对齐 + count 固定 min-height → icon 严格同一排（无论有无数字） */
+#pi-panel .pi-action{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:.3rem;background:none;border:none;padding:.3rem .6rem;cursor:pointer;color:var(--pi-text);font:inherit;border-radius:8px;}
+#pi-panel .pi-action svg{width:24px;height:24px;display:block;} /* 统一 24px，display:block 消除基线间隙 */
+#pi-panel .pi-action .pi-count{display:block;font-size:.75rem;color:var(--pi-muted);min-width:1em;min-height:.9rem;line-height:.9rem;text-align:center;}
+#pi-panel .pi-action.on{color:var(--pi-theme);}
+#pi-panel .pi-action.on .pi-count{color:var(--pi-theme);}
 #pi-panel .pi-tabs{display:flex;border-bottom:1px solid var(--pi-border);flex-shrink:0;}
 #pi-panel .pi-tab{flex:1;padding:.7rem .5rem;background:none;border:none;font:inherit;cursor:pointer;color:var(--pi-muted);border-bottom:2px solid transparent;}
 #pi-panel .pi-tab.on{color:var(--pi-theme);border-bottom-color:var(--pi-theme);font-weight:600;}
@@ -151,14 +163,12 @@ html.pi-open #pi-trigger{opacity:0;pointer-events:none;}
 #pi-panel .pi-body[hidden]{display:none;}
 #pi-panel .pi-grabber{display:flex;align-items:center;justify-content:center;padding:.75rem 0 .4rem;cursor:grab;touch-action:none;flex-shrink:0;}
 #pi-panel .pi-grabber::before{content:'';width:56px;height:5px;border-radius:3px;background:var(--pi-muted);opacity:.4;}
-/* author tab */
-#pi-panel .pi-author{display:flex;align-items:center;gap:.8rem;padding-bottom:.9rem;border-bottom:1px solid var(--pi-border);margin-bottom:1rem;cursor:pointer;}
-#pi-panel .pi-avatar{width:56px;height:56px;border-radius:50%;object-fit:cover;flex-shrink:0;background:color-mix(in srgb, var(--pi-theme) 14%, transparent);display:flex;align-items:center;justify-content:center;font-weight:600;font-size:1.3rem;color:var(--pi-theme);}
-#pi-panel .pi-author-meta{min-width:0;}
-#pi-panel .pi-name{font-weight:600;font-size:1.05rem;}
-#pi-panel .pi-id{font-size:.82rem;color:var(--pi-muted);}
-#pi-panel .pi-bio{font-size:.85rem;color:var(--pi-muted);margin-top:.15rem;white-space:pre-wrap;word-break:break-word;}
-#pi-panel .pi-followers{font-size:.8rem;color:var(--pi-muted);margin-top:.15rem;}
+/* 简介区：作者行（头像 + 名字/关注·作品数 + 关注按钮） */
+#pi-panel .pi-author-row{display:flex;align-items:center;gap:.8rem;padding-bottom:.75rem;margin-bottom:0;cursor:pointer;}
+#pi-panel .pi-avatar{width:52px;height:52px;border-radius:50%;object-fit:cover;flex-shrink:0;background:color-mix(in srgb, var(--pi-theme) 14%, transparent);display:flex;align-items:center;justify-content:center;font-weight:600;font-size:1.2rem;color:var(--pi-theme);}
+#pi-panel .pi-author-meta{min-width:0;display:flex;flex-direction:column;gap:.3rem;align-items:flex-start;}
+#pi-panel .pi-name{font-weight:600;font-size:1.05rem;line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%;}
+#pi-panel .pi-stats{font-size:.8rem;color:var(--pi-muted);display:flex;align-items:center;gap:.75rem;}
 #pi-panel .pi-follow{margin-left:auto;display:inline-flex;align-items:center;gap:.3rem;padding:.35rem .8rem;border:1px solid var(--pi-border);border-radius:999px;background:color-mix(in srgb, var(--pi-theme) 10%, transparent);color:var(--pi-text);cursor:pointer;font:inherit;font-size:.82rem;white-space:nowrap;flex-shrink:0;}
 #pi-panel .pi-follow.on{background:var(--pi-theme);color:var(--pi-theme-fg);border-color:var(--pi-theme);font-weight:600;}
 #pi-panel .pi-works-title{font-weight:600;font-size:.92rem;margin-bottom:.6rem;color:var(--pi-text);}
@@ -224,82 +234,85 @@ html.pi-open #pi-trigger{opacity:0;pointer-events:none;}
   grabber.className = 'pi-grabber'
   panel.appendChild(grabber)
 
-  // head: current work title + publish time/tags + like/favorite
-  var head = document.createElement('div')
-  head.className = 'pi-head'
-  var headMeta = document.createElement('div')
-  headMeta.className = 'pi-head-meta'
-  var titleEl = document.createElement('div')
-  titleEl.className = 'pi-title'
-  var metaLine = document.createElement('div')
-  metaLine.className = 'pi-meta-line'
-  var timeEl = document.createElement('span')
-  timeEl.className = 'pi-time'
-  var tagsEl = document.createElement('div')
-  tagsEl.className = 'pi-tags'
-  metaLine.appendChild(timeEl)
-  metaLine.appendChild(tagsEl)
-  headMeta.appendChild(titleEl)
-  headMeta.appendChild(metaLine)
-  var likeBtn = makeBtn('')
-  var favBtn = makeBtn('')
-  likeBtn.addEventListener('click', toggleLike)
-  favBtn.addEventListener('click', toggleFavorite)
-  head.appendChild(headMeta)
-  head.appendChild(likeBtn)
-  head.appendChild(favBtn)
-  panel.appendChild(head)
-
   // tabs
   var tabs = document.createElement('div')
   tabs.className = 'pi-tabs'
-  var tabAuthor = makeTab('作者', 'author')
+  var tabAuthor = makeTab('简介', 'author')
   var tabComments = makeTab('评论', 'comments')
   tabs.appendChild(tabAuthor)
   tabs.appendChild(tabComments)
   panel.appendChild(tabs)
 
-  // author body
+  // 简介 body（自上而下：作者行 → 项目名 → 发布时间 → 描述 → 点赞/收藏/转发 → TA 的其他作品）
   var authorBody = document.createElement('div')
   authorBody.className = 'pi-body'
   authorBody.id = 'pi-body-author'
-  var authorCard = document.createElement('div')
-  authorCard.className = 'pi-author'
   var authorUserId = null
+
+  // 1) 作者行：头像 + 名字/统计（x关注者 y作品）+ 关注按钮
+  var authorRow = document.createElement('div')
+  authorRow.className = 'pi-author-row'
   var avatarBox = document.createElement('span')
   avatarBox.className = 'pi-avatar'
   var authorMeta = document.createElement('div')
   authorMeta.className = 'pi-author-meta'
   var nameEl = document.createElement('div')
   nameEl.className = 'pi-name'
-  var idEl = document.createElement('div')
-  idEl.className = 'pi-id'
-  var bioEl = document.createElement('div')
-  bioEl.className = 'pi-bio'
-  var followersEl = document.createElement('div')
-  followersEl.className = 'pi-followers'
+  var statsEl = document.createElement('div')
+  statsEl.className = 'pi-stats'
   var followBtn = document.createElement('button')
   followBtn.type = 'button'
   followBtn.className = 'pi-follow'
   followBtn.textContent = '关注'
   followBtn.addEventListener('click', function (e) { e.stopPropagation(); toggleFollow() })
   authorMeta.appendChild(nameEl)
-  authorMeta.appendChild(idEl)
-  authorMeta.appendChild(bioEl)
-  authorMeta.appendChild(followersEl)
-  authorCard.appendChild(avatarBox)
-  authorCard.appendChild(authorMeta)
-  authorCard.appendChild(followBtn)
+  authorMeta.appendChild(statsEl)
+  authorRow.appendChild(avatarBox)
+  authorRow.appendChild(authorMeta)
+  authorRow.appendChild(followBtn)
   // 点击作者信息栏 → 打开作者个人主页
-  authorCard.addEventListener('click', function () {
+  authorRow.addEventListener('click', function () {
     if (authorUserId) window.location.href = '/' + encodeURIComponent(authorUserId)
   })
+
+  // 2/3/4) 项目名 / 发布时间 / 描述
+  var projTitleEl = document.createElement('div')
+  projTitleEl.className = 'pi-proj-title'
+  var projTimeEl = document.createElement('div')
+  projTimeEl.className = 'pi-proj-time'
+  var projDescEl = document.createElement('div')
+  projDescEl.className = 'pi-proj-desc'
+  var tagsEl = document.createElement('div')
+  tagsEl.className = 'pi-tags'
+
+  // 5) 点赞/收藏/转发/举报（icon+数字上下居中；转发/举报仅图标，功能暂未实现）
+  //    每个 action 都带 count 占位（转发/举报为空），保证 icon 严格同一排
+  var actionsEl = document.createElement('div')
+  actionsEl.className = 'pi-actions'
+  var likeBtn = makeBtn('')
+  var favBtn = makeBtn('')
+  var shareBtn = makeBtn(SHARE_ICON + '<span class="pi-count"></span>')
+  var reportBtn = makeBtn(REPORT_ICON + '<span class="pi-count"></span>')
+  likeBtn.addEventListener('click', toggleLike)
+  favBtn.addEventListener('click', toggleFavorite)
+  actionsEl.appendChild(likeBtn)
+  actionsEl.appendChild(favBtn)
+  actionsEl.appendChild(shareBtn)
+  actionsEl.appendChild(reportBtn)
+
+  // 6) TA 的其他作品
   var worksTitle = document.createElement('div')
   worksTitle.className = 'pi-works-title'
   worksTitle.textContent = 'TA 的其他作品'
   var worksList = document.createElement('div')
   worksList.id = 'pi-works'
-  authorBody.appendChild(authorCard)
+
+  authorBody.appendChild(authorRow)
+  authorBody.appendChild(projTitleEl)
+  authorBody.appendChild(projTimeEl)
+  authorBody.appendChild(projDescEl)
+  authorBody.appendChild(tagsEl)
+  authorBody.appendChild(actionsEl)
   authorBody.appendChild(worksTitle)
   authorBody.appendChild(worksList)
   panel.appendChild(authorBody)
@@ -334,11 +347,11 @@ html.pi-open #pi-trigger{opacity:0;pointer-events:none;}
 
   document.documentElement.appendChild(panel)
 
-  function makeBtn(label) {
+  function makeBtn(content) {
     var b = document.createElement('button')
     b.type = 'button'
-    b.className = 'pi-btn'
-    b.textContent = label
+    b.className = 'pi-action'
+    b.innerHTML = content || ''
     return b
   }
 
@@ -401,13 +414,30 @@ html.pi-open #pi-trigger{opacity:0;pointer-events:none;}
   window.addEventListener('resize', updateIcon)
 
   // ── render ──
-  function renderHead() {
+  function renderIntro() {
     var p = state.page
-    titleEl.textContent = p && p.title ? p.title : ''
-    titleEl.title = p && p.title ? p.title : ''
-    timeEl.textContent = p && p.created_at ? '发布于 ' + formatDate(p.created_at) : ''
+    projTitleEl.textContent = p && p.title ? p.title : ''
+    // 时间行：眼睛icon 访问量 发布时间
+    projTimeEl.innerHTML = ''
+    var eye = document.createElement('span')
+    eye.innerHTML = EYE_ICON
+    var viewsEl = document.createElement('span')
+    viewsEl.textContent = formatViews((p && p.view_count) || 0)
+    var timeSpan = document.createElement('span')
+    timeSpan.textContent = p && p.created_at ? formatDate(p.created_at) : ''
+    projTimeEl.appendChild(eye)
+    projTimeEl.appendChild(viewsEl)
+    projTimeEl.appendChild(timeSpan)
+    if (p && p.description) {
+      projDescEl.textContent = p.description
+      projDescEl.style.display = ''
+    } else {
+      projDescEl.textContent = ''
+      projDescEl.style.display = 'none'
+    }
     tagsEl.innerHTML = ''
     if (p && p.tags && p.tags.length) {
+      tagsEl.style.display = ''
       p.tags.forEach(function (t) {
         var a = document.createElement('a')
         a.className = 'pi-tag'
@@ -416,6 +446,8 @@ html.pi-open #pi-trigger{opacity:0;pointer-events:none;}
         a.title = '在作品广场搜索：' + t
         tagsEl.appendChild(a)
       })
+    } else {
+      tagsEl.style.display = 'none'
     }
     setLikeButton()
     setFavButton()
@@ -439,7 +471,6 @@ html.pi-open #pi-trigger{opacity:0;pointer-events:none;}
     var author = p.author
     var displayName = author.nickname || author.user_id || '匿名'
     nameEl.textContent = displayName
-    idEl.textContent = '@' + (author.user_id || '')
     authorUserId = author.user_id || null
     if (author.avatar_url) {
       if (avatarBox.tagName !== 'IMG') {
@@ -464,6 +495,7 @@ html.pi-open #pi-trigger{opacity:0;pointer-events:none;}
       api('/api/users/' + encodeURIComponent(author.user_id)).then(function (d) {
         state.isFollowing = !!d.is_following
         state.followerCount = d.follower_count || 0
+        state.worksCount = (d.pages || []).filter(function (wp) { return wp.is_published }).length
         renderFollow()
         renderWorks((d.pages || []).filter(function (wp) {
           return wp.is_published && wp.page_id && wp.page_id !== p.page_id
@@ -594,7 +626,13 @@ html.pi-open #pi-trigger{opacity:0;pointer-events:none;}
   }
 
   function renderFollow() {
-    followersEl.textContent = state.followerCount + ' 关注者'
+    statsEl.innerHTML = ''
+    var f = document.createElement('span')
+    f.textContent = state.followerCount + ' 关注者'
+    var w = document.createElement('span')
+    w.textContent = state.worksCount + ' 作品'
+    statsEl.appendChild(f)
+    statsEl.appendChild(w)
     if (state.viewerIsSelf || !state.page || !state.page.author) {
       followBtn.style.display = 'none'
       return
@@ -636,12 +674,19 @@ html.pi-open #pi-trigger{opacity:0;pointer-events:none;}
     try {
       var d = new Date(iso)
       var y = d.getFullYear()
-      var m = String(d.getMonth() + 1).padStart(2, '0')
-      var day = String(d.getDate()).padStart(2, '0')
-      return y + '-' + m + '-' + day
+      var m = d.getMonth() + 1
+      var day = d.getDate()
+      var hh = String(d.getHours()).padStart(2, '0')
+      var mm = String(d.getMinutes()).padStart(2, '0')
+      return y + '年' + m + '月' + day + '日 ' + hh + ':' + mm
     } catch (e) {
       return iso || ''
     }
+  }
+
+  function formatViews(n) {
+    if (n >= 10000) return (n / 10000).toFixed(1).replace(/\.0$/, '') + '万'
+    return String(n)
   }
 
   // ── actions ──
@@ -800,7 +845,7 @@ html.pi-open #pi-trigger{opacity:0;pointer-events:none;}
       state.favorited = !!d.viewer.favorited
       state.viewerIsSelf = !!d.viewer.is_self
     }
-    renderHead()
+    renderIntro()
     renderAuthor()
     renderComments()
   }).catch(function () {

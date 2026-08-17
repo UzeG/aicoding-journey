@@ -477,6 +477,8 @@ async def get_page_interactions(
         page_id=page.page_id,
         created_at=page.created_at,
         tags=page.tags,
+        description=page.description,
+        view_count=page.view_count or 0,
         author=CommentUser(
             user_id=owner.user_id if owner else "",
             nickname=owner.nickname if owner else None,
@@ -701,6 +703,10 @@ async def serve_page(
 
     if not page:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Page not found")
+
+    # 访问量自增（每次实际 serve 发布页）
+    page.view_count = (page.view_count or 0) + 1
+    await db.commit()
 
     # 服务期注入互动组件（点赞/评论/收藏）——不改动存储的 html_content
     widget = build_interaction_widget(str(page.id))

@@ -299,6 +299,8 @@ class InteractionPageInfo(BaseModel):
     page_id: Optional[str] = None
     created_at: Optional[datetime] = None  # 发布时间（页面创建时间）
     tags: list[str] = []
+    description: Optional[str] = None  # 项目描述
+    view_count: int = 0  # 访问量
     author: CommentUser
 
     @field_validator("tags", mode="before")
