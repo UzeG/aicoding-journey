@@ -24,7 +24,8 @@ export default function PromptInput({ onGenerate, disabled, initialValue = '', t
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    // IME 输入法选词的回车不触发生成（isComposing / keyCode 229 双保险）
+    if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing && e.keyCode !== 229) {
       e.preventDefault()
       handleSubmit()
     }
