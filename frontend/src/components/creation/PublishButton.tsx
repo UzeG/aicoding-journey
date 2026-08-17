@@ -42,7 +42,7 @@ export default function PublishButton({ pageId, disabled }: Props) {
     setDialogOpen(true)
   }
 
-  const handleConfirm = async (values: { title: string; page_id: string; tags: string[] }) => {
+  const handleConfirm = async (values: { title: string; page_id: string; tags: string[]; description: string }) => {
     if (!codeContent) return
     setPublishing(true)
     setError(null)
@@ -50,10 +50,10 @@ export default function PublishButton({ pageId, disabled }: Props) {
       // 无已有页面（如上传后未生成）：先建草稿再发布
       let targetId = pageId
       if (!targetId) {
-        const created = await createPage({ title: values.title, html_content: codeContent })
+        const created = await createPage({ title: values.title, html_content: codeContent, description: values.description })
         targetId = created.data.id
       }
-      const res = await publishPage(targetId, values.title, values.page_id || undefined, values.tags, codeContent)
+      const res = await publishPage(targetId, values.title, values.page_id || undefined, values.tags, codeContent, values.description)
       setTitle(values.title)
       setDialogOpen(false)
       setResult(res.data) // 仅展示发布成功弹窗；不清空编辑器、不打开发布页、不跳个人页
@@ -75,7 +75,7 @@ export default function PublishButton({ pageId, disabled }: Props) {
         open={dialogOpen}
         onClose={() => setDialogOpen(false)}
         onConfirm={handleConfirm}
-        defaultValues={{ title, page_id: '', tags }}
+        defaultValues={{ title, page_id: '', tags, description: '' }}
         loading={publishing}
         title="部署页面"
         description="确认页面名称后部署到公网。"

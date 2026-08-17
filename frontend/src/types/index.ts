@@ -20,6 +20,8 @@ export interface PageItem {
   page_id: string | null
   title: string | null
   cover_url: string | null
+  /** 项目描述（发布/存草稿弹窗填写） */
+  description?: string | null
   /** 页面标签（AI 生成 + 用户可改），供 gallery 检索/展示 */
   tags?: string[]
   is_published: boolean

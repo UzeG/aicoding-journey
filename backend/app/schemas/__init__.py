@@ -105,6 +105,7 @@ class PageCreate(BaseModel):
     title: Optional[str] = None
     html_content: str = ""
     prompt: Optional[str] = None
+    description: Optional[str] = Field(default=None, max_length=500)
 
 
 class PageUpdate(BaseModel):
@@ -123,6 +124,7 @@ class PageResponse(BaseModel):
     page_id: Optional[str]
     title: Optional[str]
     cover_url: Optional[str] = None
+    description: Optional[str] = None
     html_content: str = ""
     prompt: Optional[str]
     tags: list[str] = []
@@ -152,6 +154,7 @@ class PageListItem(BaseModel):
     page_id: Optional[str]
     title: Optional[str]
     cover_url: Optional[str] = None
+    description: Optional[str] = None
     tags: list[str] = []
     is_published: bool
     is_saved: bool
@@ -187,6 +190,7 @@ class PublishResponse(BaseModel):
 class SaveDraftRequest(BaseModel):
     title: Optional[str] = None
     html_content: Optional[str] = None  # 编辑器内容（可编辑后发布/保存以编辑器为准）
+    description: Optional[str] = Field(default=None, max_length=500)
 
 
 class PublishRequest(BaseModel):
@@ -194,6 +198,7 @@ class PublishRequest(BaseModel):
     page_id: Optional[str] = Field(default=None, max_length=50)
     tags: Optional[list[str]] = None
     html_content: Optional[str] = None  # 编辑器内容（可编辑后发布以编辑器为准）
+    description: Optional[str] = Field(default=None, max_length=500)
 
     @field_validator("tags", mode="before")
     @classmethod

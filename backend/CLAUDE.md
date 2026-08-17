@@ -20,7 +20,7 @@ backend/
 │   ├── config.py            # pydantic-settings, 读 .env
 │   ├── database.py          # SQLAlchemy async engine + session
 │   ├── seed.py              # 种子数据（推荐提示词 + demo 用户）
-│   ├── models/__init__.py   # User(avatar_url/bio/readme/theme), Page(cover_url/tags), Follow, PageIdRedirect, RecommendedPrompt, AuditLog ORM
+│   ├── models/__init__.py   # User(avatar_url/bio/readme/theme), Page(cover_url/tags/description), Follow, PageIdRedirect, RecommendedPrompt, AuditLog ORM
 │   ├── schemas/__init__.py  # Pydantic 请求/响应模型
 │   ├── api/                 # 路由层
 │   │   ├── __init__.py      # 路由注册
@@ -66,10 +66,10 @@ backend/
 | POST | /api/generate | JWT | SSE 流式生成 HTML（策略按 GENERATION_STRATEGY：two_step 默认 / single_step 实验；可选 accent_color 指定 AI 主色调） |
 | POST | /api/mock/generate | JWT | Mock SSE 流式（开发用，跳过 LLM） |
 | GET | /api/pages | JWT | 页面列表 |
-| POST | /api/pages | JWT | 建草稿（body: title/html_content；pageId 为空时发布/存草稿前的建页入口，is_saved=True） |
+| POST | /api/pages | JWT | 建草稿（body: title/html_content/description；pageId 为空时发布/存草稿前的建页入口，is_saved=True） |
 | GET / PUT / DELETE | /api/pages/{pk} | JWT | 页面 CRUD（pk 为 DB 主键；PUT 支持 tags） |
-| POST | /api/pages/{pk}/publish | JWT | 发布（可选自定义 page_id + tags + html_content；tags 未传保留 AI 生成，html_content 未传保留原内容——编辑器可编辑后发布以编辑器为准） |
-| POST | /api/pages/{pk}/save-draft | JWT | 保存草稿（is_saved=True；可携带 html_content 覆盖内容，派生副本也带） |
+| POST | /api/pages/{pk}/publish | JWT | 发布（可选自定义 page_id + tags + html_content + description；tags 未传保留 AI 生成，html_content/description 未传保留原值） |
+| POST | /api/pages/{pk}/save-draft | JWT | 保存草稿（is_saved=True；可携带 html_content/description 覆盖，派生副本也带） |
 | GET | /api/pages/{pk}/render | JWT | 内部渲染端点（返回完整 HTML，快照截图用，仅本人） |
 | GET | /api/pages/check-id?page_id= | JWT | 检查 page_id 可用性 |
 | PUT | /api/pages/{pk}/page-id | JWT | 修改 page_id（旧→新 301 重定向） |
@@ -114,6 +114,7 @@ backend/
 - **两步 LLM**: Step 1 理解需求 + 从注册表选 CDN 库 → Step 2 根据选中库注入对应的 system prompt（含 CDN 链接 + 使用规范）。避免全量库列表暗示 LLM 添加不必要的图表/3D
 - **单屏居中（centered）**: Step 1 判断产出是否为单屏 widget/app（计算器/游戏/时钟/转盘/贺卡等），输出 `centered: true/false`（可滚动文档/仪表盘/落地页为 false）。`centered=true` 时后端 `_assemble_html` 直接给 `<body>` 注入 `class="h-screen overflow-hidden flex justify-center items-center"`（**不依赖 LLM 写外层居中容器**，解决之前游戏/工具贴左上角问题）；Step 2 prompt 相应简化——centered 提示"系统已居中，直接输出内容、勿再加外层居中容器"，非 centered 提示"滚动文档用 mx-auto 限宽"。`get_step2_prompt(libraries, centered)`；single_step 无 Step 1，保留原居中规则。注意：body class 由后端注入，LLM 自己写的 body 属性会被 `_parse_fragment` 丢弃
 - **主色调 accent_color**: 用户可在创作页选 AI 生成主色调（预设色 / 自定义色盘 / 登录用户的系统主题色）。`GenerateRequest.accent_color`（`^#[0-9a-fA-F]{6}$`，None→默认 `#00a650`）经 `create_generation_stream(strategy, ..., accent_color)` 贯穿两步与单步：`get_step2_prompt(libraries, centered, accent_color)` / `get_single_step_prompt(accent_color)`，prompt 的 UI DESIGN GUIDELINES "Accent color" 行用该值
+- **项目描述 description**: `pages.description` TEXT（迁移补列，≤500 字）。发布/存草稿弹窗的 textarea 填写，`PublishRequest`/`SaveDraftRequest`/`PageCreate` 携带（未传保留原值），`save_draft` 派生副本复制；`PageResponse`/`PageListItem` 透出
 - **单阶段策略（实验）**: `GENERATION_STRATEGY=single_step` 时跳过 Step 1——`get_single_step_prompt()` 内嵌 `build_single_stage_cdn_text()`（全库 exact CDN 标签+用法），LLM 直出完整 HTML 文档并自行照抄所需 CDN 标签进 `<head>`；`_assemble_single_step` 仅规范化 doctype/charset/title，**不校验/不剔除 CDN**（实验口径）。主链路与测试台共用 `create_generation_stream(strategy, ...)` 分发（[llm_service.py](app/services/llm_service.py)），改一处生成代码两处生效
 - **片段解析**: `_parse_fragment` 用 BeautifulSoup 提取 LLM 输出的 `<style>`/`<body>`/`<script>`（不用正则，避免脚本被静默丢弃）。支持普通 `<script>` 与 `<script type="module">`、多个 script、script 在 body 内；组装时统一包成 `<script type="module">`。若检测到交互痕迹（`<script>`/`onclick`/`addEventListener`）但提取不到 JS，记 warning
 - **封面快照**: 生成完成后 `asyncio.create_task(capture_snapshot(...))` 异步截图（不阻塞 SSE）。用 Playwright 复用系统 Chrome（`executable_path`，headless），JWT 通过 context `extra_http_headers` 传给内部渲染端点。**陷阱**：`get_current_user` 只读 Authorization header 不读 query；`page.goto` 无 headers 参数必须用 `new_context(extra_http_headers=...)`；等待用 `load` + sleep 而非 `networkidle`（无限动画页面永不空闲）。依赖 `playwright` 包 + 系统 Chrome，缺失时快照自动禁用

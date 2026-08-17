@@ -86,6 +86,11 @@ def _run_migration_sync(conn):
         logger.info("Migrating: adding tags column to pages")
         conn.execute(text("ALTER TABLE pages ADD COLUMN tags TEXT"))
 
+    # ── pages: description (项目描述，发布/存草稿弹窗填写) ──
+    if "description" not in columns:
+        logger.info("Migrating: adding description column to pages")
+        conn.execute(text("ALTER TABLE pages ADD COLUMN description TEXT"))
+
     # ── generation_traces: strategy (single_step / two_step) ──
     result = conn.execute(text("PRAGMA table_info('generation_traces')"))
     gt_columns = {row[1] for row in result.fetchall()}

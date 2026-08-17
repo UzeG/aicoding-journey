@@ -35,7 +35,7 @@ export default function SaveDraftButton({ pageId, disabled }: Props) {
     setDialogOpen(true)
   }
 
-  const handleConfirm = async (values: { title: string; page_id: string }) => {
+  const handleConfirm = async (values: { title: string; page_id: string; description: string }) => {
     if (!codeContent) return
     setSaving(true)
     setError(null)
@@ -43,10 +43,10 @@ export default function SaveDraftButton({ pageId, disabled }: Props) {
       // 无已有页面（如上传后未生成）：先建草稿再保存
       let targetId = pageId
       if (!targetId) {
-        const created = await createPage({ title: values.title, html_content: codeContent })
+        const created = await createPage({ title: values.title, html_content: codeContent, description: values.description })
         targetId = created.data.id
       }
-      const res = await saveDraft(targetId, values.title, codeContent)
+      const res = await saveDraft(targetId, values.title, codeContent, values.description)
       // 已发布页面编辑存草稿 → 后端派生新草稿副本，pageId 切换到副本（后续发布/再保存针对副本）
       if (res.data.page_id && res.data.page_id !== targetId) {
         setPageId(res.data.page_id)
@@ -84,7 +84,7 @@ export default function SaveDraftButton({ pageId, disabled }: Props) {
         open={dialogOpen}
         onClose={() => setDialogOpen(false)}
         onConfirm={handleConfirm}
-        defaultValues={{ title, page_id: '', tags: [] }}
+        defaultValues={{ title, page_id: '', tags: [], description: '' }}
         loading={saving}
         title="保存草稿"
         description="给页面起个名字，方便在列表中识别。"

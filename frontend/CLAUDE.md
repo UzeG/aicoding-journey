@@ -57,7 +57,7 @@ frontend/src/
 │   │   ├── PublishButton.tsx     # 发布 + 新窗口打开 + 跳转用户主页
 │   │   ├── SaveDraftButton.tsx   # 保存草稿 (is_saved=True 后列表可见；携带编辑器 html_content)
 │   │   ├── UploadToEditorButton.tsx # 上传 html → 确认覆盖编辑器 → 上层**本地读取**覆盖内容（无需登录；发布/存草稿才需登录）
-│   │   └── SavePageDialog.tsx    # 发布/保存表单 (标题 + page_id 实时校验；发布时含 tags 编辑：AI 预填、回车/逗号添加、chips 删除，≤5×20)
+│   │   └── SavePageDialog.tsx    # 发布/保存表单 (标题 + 描述 textarea + page_id 实时校验；发布时含 tags 编辑：AI 预填、回车/逗号添加、chips 删除，≤5×20)
 │   ├── user/                     # 个人主页专属组件
 │   │   ├── ProjectCard.tsx        # 项目卡片（16:9 封面 + 下载/编辑/删除）
 │   │   └── FollowList.tsx         # 关注者/正在关注列表（可回关）

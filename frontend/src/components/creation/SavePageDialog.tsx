@@ -13,11 +13,13 @@ import {
 } from '../ui/dialog'
 import { Input } from '../ui/input'
 import { Label } from '../ui/label'
+import { Textarea } from '../ui/textarea'
 
 interface PageFormValues {
   title: string
   page_id: string
   tags: string[]
+  description: string
 }
 
 interface Props {
@@ -136,6 +138,19 @@ export default function SavePageDialog({
               onChange={(e) => setValues((v) => ({ ...v, title: e.target.value }))}
               placeholder="输入页面名称（4-10字）"
               maxLength={200}
+              disabled={loading}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="page-desc">描述（可选）</Label>
+            <Textarea
+              id="page-desc"
+              value={values.description}
+              onChange={(e) => setValues((v) => ({ ...v, description: e.target.value }))}
+              placeholder="一句话介绍这个项目..."
+              maxLength={500}
+              rows={3}
               disabled={loading}
             />
           </div>

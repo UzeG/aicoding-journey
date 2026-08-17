@@ -96,6 +96,7 @@ async def create_page(
         title=req.title,
         html_content=content,
         prompt=req.prompt,
+        description=req.description,
         file_size=len(content.encode("utf-8")),
         is_saved=True,
     )
@@ -234,6 +235,9 @@ async def publish_page(
     if req.html_content is not None:
         page.html_content = req.html_content
         page.file_size = len(req.html_content.encode("utf-8"))
+    # 描述：未传保留原值
+    if req.description is not None:
+        page.description = req.description
 
     # Resolve page_id: user-provided → validate + check uniqueness; otherwise auto-generate
     if req.page_id and req.page_id.strip():
@@ -345,6 +349,7 @@ async def save_draft(
             prompt=page.prompt,
             step1_output=page.step1_output,
             tags=page.tags,
+            description=req.description if req.description is not None else page.description,
             file_size=len((req.html_content if req.html_content is not None else page.html_content).encode("utf-8")),
             is_saved=True,
         )
@@ -358,6 +363,8 @@ async def save_draft(
     if req.html_content is not None:
         page.html_content = req.html_content
         page.file_size = len(req.html_content.encode("utf-8"))
+    if req.description is not None:
+        page.description = req.description
     page.is_saved = True
     await db.commit()
     return {"ok": True, "page_id": str(page.id), "derived": False}

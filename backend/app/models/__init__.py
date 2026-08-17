@@ -40,6 +40,7 @@ class Page(Base):
     page_id: Mapped[str | None] = mapped_column(String(50), unique=True, nullable=True, index=True)
     title: Mapped[str | None] = mapped_column(String(200), default=None)
     cover_url: Mapped[str | None] = mapped_column(String(255), default=None)
+    description: Mapped[str | None] = mapped_column(Text, default=None)  # 项目描述（发布/存草稿弹窗填写）
     html_content: Mapped[str] = mapped_column(Text, nullable=False, default="")
     prompt: Mapped[str | None] = mapped_column(Text, default=None)
     step1_output: Mapped[str | None] = mapped_column(Text, default=None)
