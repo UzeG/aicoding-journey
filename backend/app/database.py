@@ -96,6 +96,12 @@ def _run_migration_sync(conn):
         logger.info("Migrating: adding view_count column to pages")
         conn.execute(text("ALTER TABLE pages ADD COLUMN view_count INTEGER DEFAULT 0"))
 
+    # ── pages: published_at (实际发布时刻；存量已发布页回填 created_at) ──
+    if "published_at" not in columns:
+        logger.info("Migrating: adding published_at column to pages")
+        conn.execute(text("ALTER TABLE pages ADD COLUMN published_at DATETIME"))
+        conn.execute(text("UPDATE pages SET published_at = created_at WHERE is_published = 1 AND published_at IS NULL"))
+
     # ── generation_traces: strategy (single_step / two_step) ──
     result = conn.execute(text("PRAGMA table_info('generation_traces')"))
     gt_columns = {row[1] for row in result.fetchall()}

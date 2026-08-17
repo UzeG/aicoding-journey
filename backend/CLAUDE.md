@@ -73,7 +73,7 @@ backend/
 | GET | /api/pages/{pk}/render | JWT | 内部渲染端点（返回完整 HTML，快照截图用，仅本人） |
 | GET | /api/pages/check-id?page_id= | JWT | 检查 page_id 可用性 |
 | PUT | /api/pages/{pk}/page-id | JWT | 修改 page_id（旧→新 301 重定向） |
-| GET | /api/pages/{pk}/interactions | 可选 | 发布页互动：like/favorite 计数 + 评论列表 + viewer 状态 + page（标题/作者/发布时间/tags/描述/访问量 view_count） |
+| GET | /api/pages/{pk}/interactions | 可选 | 发布页互动：like/favorite 计数 + 评论列表 + viewer 状态 + page（标题/作者/published_at 实际发布时刻/tags/描述/访问量 view_count） |
 | POST | /api/pages/{pk}/like · /favorite | JWT | 点赞/收藏 toggle → {state, count} |
 | POST | /api/pages/{pk}/comments | JWT | 发评论（≤500 字）→ CommentItem |
 | DELETE | /api/pages/{pk}/comments/{cid} | JWT | 删除自己的评论 |
@@ -116,6 +116,7 @@ backend/
 - **主色调 accent_color**: 用户可在创作页选 AI 生成主色调（预设色 / 自定义色盘 / 登录用户的系统主题色）。`GenerateRequest.accent_color`（`^#[0-9a-fA-F]{6}$`，None→默认 `#00a650`）经 `create_generation_stream(strategy, ..., accent_color)` 贯穿两步与单步：`get_step2_prompt(libraries, centered, accent_color)` / `get_single_step_prompt(accent_color)`，prompt 的 UI DESIGN GUIDELINES "Accent color" 行用该值
 - **项目描述 description**: `pages.description` TEXT（迁移补列，≤500 字）。发布/存草稿弹窗的 textarea 填写，`PublishRequest`/`SaveDraftRequest`/`PageCreate` 携带（未传保留原值），`save_draft` 派生副本复制；`PageResponse`/`PageListItem` 透出
 - **访问量 view_count**: `pages.view_count` INTEGER（迁移补列，默认 0）。`serve_page` 每次实际 serve 发布页时自增 + commit（重定向 301 不计，快照 render 端点不计）。互动端点透出给 widget 展示（icon+数字，≥1万 显示 x万）
+- **发布时刻 published_at**: `pages.published_at` DATETIME（迁移补列，**存量已发布页回填 created_at**）。`publish_page` 置 `datetime.utcnow()`（区别于 `created_at` 记录创建时间——草稿隔天发布时两者差异显著）。widget 时间行显示 `published_at ?? created_at`（实际发布时刻，存量回退创建时间）
 - **单阶段策略（实验）**: `GENERATION_STRATEGY=single_step` 时跳过 Step 1——`get_single_step_prompt()` 内嵌 `build_single_stage_cdn_text()`（全库 exact CDN 标签+用法），LLM 直出完整 HTML 文档并自行照抄所需 CDN 标签进 `<head>`；`_assemble_single_step` 仅规范化 doctype/charset/title，**不校验/不剔除 CDN**（实验口径）。主链路与测试台共用 `create_generation_stream(strategy, ...)` 分发（[llm_service.py](app/services/llm_service.py)），改一处生成代码两处生效
 - **片段解析**: `_parse_fragment` 用 BeautifulSoup 提取 LLM 输出的 `<style>`/`<body>`/`<script>`（不用正则，避免脚本被静默丢弃）。支持普通 `<script>` 与 `<script type="module">`、多个 script、script 在 body 内；组装时统一包成 `<script type="module">`。若检测到交互痕迹（`<script>`/`onclick`/`addEventListener`）但提取不到 JS，记 warning
 - **封面快照**: 生成完成后 `asyncio.create_task(capture_snapshot(...))` 异步截图（不阻塞 SSE）。用 Playwright 复用系统 Chrome（`executable_path`，headless），JWT 通过 context `extra_http_headers` 传给内部渲染端点。**陷阱**：`get_current_user` 只读 Authorization header 不读 query；`page.goto` 无 headers 参数必须用 `new_context(extra_http_headers=...)`；等待用 `load` + sleep 而非 `networkidle`（无限动画页面永不空闲）。依赖 `playwright` 包 + 系统 Chrome，缺失时快照自动禁用

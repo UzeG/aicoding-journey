@@ -424,7 +424,8 @@ html.pi-open #pi-trigger{opacity:0;pointer-events:none;}
     var viewsEl = document.createElement('span')
     viewsEl.textContent = formatViews((p && p.view_count) || 0)
     var timeSpan = document.createElement('span')
-    timeSpan.textContent = p && p.created_at ? formatDate(p.created_at) : ''
+    var pubAt = (p && p.published_at) || (p && p.created_at) // 实际发布时刻，存量无则回退创建时间
+    timeSpan.textContent = pubAt ? formatDate(pubAt) : ''
     projTimeEl.appendChild(eye)
     projTimeEl.appendChild(viewsEl)
     projTimeEl.appendChild(timeSpan)

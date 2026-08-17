@@ -271,6 +271,8 @@ async def publish_page(
     page.file_size = len(page.html_content.encode("utf-8"))
 
     page.is_published = True
+    # 首次发布才记 published_at；重发保留最初发布时刻（编辑迭代不推后发布日期）
+    page.published_at = page.published_at or datetime.utcnow()
     await db.commit()
     await db.refresh(page)
 
@@ -476,6 +478,7 @@ async def get_page_interactions(
         title=page.title,
         page_id=page.page_id,
         created_at=page.created_at,
+        published_at=page.published_at,
         tags=page.tags,
         description=page.description,
         view_count=page.view_count or 0,

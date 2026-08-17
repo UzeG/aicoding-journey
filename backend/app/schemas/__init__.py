@@ -301,6 +301,7 @@ class InteractionPageInfo(BaseModel):
     tags: list[str] = []
     description: Optional[str] = None  # 项目描述
     view_count: int = 0  # 访问量
+    published_at: Optional[datetime] = None  # 实际发布时刻
     author: CommentUser
 
     @field_validator("tags", mode="before")
