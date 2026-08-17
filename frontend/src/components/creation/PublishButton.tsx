@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { Upload, Loader2, PartyPopper, Clipboard, ExternalLink } from 'lucide-react'
 import { createPage, publishPage } from '../../api/endpoints'
 import { useLoginPrompt } from '../../hooks/useLoginPrompt'
@@ -33,8 +32,6 @@ export default function PublishButton({ pageId, disabled }: Props) {
   const codeContent = useGenerationStore((s) => s.codeContent)
   const markClean = useGenerationStore((s) => s.markClean)
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
-  const currentUserId = useAuthStore((s) => s.user?.user_id)
-  const navigate = useNavigate()
   const { askLogin, loginModal } = useLoginPrompt()
 
   const handleClick = () => {
@@ -59,11 +56,9 @@ export default function PublishButton({ pageId, disabled }: Props) {
       }
       const res = await publishPage(targetId, values.title, values.page_id || undefined, values.tags, codeContent)
       setTitle(values.title)
-      markClean() // 已发布持久化，避免跳个人页时误弹"未保存"
+      markClean() // 已发布持久化，编辑器内容不再视为未保存
       setDialogOpen(false)
-      setResult(res.data)
-      window.open(res.data.url, '_blank')
-      navigate(`/${currentUserId}`)
+      setResult(res.data) // 仅展示发布成功弹窗；不打开发布页、不跳个人页
     } catch (err: any) {
       setError(err.response?.data?.detail || '部署失败，请重试')
     } finally {
