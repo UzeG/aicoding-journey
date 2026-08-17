@@ -18,10 +18,10 @@ import { getPage } from '../api/endpoints'
 export default function CreationView() {
   const [searchParams] = useSearchParams()
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
-  const dirty = useGenerationStore((s) => s.dirty)
   const { askLogin, loginModal } = useLoginPrompt()
-  const { leaveGuardModal } = useUnsavedLeaveGuard(dirty)
   const { isStreaming, codeContent, pageId, title, error, progressStep, progressMessage, setCode, setTitle, setTags } = useGenerationStore()
+  // creation 是复用编辑器：只要编辑器有内容，离开/刷新始终提示（发布/保存不清除）
+  const { leaveGuardModal } = useUnsavedLeaveGuard(!!codeContent)
   const { startGeneration } = useSSE()
   const abortRef = useRef<AbortController | null>(null)
   // PC 端编辑器/预览分栏拖拽（移动端纵向不启用）

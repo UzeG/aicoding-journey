@@ -12,28 +12,29 @@ import {
 } from '../components/ui/dialog'
 
 /**
- * 创作页离开守卫：有未保存内容（dirty）时，切换其他页面弹窗确认；刷新/关页走 beforeunload。
+ * 创作页离开守卫：编辑器有内容（hasContent）时，切换其他页面弹窗确认；刷新/关页走 beforeunload。
+ * creation 是复用编辑器——只要编辑器有内容，发布/保存后也始终提示。
  * 排除 /login——创作页自身的登录/注册跳转不提示，登录返回内容保留（SPA navigate，store 存活）。
  * 返回 leaveGuardModal 渲染在组件 JSX 中。
  */
-export function useUnsavedLeaveGuard(dirty: boolean) {
+export function useUnsavedLeaveGuard(hasContent: boolean) {
   // useBlocker 的 shouldBlock 必须是稳定引用（否则每次渲染重注册 blocker，可能放行已拦截的导航）——
-  // 用 ref 读最新 dirty，函数体用 useCallback 固定。
-  const dirtyRef = useRef(dirty)
-  dirtyRef.current = dirty
+  // 用 ref 读最新 hasContent，函数体用 useCallback 固定。
+  const hasContentRef = useRef(hasContent)
+  hasContentRef.current = hasContent
 
   // SPA 内导航拦截（useBlocker 拿到 nextLocation，可精确排除 /login）
   const blocker = useBlocker(
     useCallback(
       ({ nextLocation }: { nextLocation: { pathname: string } }) =>
-        dirtyRef.current && nextLocation.pathname !== '/login',
+        hasContentRef.current && nextLocation.pathname !== '/login',
       []
     )
   )
 
   // 整页卸载（刷新/关闭/跳发布页整页加载）兜底——beforeunload 无法区分目标，正常登录是 SPA 跳转不触发
   useEffect(() => {
-    if (!dirty) return
+    if (!hasContent) return
     const handler = (e: BeforeUnloadEvent) => {
       e.preventDefault()
       // 现代浏览器忽略自定义文案，仅用于触发原生确认框
@@ -41,7 +42,7 @@ export function useUnsavedLeaveGuard(dirty: boolean) {
     }
     window.addEventListener('beforeunload', handler)
     return () => window.removeEventListener('beforeunload', handler)
-  }, [dirty])
+  }, [hasContent])
 
   const stay = () => blocker.reset?.()
   const confirmLeave = () => {

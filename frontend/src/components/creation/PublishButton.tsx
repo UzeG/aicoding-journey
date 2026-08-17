@@ -30,7 +30,6 @@ export default function PublishButton({ pageId, disabled }: Props) {
   const setTitle = useGenerationStore((s) => s.setTitle)
   const tags = useGenerationStore((s) => s.tags)
   const codeContent = useGenerationStore((s) => s.codeContent)
-  const markClean = useGenerationStore((s) => s.markClean)
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
   const { askLogin, loginModal } = useLoginPrompt()
 
@@ -56,9 +55,8 @@ export default function PublishButton({ pageId, disabled }: Props) {
       }
       const res = await publishPage(targetId, values.title, values.page_id || undefined, values.tags, codeContent)
       setTitle(values.title)
-      markClean() // 已发布持久化，编辑器内容不再视为未保存
       setDialogOpen(false)
-      setResult(res.data) // 仅展示发布成功弹窗；不打开发布页、不跳个人页
+      setResult(res.data) // 仅展示发布成功弹窗；不清空编辑器、不打开发布页、不跳个人页
     } catch (err: any) {
       setError(err.response?.data?.detail || '部署失败，请重试')
     } finally {
