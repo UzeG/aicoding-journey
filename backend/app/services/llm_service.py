@@ -29,6 +29,7 @@ async def create_two_step_stream(
     persist: bool = True,
     verbose: bool = False,
     source: str = "generation",
+    accent_color: str | None = None,
 ) -> AsyncGenerator[dict, None]:
     """Two-step HTML generation pipeline.
 
@@ -78,7 +79,7 @@ async def create_two_step_stream(
 
         async for event in _run_step2_generate(
             refined_prompt, libraries, user_config, user_id, step1_output, request, page_id,
-            trace=trace, persist=persist, verbose=verbose, tags=tags, centered=centered,
+            trace=trace, persist=persist, verbose=verbose, tags=tags, centered=centered, accent_color=accent_color,
         ):
             yield event
     finally:
@@ -99,6 +100,7 @@ async def create_single_step_stream(
     persist: bool = True,
     verbose: bool = False,
     source: str = "generation",
+    accent_color: str | None = None,
 ) -> AsyncGenerator[dict, None]:
     """Single-step HTML generation pipeline (experimental strategy).
 
@@ -113,7 +115,7 @@ async def create_single_step_stream(
         yield {"type": "progress", "step": "generate", "message": "正在生成页面..."}
         async for event in _run_single_step_generate(
             prompt, user_config, user_id, request, page_id,
-            trace=trace, persist=persist, verbose=verbose,
+            trace=trace, persist=persist, verbose=verbose, accent_color=accent_color,
         ):
             yield event
     finally:
@@ -135,6 +137,7 @@ async def create_generation_stream(
     persist: bool = True,
     verbose: bool = False,
     source: str = "generation",
+    accent_color: str | None = None,
 ) -> AsyncGenerator[dict, None]:
     """Dispatch to the configured generation strategy (two-step default / single-step).
 
@@ -144,13 +147,13 @@ async def create_generation_stream(
     if strategy == "single_step":
         async for event in create_single_step_stream(
             prompt, user_config, user_id, request, page_id,
-            persist=persist, verbose=verbose, source=source,
+            persist=persist, verbose=verbose, source=source, accent_color=accent_color,
         ):
             yield event
     else:
         async for event in create_two_step_stream(
             prompt, user_config, user_id, request, page_id,
-            persist=persist, verbose=verbose, source=source,
+            persist=persist, verbose=verbose, source=source, accent_color=accent_color,
         ):
             yield event
 
@@ -253,6 +256,7 @@ async def _run_step2_generate(
     verbose: bool = False,
     tags: list[str] | None = None,
     centered: bool = False,
+    accent_color: str | None = None,
 ) -> AsyncGenerator[dict, None]:
     """SSE streaming HTML fragment generation + assembly with CDN includes."""
     from openai import AsyncOpenAI
@@ -260,7 +264,7 @@ async def _run_step2_generate(
     client = _build_client(user_config)
     model = user_config.get("model") or _get_default("LLM_MODEL")
 
-    system_prompt = get_step2_prompt(libraries, centered)
+    system_prompt = get_step2_prompt(libraries, centered, accent_color)
 
     messages = [
         {"role": "system", "content": system_prompt},
@@ -391,13 +395,14 @@ async def _run_single_step_generate(
     trace: dict,
     persist: bool = True,
     verbose: bool = False,
+    accent_color: str | None = None,
 ) -> AsyncGenerator[dict, None]:
     """SSE streaming single-stage generation: LLM writes a complete HTML page incl. its own CDN."""
     from openai import AsyncOpenAI
 
     client = _build_client(user_config)
     model = user_config.get("model") or _get_default("LLM_MODEL")
-    system_prompt = get_single_step_prompt()
+    system_prompt = get_single_step_prompt(accent_color)
 
     messages = [
         {"role": "system", "content": system_prompt},

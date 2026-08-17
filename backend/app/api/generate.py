@@ -55,6 +55,7 @@ async def generate(
             async for event in create_generation_stream(
                 settings.GENERATION_STRATEGY, req.prompt, user_config, str(user.id), request,
                 page_id=req.page_id,
+                accent_color=req.accent_color,
             ):
                 yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
         except Exception as e:

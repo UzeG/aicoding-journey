@@ -73,6 +73,7 @@ frontend/src/
 └── views/
     ├── HomeView.tsx              # 首页（双栏 Hero：左文案+输入 / 右工具预览，+ Three.js 背景动效）
     ├── CreationView.tsx          # 创作页 ★核心页面（路由 /creation；PC 端编辑/预览分栏可拖拽——分隔线 pointer 拖动，`--split` CSS 变量控制 flex-basis，15%~85%，cursor-col-resize；移动端纵向）
+    ├── components/creation/AccentColorPicker.tsx # 选 AI 生成主色调：预设（THEME_ACCENTS）+ 自定义色盘 + 登录用户系统主题配色（popover，点击外部关闭）
     ├── GalleryView.tsx           # 作品广场：卡片墙 + tag 筛选 chips + 最新/最热排序 + 搜索 + 分页；tag/q/sort/page 全部 URL query 驱动（useSearchParams，replace 防历史堆积，搜索防抖回写）
     ├── UserProfileView.tsx       # 用户主页（tab 栏下移 header；首页/项目/设置）
     ├── LoginView.tsx             # 登录/注册（支持手机号 + user_id）
@@ -134,7 +135,7 @@ UserProfileView 点击编辑 → navigate("/creation?pageId={id}")
 - **LLM 聊天测试**: `AdminChatView`（`/admin/chat`）单轮 prompt → 流式回复（`chatSSE` 消费 `token`/`done`/`error`）；配置选择平台默认/自定义（model/base_url/api_key，仅本次请求不落库），Enter 发送 / 停止中止 / 清空
 - **SSE 消费**: 使用 fetch + ReadableStream 而非 EventSource（需要 POST）
 - **创作页登录态**: **生成/发布/存草稿都需要登录**——未登录点击时弹窗提示（`useLoginPrompt`：确认→`/login?redirect=/creation`，取消→留在原页）；登录后 SPA navigate 跳回，store 保留编辑器内容。**上传 HTML 本地读取覆盖编辑器，无需登录**（pageId 为空时发布/存草稿先 `POST /api/pages` 建草稿再操作）。`LoginView` 的 `?redirect=` 区分 SPA 路由（`navigate`，保留 store）vs 发布页两段路径（`location.href` 整页跳回，正则 `PUBLISHED_PAGE_RE` 与 vite proxy 一致）。**发布/存草稿按钮在有编辑器内容时可用**（AI 生成或上传均可发布），无内容/生成中禁用
-- **创作页离开守卫**（`useUnsavedLeaveGuard`）：**creation 是复用编辑器，不与项目绑定**——只要编辑器有内容（`codeContent` 非空），离开/刷新**始终提示**（发布/存草稿/载入页面都不清除）；`useBlocker` 弹「内容未保存」确认（**排除 `/login`**：创作页自身引导登录/注册，去登录不提示、store 保留，登录返回内容不丢）；刷新/关页用 `beforeunload` 兜底。`useBlocker` 的 shouldBlock 必须稳定引用（`useRef` 读状态 + `useCallback` 固定），否则每次渲染重注册会放行已拦截导航；**`useBlocker` 需要 data router**（App 已迁至 `createBrowserRouter`）
+- **创作页离开守卫**（`useUnsavedLeaveGuard`）：**creation 是复用编辑器，不与项目绑定**——只要编辑器有内容（`codeContent` 非空），离开/刷新**始终提示**（发布/存草稿/载入页面都不清除）；`useBlocker` 弹窗「提示」确认（**排除 `/login`**：创作页自身引导登录/注册，去登录不提示、store 保留，登录返回内容不丢）；刷新/关页用 `beforeunload` 兜底。`useBlocker` 的 shouldBlock 必须稳定引用（`useRef` 读状态 + `useCallback` 固定），否则每次渲染重注册会放行已拦截导航；**`useBlocker` 需要 data router**（App 已迁至 `createBrowserRouter`）
 - **SSE 事件类型**: `progress`（步骤进度）、`token`（追加代码）、`final`（替换为精确 HTML）、`done`（结束）、`error`（错误）
 - **iframe 预览**: `sandbox="allow-scripts"`（不加 allow-same-origin 防 XSS），500ms 防抖更新避免流式时过度重渲染。`key={debouncedHtml.length}` 强制内容变化时 iframe 重挂载（解决 srcDoc 不刷新的问题）
 - **Monaco**: `@monaco-editor/react`，vs-dark 主题。**编辑器可编辑**（生成中 `readOnly=isStreaming`），`onChange` 回写 `generationStore.codeContent`（iframe 预览 500ms 防抖随之实时刷新）。**发布/保存以编辑器内容为准**：`publishPage`/`saveDraft` 携带 `html_content`，后端 `PublishRequest`/`SaveDraftRequest` 新增该字段。**输入提示**：启用 VSCode-like IntelliSense（quickSuggestions / Emmet 缩写展开 / tab 补全 / snippet 优先 / 参数提示 / 自动配对），CDN 全量构建自带 HTML/CSS/JS 语言服务；`emmet` 运行时支持但缺类型声明，用 `as Partial<editor.IStandaloneEditorConstructionOptions>` 断言补充。**`!` → HTML5 骨架**：Monaco 自带 Emmet 对单个 `!` 缩写触发不稳，`handleMount(editor, monaco)` 里手动 `registerCompletionItemProvider('html')` 注册（snippet 制表位 `$1` 标题 / `$2` body），模块级标志防 StrictMode 重复注册

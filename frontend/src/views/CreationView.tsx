@@ -7,6 +7,7 @@ import PromptInput from '../components/creation/PromptInput'
 import PublishButton from '../components/creation/PublishButton'
 import SaveDraftButton from '../components/creation/SaveDraftButton'
 import UploadToEditorButton from '../components/creation/UploadToEditorButton'
+import AccentColorPicker from '../components/creation/AccentColorPicker'
 import DownloadButton from '../components/common/DownloadButton'
 import { useSSE } from '../hooks/useSSE'
 import { useLoginPrompt } from '../hooks/useLoginPrompt'
@@ -18,8 +19,9 @@ import { getPage } from '../api/endpoints'
 export default function CreationView() {
   const [searchParams] = useSearchParams()
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
+  const systemTheme = useAuthStore((s) => s.user?.theme)
   const { askLogin, loginModal } = useLoginPrompt()
-  const { isStreaming, codeContent, pageId, title, error, progressStep, progressMessage, setCode, setTitle, setTags } = useGenerationStore()
+  const { isStreaming, codeContent, pageId, title, error, progressStep, progressMessage, setCode, setTitle, setTags, accentColor, setAccentColor } = useGenerationStore()
   // creation 是复用编辑器：只要编辑器有内容，离开/刷新始终提示（发布/保存不清除）
   const { leaveGuardModal } = useUnsavedLeaveGuard(!!codeContent)
   const { startGeneration } = useSSE()
@@ -110,6 +112,7 @@ export default function CreationView() {
           <PromptInput onGenerate={handleGenerate} disabled={isStreaming} initialValue={!isStreaming ? initialPrompt : undefined} />
         </div>
         <div className="flex flex-wrap items-center gap-2 md:gap-4">
+          <AccentColorPicker value={accentColor} systemTheme={systemTheme} onChange={setAccentColor} />
           <UploadToEditorButton disabled={isStreaming} onLoaded={handleUploaded} />
           <SaveDraftButton pageId={pageId} disabled={isStreaming || !codeContent} />
           <DownloadButton

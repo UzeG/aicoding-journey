@@ -22,14 +22,14 @@ export const uploadAvatar = (file: File) => {
 }
 
 // Generate
-export const generateSSE = (prompt: string, pageId?: string | null, signal?: AbortSignal) =>
+export const generateSSE = (prompt: string, pageId?: string | null, accentColor?: string | null, signal?: AbortSignal) =>
   fetch('/api/generate', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${localStorage.getItem('access_token')}`,
     },
-    body: JSON.stringify({ prompt, page_id: pageId || null }),
+    body: JSON.stringify({ prompt, page_id: pageId || null, accent_color: accentColor || null }),
     signal,
   })
 

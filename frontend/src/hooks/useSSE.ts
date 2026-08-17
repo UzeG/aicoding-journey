@@ -5,14 +5,15 @@ export function useSSE() {
   const store = useGenerationStore()
 
   const startGeneration = async (prompt: string, existingPageId?: string | null) => {
-    // Capture current pageId before startStreaming resets it
+    // Capture current pageId + accentColor before startStreaming resets the pageId
     const pageId = existingPageId ?? useGenerationStore.getState().pageId
+    const accentColor = useGenerationStore.getState().accentColor
     store.startStreaming(prompt)
 
     const abortController = new AbortController()
 
     try {
-      const response = await generateSSE(prompt, pageId, abortController.signal)
+      const response = await generateSSE(prompt, pageId, accentColor, abortController.signal)
 
       if (!response.ok) {
         const data = await response.json()

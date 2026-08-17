@@ -55,7 +55,7 @@ export function useUnsavedLeaveGuard(hasContent: boolean) {
     <Dialog open={blocker.state === 'blocked'} onOpenChange={(o) => !o && stay()}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>内容未保存</DialogTitle>
+          <DialogTitle>提示</DialogTitle>
           <DialogDescription>离开后，当前编辑器里未保存的内容将丢失。确定要离开吗？</DialogDescription>
         </DialogHeader>
         <DialogFooter>

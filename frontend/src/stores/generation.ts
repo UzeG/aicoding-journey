@@ -7,6 +7,8 @@ interface GenerationState {
   prompt: string
   title: string
   tags: string[]
+  /** AI 生成主色调（用户所选，null → 平台默认 #00a650） */
+  accentColor: string | null
   isSaved: boolean
   error: string | null
   progressStep: string | null
@@ -20,6 +22,7 @@ interface GenerationState {
   setPageId: (pageId: string) => void
   setTitle: (title: string) => void
   setTags: (tags: string[]) => void
+  setAccentColor: (color: string | null) => void
   setProgress: (step: string, message: string) => void
   setSaved: () => void
   setError: (error: string) => void
@@ -33,6 +36,7 @@ export const useGenerationStore = create<GenerationState>((set) => ({
   prompt: '',
   title: '',
   tags: [],
+  accentColor: null,
   isSaved: false,
   error: null,
   progressStep: null,
@@ -61,6 +65,9 @@ export const useGenerationStore = create<GenerationState>((set) => ({
 
   setTags: (tags) =>
     set({ tags }),
+
+  setAccentColor: (color) =>
+    set({ accentColor: color }),
 
   setProgress: (step, message) =>
     set({ progressStep: step, progressMessage: message }),

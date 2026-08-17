@@ -63,7 +63,7 @@ backend/
 | PUT | /api/auth/me | JWT | 更新资料（nickname/bio/readme/theme） |
 | POST | /api/auth/me/avatar | JWT | 上传头像（multipart，≤2MB） |
 | GET | /api/auth/check?user_id= | No | 检查 user_id 可用性 |
-| POST | /api/generate | JWT | SSE 流式生成 HTML（策略按 GENERATION_STRATEGY：two_step 默认 / single_step 实验） |
+| POST | /api/generate | JWT | SSE 流式生成 HTML（策略按 GENERATION_STRATEGY：two_step 默认 / single_step 实验；可选 accent_color 指定 AI 主色调） |
 | POST | /api/mock/generate | JWT | Mock SSE 流式（开发用，跳过 LLM） |
 | GET | /api/pages | JWT | 页面列表 |
 | POST | /api/pages | JWT | 建草稿（body: title/html_content；pageId 为空时发布/存草稿前的建页入口，is_saved=True） |
@@ -113,6 +113,7 @@ backend/
 - **流式过滤**: `create_llm_stream` 会缓冲 token 直到检测到 HTML 开始标记（`\`\`\`html` / `<!DOCTYPE` / `<html>`），才转发给前端。防止 LLM 输出的中文描述文字混入 Monaco 编辑器
 - **两步 LLM**: Step 1 理解需求 + 从注册表选 CDN 库 → Step 2 根据选中库注入对应的 system prompt（含 CDN 链接 + 使用规范）。避免全量库列表暗示 LLM 添加不必要的图表/3D
 - **单屏居中（centered）**: Step 1 判断产出是否为单屏 widget/app（计算器/游戏/时钟/转盘/贺卡等），输出 `centered: true/false`（可滚动文档/仪表盘/落地页为 false）。`centered=true` 时后端 `_assemble_html` 直接给 `<body>` 注入 `class="h-screen overflow-hidden flex justify-center items-center"`（**不依赖 LLM 写外层居中容器**，解决之前游戏/工具贴左上角问题）；Step 2 prompt 相应简化——centered 提示"系统已居中，直接输出内容、勿再加外层居中容器"，非 centered 提示"滚动文档用 mx-auto 限宽"。`get_step2_prompt(libraries, centered)`；single_step 无 Step 1，保留原居中规则。注意：body class 由后端注入，LLM 自己写的 body 属性会被 `_parse_fragment` 丢弃
+- **主色调 accent_color**: 用户可在创作页选 AI 生成主色调（预设色 / 自定义色盘 / 登录用户的系统主题色）。`GenerateRequest.accent_color`（`^#[0-9a-fA-F]{6}$`，None→默认 `#00a650`）经 `create_generation_stream(strategy, ..., accent_color)` 贯穿两步与单步：`get_step2_prompt(libraries, centered, accent_color)` / `get_single_step_prompt(accent_color)`，prompt 的 UI DESIGN GUIDELINES "Accent color" 行用该值
 - **单阶段策略（实验）**: `GENERATION_STRATEGY=single_step` 时跳过 Step 1——`get_single_step_prompt()` 内嵌 `build_single_stage_cdn_text()`（全库 exact CDN 标签+用法），LLM 直出完整 HTML 文档并自行照抄所需 CDN 标签进 `<head>`；`_assemble_single_step` 仅规范化 doctype/charset/title，**不校验/不剔除 CDN**（实验口径）。主链路与测试台共用 `create_generation_stream(strategy, ...)` 分发（[llm_service.py](app/services/llm_service.py)），改一处生成代码两处生效
 - **片段解析**: `_parse_fragment` 用 BeautifulSoup 提取 LLM 输出的 `<style>`/`<body>`/`<script>`（不用正则，避免脚本被静默丢弃）。支持普通 `<script>` 与 `<script type="module">`、多个 script、script 在 body 内；组装时统一包成 `<script type="module">`。若检测到交互痕迹（`<script>`/`onclick`/`addEventListener`）但提取不到 JS，记 warning
 - **封面快照**: 生成完成后 `asyncio.create_task(capture_snapshot(...))` 异步截图（不阻塞 SSE）。用 Playwright 复用系统 Chrome（`executable_path`，headless），JWT 通过 context `extra_http_headers` 传给内部渲染端点。**陷阱**：`get_current_user` 只读 Authorization header 不读 query；`page.goto` 无 headers 参数必须用 `new_context(extra_http_headers=...)`；等待用 `load` + sleep 而非 `networkidle`（无限动画页面永不空闲）。依赖 `playwright` 包 + 系统 Chrome，缺失时快照自动禁用
