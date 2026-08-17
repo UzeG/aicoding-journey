@@ -20,8 +20,6 @@ def get_step1_prompt() -> str:
 
 ## CRITICAL RULES
 - Understand what the user SAID, not what else they might want
-- If the user says "日历", don't add charts or data visualization
-- If the user says "数据仪表盘" or mentions specific numbers/trends, then consider chart libraries
 - Choose ONLY libraries that are clearly needed. When in doubt, DON'T select it
 - The "refined_prompt" should add helpful layout/color/typography details the user omitted, but should NOT introduce new features or interactive behaviors the user didn't ask for
 
@@ -31,16 +29,22 @@ def get_step1_prompt() -> str:
 ## OUTPUT FORMAT
 Respond with ONLY this JSON (no other text):
 
-{{"refined_prompt": "the clarified and detailed prompt in Chinese", "libraries": ["key1", "key2"], "tags": ["标签1", "标签2"]}}
+{{"refined_prompt": "the clarified and detailed prompt in Chinese", "libraries": ["key1", "key2"], "tags": ["标签1", "标签2"], "centered": true}}
 
 - refined_prompt: 200-400 characters in Chinese, add layout/style details the user omitted
 - libraries: array of library keys from the list above. Empty array [] if none needed
 - tags: 2-5 short Chinese tags, each ≤20 characters, describing the page's TYPE/THEME/USE (e.g. 计算器、图表、游戏、贺卡、工具、表单、博客、个人主页、三维). These are for a public gallery to browse & filter by — pick the most accurate, searchable keywords. Prefer fewer, more precise tags over generic ones
+- centered: whether the output is a SINGLE-SCREEN widget/app — a self-contained tool or game that fits ONE viewport without scrolling (计算器、游戏、时钟、转盘、交互卡片、贺卡 etc.). Such pages are centered by the system (body flex-centered, exactly one screen). Set FALSE for scrollable documents/pages (仪表盘、数据表格、列表、文章、落地页、多区块页面) that flow top-to-bottom and scroll. When unsure, default to false
 """
 
 
-def get_step2_prompt(libraries: list[str]) -> str:
-    """Step 2 system prompt: generate HTML fragments with library usage notes."""
+def get_step2_prompt(libraries: list[str], centered: bool = False) -> str:
+    """Step 2 system prompt: generate HTML fragments with library usage notes.
+
+    `centered` comes from Step 1's judgment — when the page is a single-screen widget/app,
+    the backend injects the centering onto <body>, so Step 2 only needs a short note telling
+    the LLM NOT to add its own centering wrapper (replaces the old verbose rule).
+    """
 
     usage_notes = build_step2_usage_notes(libraries)
 
@@ -51,6 +55,19 @@ def get_step2_prompt(libraries: list[str]) -> str:
             "These libraries are already included in the page — you can use them directly:\n\n"
             f"{usage_notes}\n"
         )
+
+    centering_section = (
+        "## VIEWPORT CENTERING\n"
+        "The page is ALREADY centered by the system: <body> is exactly one viewport, vertically and "
+        "horizontally centered (h-screen flex justify-center items-center). Output the widget/tool "
+        "content DIRECTLY — do NOT add any outer centering wrapper (no min-h-screen / "
+        "flex items-center justify-center / place-content-center on a container). "
+        "Keep inner content mobile-responsive: inner card uses w-full + max-w-*, never a fixed width alone.\n"
+    ) if centered else (
+        "## PAGE LAYOUT\n"
+        "This is a scrollable document/page — content flows top-to-bottom. "
+        "Constrain the main container with mx-auto + max-w-* on wide screens; do NOT force it into a single viewport.\n"
+    )
 
     return f"""You are an expert frontend developer. Generate the core content of a web page based on the user's description.
 
@@ -87,7 +104,7 @@ Your ENTIRE response must contain exactly these sections in order:
 2. Mobile-first responsive design. Touch targets >= 44x44px
 3. Visual style: clean, modern, with smooth CSS transitions
 4. **Styling**: Use UnoCSS (Tailwind-compatible) utility classes for ALL styling — `class="flex items-center gap-4 p-6 bg-white rounded-xl shadow-sm"`. Do NOT write custom CSS unless UnoCSS cannot achieve the effect
-5. **Viewport centering — tools/cards/games MUST be strictly centered**: For single-page 工具类/卡片类/游戏类 pages (计算器、卡片、小工具、表单、贺卡、时钟、屏保、游戏等), the OUTERMOST element inside <body> MUST be `<div class="min-h-screen flex items-center justify-center p-4">` — the whole page strictly centered both horizontally AND vertically. Do NOT use only `flex flex-col items-center` (that centers horizontally only and sticks content to the top). Only dashboards / full-width tables / lists should use `mx-auto` on the main container instead. Keep mobile responsive — inner card uses `w-full` + `max-w-*`, never a fixed width alone
+{centering_section}
 {usage_section}
 ## API CALLS（仅在需要拉取外部数据时参考）
 To fetch external data from the published page, use this proxy pattern:
@@ -111,8 +128,8 @@ fetch('/api/proxy', {{
 - Do NOT invent fake CDN URLs or npm package URLs
 
 ## TITLE
-- At the very start of <body>, include a hidden HTML comment with a 2-8 character Chinese title: `<!-- TITLE: 日历 -->`
-- Use the SIMPLEST, most direct name for what the user asked to build. If the user said "日历", use "日历" — not "月历选择" or "日期选择器"
+- At the very start of <body>, include a hidden HTML comment with a 2-8 character Chinese title: `<!-- TITLE: 简短中文标题 -->`
+- Use the SIMPLEST, most direct name for what the user asked to build. If the user said "日历", use "日历"
 - The title is a short label, not a feature summary. Prefer the user's own words
 
 ## UI DESIGN GUIDELINES

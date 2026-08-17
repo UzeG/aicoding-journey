@@ -55,6 +55,7 @@ async def create_two_step_stream(
             refined_prompt = step1.get("refined_prompt", prompt)
             libraries = step1.get("libraries", [])
             tags = normalize_tags(step1.get("tags")) or []
+            centered = bool(step1.get("centered", False))
             trace["refined_prompt"] = refined_prompt
             trace["libraries"] = json.dumps(libraries, ensure_ascii=False)
             trace["step1_output"] = json.dumps(step1, ensure_ascii=False)
@@ -67,7 +68,7 @@ async def create_two_step_stream(
             return
 
         if verbose:
-            yield {"type": "step1", "refined_prompt": refined_prompt, "libraries": libraries, "tags": tags}
+            yield {"type": "step1", "refined_prompt": refined_prompt, "libraries": libraries, "tags": tags, "centered": centered}
             yield {"type": "step1_prompt", "system": get_step1_prompt(), "user": prompt}
 
         # ── Step 2: Generate ──
@@ -77,7 +78,7 @@ async def create_two_step_stream(
 
         async for event in _run_step2_generate(
             refined_prompt, libraries, user_config, user_id, step1_output, request, page_id,
-            trace=trace, persist=persist, verbose=verbose, tags=tags,
+            trace=trace, persist=persist, verbose=verbose, tags=tags, centered=centered,
         ):
             yield event
     finally:
@@ -251,6 +252,7 @@ async def _run_step2_generate(
     persist: bool = True,
     verbose: bool = False,
     tags: list[str] | None = None,
+    centered: bool = False,
 ) -> AsyncGenerator[dict, None]:
     """SSE streaming HTML fragment generation + assembly with CDN includes."""
     from openai import AsyncOpenAI
@@ -258,7 +260,7 @@ async def _run_step2_generate(
     client = _build_client(user_config)
     model = user_config.get("model") or _get_default("LLM_MODEL")
 
-    system_prompt = get_step2_prompt(libraries)
+    system_prompt = get_step2_prompt(libraries, centered)
 
     messages = [
         {"role": "system", "content": system_prompt},
@@ -346,6 +348,7 @@ async def _run_step2_generate(
             script=parsed["script"],
             selected_libraries=libraries,
             title=llm_title,
+            centered=centered,
         )
 
         trace["refined_prompt"] = refined_prompt
@@ -664,8 +667,13 @@ def _assemble_html(
     script: str,
     selected_libraries: list[str],
     title: str,
+    centered: bool = False,
 ) -> str:
-    """Assemble complete HTML page from LLM fragments + CDN includes."""
+    """Assemble complete HTML page from LLM fragments + CDN includes.
+
+    `centered`（来自 Step 1 判断）时，后端直接在 <body> 上注入单屏垂直水平居中类，
+    不依赖 LLM 写外层居中容器。
+    """
     includes = build_cdn_includes(selected_libraries)
 
     head_parts = [
@@ -678,7 +686,8 @@ def _assemble_html(
     if style:
         head_parts.append(f"  <style>\n{style}\n  </style>")
 
-    body_parts = [f"<body>{body}"]
+    body_attrs = ' class="h-screen overflow-hidden flex justify-center items-center"' if centered else ""
+    body_parts = [f"<body{body_attrs}>{body}"]
     if includes["body_end"]:
         body_parts.append(f"  {includes['body_end']}")
     if script:
