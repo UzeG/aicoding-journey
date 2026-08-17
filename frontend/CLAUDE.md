@@ -72,7 +72,7 @@ frontend/src/
 │       └── Markdown.tsx          # react-markdown + remark-gfm 封装（.markdown-body 样式）
 └── views/
     ├── HomeView.tsx              # 首页（双栏 Hero：左文案+输入 / 右工具预览，+ Three.js 背景动效）
-    ├── CreationView.tsx          # 创作页 ★核心页面（路由 /creation）
+    ├── CreationView.tsx          # 创作页 ★核心页面（路由 /creation；PC 端编辑/预览分栏可拖拽——分隔线 pointer 拖动，`--split` CSS 变量控制 flex-basis，15%~85%，cursor-col-resize；移动端纵向）
     ├── GalleryView.tsx           # 作品广场：卡片墙 + tag 筛选 chips + 最新/最热排序 + 搜索 + 分页；tag/q/sort/page 全部 URL query 驱动（useSearchParams，replace 防历史堆积，搜索防抖回写）
     ├── UserProfileView.tsx       # 用户主页（tab 栏下移 header；首页/项目/设置）
     ├── LoginView.tsx             # 登录/注册（支持手机号 + user_id）

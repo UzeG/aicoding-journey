@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { CircleAlert, Loader2 } from 'lucide-react'
 import CodePanel from '../components/creation/CodePanel'
@@ -24,6 +24,31 @@ export default function CreationView() {
   const { isStreaming, codeContent, pageId, title, error, progressStep, progressMessage, setCode, setTitle, setTags } = useGenerationStore()
   const { startGeneration } = useSSE()
   const abortRef = useRef<AbortController | null>(null)
+  // PC 端编辑器/预览分栏拖拽（移动端纵向不启用）
+  const panelsRef = useRef<HTMLDivElement | null>(null)
+  const [split, setSplit] = useState(50)
+
+  const startResize = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    e.preventDefault()
+    const container = panelsRef.current
+    if (!container) return
+    const onMove = (ev: PointerEvent) => {
+      const rect = container.getBoundingClientRect()
+      if (rect.width === 0) return
+      const pct = ((ev.clientX - rect.left) / rect.width) * 100
+      setSplit(Math.min(85, Math.max(15, pct)))
+    }
+    const onUp = () => {
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerup', onUp)
+      document.body.style.cursor = ''
+      document.body.style.userSelect = ''
+    }
+    document.body.style.cursor = 'col-resize'
+    document.body.style.userSelect = 'none'
+    window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointerup', onUp)
+  }, [])
   const initialPrompt = searchParams.get('prompt') || ''
   const editPageId = searchParams.get('pageId')
   const loadedRef = useRef(false)
@@ -117,12 +142,22 @@ export default function CreationView() {
         </div>
       )}
 
-      {/* Split panels */}
-      <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
-        <div className="flex-1 border-r border-border overflow-hidden">
+      {/* Split panels：PC 端可拖拽分栏（编辑器 flex-basis = --split），移动端纵向 */}
+      <div
+        ref={panelsRef}
+        style={{ '--split': `${split}%` } as React.CSSProperties}
+        className="flex-1 flex flex-col md:flex-row overflow-hidden"
+      >
+        <div className="min-w-0 overflow-hidden flex-1 md:grow-0 md:shrink-0 md:basis-[var(--split)]">
           <CodePanel code={codeContent} isStreaming={isStreaming} onChange={setCode} />
         </div>
-        <div className="flex-1 overflow-hidden">
+        {/* 拖拽分隔线：鼠标悬停/拖动时 col-resize 光标 */}
+        <div
+          onPointerDown={startResize}
+          className="hidden md:block shrink-0 w-1.5 bg-border/60 hover:bg-primary/40 active:bg-primary/40 transition-colors cursor-col-resize select-none"
+          aria-label="拖拽调整编辑区宽度"
+        />
+        <div className="min-w-0 overflow-hidden flex-1">
           <PreviewPanel htmlContent={codeContent} isStreaming={isStreaming} />
         </div>
       </div>

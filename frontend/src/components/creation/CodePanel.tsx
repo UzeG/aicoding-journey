@@ -62,8 +62,8 @@ export default function CodePanel({ code, isStreaming, onChange }: Props) {
     const lastLine = model.getLineCount()
     const lastLineBottom = ed.getBottomForLineNumber(lastLine)  // 文档绝对坐标
     const viewportH = ed.getLayoutInfo().height
-    // 让最后一行的底部位于视口 9/10 处 → 距底部 1/10
-    const targetTop = lastLineBottom - Math.floor(viewportH * 9 / 10)
+    // 让最后一行的底部位于视口 39/40 处 → 距底部 1/40
+    const targetTop = lastLineBottom - Math.floor(viewportH * 39 / 40)
     ed.setScrollTop(Math.max(0, targetTop))
   }, [code, isStreaming])
 
