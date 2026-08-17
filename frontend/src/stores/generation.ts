@@ -9,6 +9,11 @@ interface GenerationState {
   tags: string[]
   /** AI 生成主色调（用户所选，null → 平台默认 #00a650） */
   accentColor: string | null
+  /** 是否编辑已有页面（从 ?pageId= 载入）——发布弹窗据此显示"保存"并预填原配置 */
+  isEdit: boolean
+  description: string
+  /** 公开 page_id（slug），编辑态预填到发布弹窗 */
+  publicPageId: string | null
   isSaved: boolean
   error: string | null
   progressStep: string | null
@@ -17,7 +22,7 @@ interface GenerationState {
   startStreaming: (prompt: string) => void
   appendCode: (content: string) => void
   setCode: (content: string) => void
-  loadPage: (pageId: string, codeContent: string, prompt: string, isSaved?: boolean, title?: string, tags?: string[]) => void
+  loadPage: (pageId: string, codeContent: string, prompt: string, isSaved?: boolean, title?: string, tags?: string[], description?: string, publicPageId?: string | null) => void
   finishStreaming: (pageId: string, title?: string, tags?: string[]) => void
   setPageId: (pageId: string) => void
   setTitle: (title: string) => void
@@ -37,13 +42,16 @@ export const useGenerationStore = create<GenerationState>((set) => ({
   title: '',
   tags: [],
   accentColor: null,
+  isEdit: false,
+  description: '',
+  publicPageId: null,
   isSaved: false,
   error: null,
   progressStep: null,
   progressMessage: '',
 
   startStreaming: (prompt) =>
-    set({ isStreaming: true, codeContent: '', pageId: null, prompt, title: '', tags: [], isSaved: false, error: null, progressStep: null, progressMessage: '' }),
+    set({ isStreaming: true, codeContent: '', pageId: null, prompt, title: '', tags: [], accentColor: null, isEdit: false, description: '', publicPageId: null, isSaved: false, error: null, progressStep: null, progressMessage: '' }),
 
   appendCode: (content) =>
     set((state) => ({ codeContent: state.codeContent + content })),
@@ -51,8 +59,8 @@ export const useGenerationStore = create<GenerationState>((set) => ({
   setCode: (content: string) =>
     set({ codeContent: content }),
 
-  loadPage: (pageId, codeContent, prompt, isSaved = false, title = '', tags = []) =>
-    set({ pageId, codeContent, prompt, isSaved, title, tags, isStreaming: false, error: null }),
+  loadPage: (pageId, codeContent, prompt, isSaved = false, title = '', tags = [], description = '', publicPageId: string | null = null) =>
+    set({ pageId, codeContent, prompt, isSaved, title, tags, description, publicPageId, isEdit: true, isStreaming: false, error: null }),
 
   finishStreaming: (pageId, title = '', tags = []) =>
     set({ isStreaming: false, pageId, title, tags, progressStep: null, progressMessage: '' }),
@@ -79,5 +87,5 @@ export const useGenerationStore = create<GenerationState>((set) => ({
     set({ isStreaming: false, error }),
 
   reset: () =>
-    set({ isStreaming: false, codeContent: '', pageId: null, prompt: '', title: '', tags: [], isSaved: false, error: null, progressStep: null, progressMessage: '' }),
+    set({ isStreaming: false, codeContent: '', pageId: null, prompt: '', title: '', tags: [], accentColor: null, isEdit: false, description: '', publicPageId: null, isSaved: false, error: null, progressStep: null, progressMessage: '' }),
 }))

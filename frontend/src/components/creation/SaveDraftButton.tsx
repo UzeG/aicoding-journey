@@ -18,6 +18,7 @@ export default function SaveDraftButton({ pageId, disabled }: Props) {
   const [error, setError] = useState<string | null>(null)
   const isSaved = useGenerationStore((s) => s.isSaved)
   const title = useGenerationStore((s) => s.title)
+  const description = useGenerationStore((s) => s.description)
   const codeContent = useGenerationStore((s) => s.codeContent)
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
   const setSaved = useGenerationStore((s) => s.setSaved)
@@ -84,7 +85,7 @@ export default function SaveDraftButton({ pageId, disabled }: Props) {
         open={dialogOpen}
         onClose={() => setDialogOpen(false)}
         onConfirm={handleConfirm}
-        defaultValues={{ title, page_id: '', tags: [], description: '' }}
+        defaultValues={{ title, page_id: '', tags: [], description }}
         loading={saving}
         title="保存草稿"
         description="给页面起个名字，方便在列表中识别。"

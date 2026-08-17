@@ -30,6 +30,9 @@ export default function PublishButton({ pageId, disabled }: Props) {
   const setTitle = useGenerationStore((s) => s.setTitle)
   const tags = useGenerationStore((s) => s.tags)
   const codeContent = useGenerationStore((s) => s.codeContent)
+  const isEdit = useGenerationStore((s) => s.isEdit)
+  const description = useGenerationStore((s) => s.description)
+  const publicPageId = useGenerationStore((s) => s.publicPageId)
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
   const { askLogin, loginModal } = useLoginPrompt()
 
@@ -68,18 +71,18 @@ export default function PublishButton({ pageId, disabled }: Props) {
     <div>
       <Button onClick={handleClick} disabled={disabled || publishing}>
         {publishing ? <Loader2 className="size-4 animate-spin" /> : <Upload className="size-4" />}
-        <span className="hidden sm:inline">{publishing ? '部署中...' : '部署页面'}</span>
+        <span className="hidden sm:inline">{publishing ? (isEdit ? '保存中...' : '部署中...') : (isEdit ? '保存页面' : '部署页面')}</span>
       </Button>
 
       <SavePageDialog
         open={dialogOpen}
         onClose={() => setDialogOpen(false)}
         onConfirm={handleConfirm}
-        defaultValues={{ title, page_id: '', tags, description: '' }}
+        defaultValues={{ title, page_id: publicPageId || '', tags, description }}
         loading={publishing}
-        title="部署页面"
-        description="确认页面名称后部署到公网。"
-        confirmLabel="部署"
+        title={isEdit ? '保存页面' : '部署页面'}
+        description={isEdit ? '确认页面信息后保存。' : '确认页面名称后部署到公网。'}
+        confirmLabel={isEdit ? '保存' : '部署'}
         showPageId
         showTags
       />
@@ -89,7 +92,7 @@ export default function PublishButton({ pageId, disabled }: Props) {
           <DialogHeader>
             <div className="flex items-center gap-2">
               <PartyPopper className="size-5 text-primary" />
-              <DialogTitle>部署成功！</DialogTitle>
+              <DialogTitle>{isEdit ? '保存成功！' : '部署成功！'}</DialogTitle>
             </div>
             <DialogDescription>页面已上线，复制链接或打开访问。</DialogDescription>
           </DialogHeader>

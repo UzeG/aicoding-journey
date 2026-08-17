@@ -73,7 +73,7 @@ export default function CreationView() {
     loadedRef.current = true
     const loadPage = useGenerationStore.getState().loadPage
     getPage(editPageId).then((res) => {
-      loadPage(editPageId, res.data.html_content, res.data.prompt || '', res.data.is_saved, res.data.title || '', res.data.tags || [])
+      loadPage(editPageId, res.data.html_content, res.data.prompt || '', res.data.is_saved, res.data.title || '', res.data.tags || [], res.data.description || '', res.data.page_id || null)
     }).catch(() => {
       useGenerationStore.getState().setError('加载页面失败')
     })
