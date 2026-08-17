@@ -45,13 +45,14 @@ export default function AppHeader() {
   return (
     <header className="bg-card border-b border-border sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 h-(--header-height) flex items-center justify-between">
+        <Link to="/" className="flex items-center gap-2 text-foreground no-underline">
+          <span className="inline-flex items-center justify-center size-8 rounded-lg bg-primary text-primary-foreground">
+            <Zap className="size-4" fill="currentColor" />
+          </span>
+          <span className="text-base font-bold tracking-tight">Manifest</span>
+        </Link>
+
         <div className="flex items-center gap-6">
-          <Link to="/" className="flex items-center gap-2 text-foreground no-underline">
-            <span className="inline-flex items-center justify-center size-8 rounded-lg bg-primary text-primary-foreground">
-              <Zap className="size-4" fill="currentColor" />
-            </span>
-            <span className="text-base font-bold tracking-tight">Manifest</span>
-          </Link>
           <nav className="flex items-center gap-1">
             <NavLink
               to="/creation"
@@ -78,9 +79,7 @@ export default function AppHeader() {
               作品广场
             </NavLink>
           </nav>
-        </div>
-
-        <div className="flex items-center">
+          <div className="flex items-center">
           {isAuthenticated ? (
             <div className="relative" ref={menuRef}>
               <button
@@ -135,6 +134,7 @@ export default function AppHeader() {
               </Link>
             </Button>
           )}
+        </div>
         </div>
       </div>
     </header>
