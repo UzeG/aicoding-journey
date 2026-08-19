@@ -7,6 +7,7 @@ import LoadingSpinner from '../components/common/LoadingSpinner'
 import Pagination from '../components/admin/Pagination'
 import { Input } from '../components/ui/input'
 import { cn } from '../lib/utils'
+import { useProgressStore } from '../stores/progress'
 import type { GalleryResponse } from '../types'
 
 const PAGE_SIZE = 12
@@ -67,10 +68,11 @@ export default function GalleryView() {
 
   useEffect(() => {
     setLoading(true)
+    useProgressStore.getState().start()
     getGallery({ tag: tag || undefined, q: urlQ || undefined, sort, page, page_size: PAGE_SIZE })
       .then((res) => { setData(res.data); setError(null) })
       .catch(() => setError('加载失败，请稍后重试'))
-      .finally(() => setLoading(false))
+      .finally(() => { setLoading(false); useProgressStore.getState().done() })
   }, [tag, urlQ, sort, page])
 
   const selectTag = (t: string) => updateParams({ tag: t === tag ? null : t, page: '1' })

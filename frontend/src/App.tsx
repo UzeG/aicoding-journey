@@ -1,6 +1,8 @@
 import { createBrowserRouter, Navigate, Outlet, RouterProvider, useLocation } from 'react-router-dom'
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { cn } from './lib/utils'
+import TopProgressBar from './components/common/TopProgressBar'
+import { useProgressStore } from './stores/progress'
 import AppHeader from './components/layout/AppHeader'
 import HomeView from './views/HomeView'
 import CreationView from './views/CreationView'
@@ -72,9 +74,20 @@ export default function App() {
 function AppLayout() {
   const location = useLocation()
   const isAuthPage = location.pathname === '/login'
+  const prevPath = useRef(location.pathname)
+
+  // 路由切换 → 顶部进度条（GitHub 风格；SPA 切换快，给最短可见时长）
+  useEffect(() => {
+    if (prevPath.current === location.pathname) return
+    prevPath.current = location.pathname
+    const p = useProgressStore.getState()
+    p.start()
+    window.setTimeout(() => p.done(), 250)
+  }, [location.pathname])
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
+      <TopProgressBar />
       {!isAuthPage && <AppHeader />}
       <main className={cn('flex-1', isAuthPage && 'flex flex-col')}>
         <Outlet />

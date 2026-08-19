@@ -5,6 +5,7 @@ import {
 } from 'lucide-react'
 import { deletePage, getUserActivity, getUserProfile, updateProfile, uploadAvatar } from '../api/endpoints'
 import { useAuthStore } from '../stores/auth'
+import { useProgressStore } from '../stores/progress'
 import ConfirmDialog from '../components/common/ConfirmDialog'
 import LoadingSpinner from '../components/common/LoadingSpinner'
 import Avatar from '../components/common/Avatar'
@@ -79,6 +80,7 @@ export default function UserProfileView() {
 
   const fetchProfile = useCallback(async () => {
     if (!userId) return
+    useProgressStore.getState().start()
     try {
       const res = await getUserProfile(userId)
       setProfile(res.data)
@@ -86,6 +88,7 @@ export default function UserProfileView() {
       if (err.response?.status === 404) setNotFound(true)
     } finally {
       setLoading(false)
+      useProgressStore.getState().done()
     }
   }, [userId])
 

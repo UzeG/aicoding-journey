@@ -1,5 +1,6 @@
 import { generateSSE } from '../api/endpoints'
 import { useGenerationStore } from '../stores/generation'
+import { useProgressStore } from '../stores/progress'
 
 export function useSSE() {
   const store = useGenerationStore()
@@ -9,6 +10,7 @@ export function useSSE() {
     const pageId = existingPageId ?? useGenerationStore.getState().pageId
     const accentColor = useGenerationStore.getState().accentColor
     store.startStreaming(prompt)
+    useProgressStore.getState().start() // 顶部加载进度条
 
     const abortController = new AbortController()
 
@@ -59,6 +61,7 @@ export function useSSE() {
       }
     }
 
+    useProgressStore.getState().done() // 生成结束/出错/停止
     return abortController
   }
 
