@@ -4,8 +4,9 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  /* Header 高度 —— UserProfileView 的 sticky top 基于此计算（calc(+0.5rem) 间距） */
-  --header-height: 3.5rem;
+  /* Header 高度 —— UserProfileView 的 sticky top 基于此计算（calc(+0.5rem) 间距）；
+     气泡 header：py-3 + 气泡高 ≈ 4rem */
+  --header-height: 4rem;
   /* 个人主页 tab 栏高度（tab 栏 sticky 在 header 下方，aside sticky 需再加此高度） */
   --profile-tab-height: 3rem;
 

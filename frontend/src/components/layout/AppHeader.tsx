@@ -6,6 +6,10 @@ import { cn } from '../../lib/utils'
 import { Button } from '../ui/button'
 import Avatar from '../common/Avatar'
 
+/** 气泡导航通用 hover/active 动效：hover 阴影加深（respect reduced-motion） */
+const BUBBLE = 'transition-all duration-200 hover:shadow-md motion-reduce:transition-none motion-reduce:hover:shadow-sm'
+const BUBBLE_SURFACE = 'bg-card/80 backdrop-blur ring-1 ring-border/60 shadow-sm'
+
 export default function AppHeader() {
   const { user, isAuthenticated, logout } = useAuthStore()
   const navigate = useNavigate()
@@ -43,66 +47,77 @@ export default function AppHeader() {
   ]
 
   return (
-    <header className="bg-card border-b border-border sticky top-0 z-50">
-      <div className="max-w-7xl mx-auto px-4 h-(--header-height) grid grid-cols-[1fr_auto_1fr] items-center">
-        {/* 左列：logo */}
-        <Link to="/" className="flex items-center gap-2 text-foreground no-underline">
-          <span className="inline-flex items-center justify-center size-8 rounded-lg bg-primary text-primary-foreground">
-            <Zap className="size-4" fill="currentColor" />
+    <header className="sticky top-0 z-50 py-3">
+      <div className="max-w-7xl mx-auto px-4 grid grid-cols-[1fr_auto_1fr] items-center gap-3">
+        {/* 左：logo bubble */}
+        <Link
+          to="/"
+          className={cn(
+            'justify-self-start inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-foreground no-underline',
+            BUBBLE_SURFACE, BUBBLE
+          )}
+        >
+          <span className="inline-flex items-center justify-center size-7 rounded-full bg-primary text-primary-foreground">
+            <Zap className="size-3.5" fill="currentColor" />
           </span>
-          <span className="text-base font-bold tracking-tight">Manifest</span>
+          <span className="hidden sm:inline text-sm font-bold tracking-tight">Manifest</span>
         </Link>
 
-        {/* 中列：tab 居中 */}
-        <nav className="flex items-center gap-1">
+        {/* 中：tab bubble 组（active 填充主题色 pill） */}
+        <nav className={cn('inline-flex items-center gap-1 rounded-full p-1', BUBBLE_SURFACE, BUBBLE)}>
           <NavLink
             to="/"
             end
             className={({ isActive }) =>
               cn(
-                'flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-sm transition-colors',
-                isActive ? 'text-primary bg-accent' : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+                'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm transition-all duration-200',
+                isActive
+                  ? 'bg-primary text-primary-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-accent motion-reduce:transition-none'
               )
             }
           >
             <Home className="size-4" />
-            首页
+            <span className="hidden sm:inline">首页</span>
           </NavLink>
           <NavLink
             to="/gallery"
             className={({ isActive }) =>
               cn(
-                'flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-sm transition-colors',
-                isActive ? 'text-primary bg-accent' : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+                'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm transition-all duration-200',
+                isActive
+                  ? 'bg-primary text-primary-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-accent motion-reduce:transition-none'
               )
             }
           >
             <LayoutGrid className="size-4" />
-            作品广场
+            <span className="hidden sm:inline">作品广场</span>
           </NavLink>
           <NavLink
             to="/creation"
             className={({ isActive }) =>
               cn(
-                'flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-sm transition-colors',
-                isActive ? 'text-primary bg-accent' : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+                'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm transition-all duration-200',
+                isActive
+                  ? 'bg-primary text-primary-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-accent motion-reduce:transition-none'
               )
             }
           >
             <SquarePen className="size-4" />
-            创作
+            <span className="hidden sm:inline">创作</span>
           </NavLink>
         </nav>
 
-        {/* 右列：用户菜单/登录 */}
-        <div className="flex items-center justify-end">
-          <div className="flex items-center">
+        {/* 右：个人 bubble（头像胶囊 / 登录按钮） */}
+        <div className="justify-self-end flex items-center">
           {isAuthenticated ? (
             <div className="relative" ref={menuRef}>
               <button
                 onClick={() => setMenuOpen((o) => !o)}
-                className="flex items-center rounded-full hover:ring-2 hover:ring-primary/30 transition-shadow"
                 aria-label="用户菜单"
+                className={cn('flex items-center rounded-full p-1', BUBBLE_SURFACE, BUBBLE)}
               >
                 <Avatar
                   src={user?.avatar_url}
@@ -112,7 +127,7 @@ export default function AppHeader() {
               </button>
 
               {menuOpen && (
-                <div className="absolute right-0 top-full mt-2 w-56 rounded-lg border border-border bg-card shadow-lg overflow-hidden">
+                <div className="absolute right-0 top-full mt-3 w-56 rounded-xl border border-border bg-card shadow-lg overflow-hidden">
                   <div className="px-3 py-2.5 border-b border-border">
                     <p className="font-medium text-sm text-foreground truncate">{user?.nickname || user?.phone}</p>
                     <p className="text-xs text-muted-foreground truncate">@{user?.user_id}</p>
@@ -144,14 +159,13 @@ export default function AppHeader() {
               )}
             </div>
           ) : (
-            <Button size="sm" asChild>
+            <Button size="sm" className={cn('rounded-full', BUBBLE)} asChild>
               <Link to="/login">
                 <LogIn className="size-4" />
                 登录
               </Link>
             </Button>
           )}
-        </div>
         </div>
       </div>
     </header>
