@@ -141,8 +141,10 @@ html.pi-open #pi-trigger{opacity:0;pointer-events:none;}
 #pi-panel.open{transform:translateY(0);opacity:1;visibility:visible;transition:transform .3s ease,opacity .3s ease,visibility 0s;}
 /* 简介区：项目名 / 发布时间 / 描述（每项一行） */
 #pi-panel .pi-proj-title{font-weight:700;font-size:1.15rem;line-height:1.3;margin-bottom:.35rem;word-break:break-word;}
-#pi-panel .pi-proj-time{display:flex;align-items:center;gap:.4rem;font-size:.8rem;color:var(--pi-muted);margin-bottom:.5rem;}
-#pi-panel .pi-proj-time svg{width:14px;height:14px;flex-shrink:0;}
+#pi-panel .pi-proj-time{display:flex;align-items:center;gap:.4rem;font-size:.8rem;color:var(--pi-muted);margin-bottom:.15rem;}
+/* 图标与访问数字成组（组内 .2rem），组与发布时间间距由外层 .4rem 承担 */
+#pi-panel .pi-proj-time .pi-proj-views{display:inline-flex;align-items:center;gap:.2rem;line-height:0;}
+#pi-panel .pi-proj-time svg{width:14px;height:14px;display:block;flex-shrink:0;}
 #pi-panel .pi-proj-desc{font-size:.85rem;color:var(--pi-muted);white-space:pre-wrap;word-break:break-word;margin-bottom:.75rem;}
 /* 描述下 tags：可换行、左排、tag 间 gap */
 #pi-panel .pi-tags{display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:0;}
@@ -417,17 +419,20 @@ html.pi-open #pi-trigger{opacity:0;pointer-events:none;}
   function renderIntro() {
     var p = state.page
     projTitleEl.textContent = p && p.title ? p.title : ''
-    // 时间行：眼睛icon 访问量 发布时间
+    // 时间行：👁访问量 + 发布时间（图标与数字成组）
     projTimeEl.innerHTML = ''
+    var viewsGroup = document.createElement('span')
+    viewsGroup.className = 'pi-proj-views'
     var eye = document.createElement('span')
     eye.innerHTML = EYE_ICON
     var viewsEl = document.createElement('span')
     viewsEl.textContent = formatViews((p && p.view_count) || 0)
+    viewsGroup.appendChild(eye)
+    viewsGroup.appendChild(viewsEl)
     var timeSpan = document.createElement('span')
     var pubAt = (p && p.published_at) || (p && p.created_at) // 实际发布时刻，存量无则回退创建时间
     timeSpan.textContent = pubAt ? formatDate(pubAt) : ''
-    projTimeEl.appendChild(eye)
-    projTimeEl.appendChild(viewsEl)
+    projTimeEl.appendChild(viewsGroup)
     projTimeEl.appendChild(timeSpan)
     if (p && p.description) {
       projDescEl.textContent = p.description
