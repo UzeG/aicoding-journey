@@ -326,8 +326,8 @@ export default function UserProfileView() {
               <>
                 {/* 发布/草稿筛选 + 上传 HTML（仅自己） */}
                 {isOwnProfile && (
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex gap-2">
+                  <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+                    <div className="flex gap-2 flex-wrap">
                       {FILTERS.map((f) => (
                         <button
                           key={f.key}

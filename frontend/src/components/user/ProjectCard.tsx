@@ -5,6 +5,7 @@ import { Button } from '../ui/button'
 import { Card, CardContent } from '../ui/card'
 import DownloadButton from '../common/DownloadButton'
 import { getPage } from '../../api/endpoints'
+import { cn } from '../../lib/utils'
 import type { PageItem } from '../../types'
 
 interface Props {
@@ -16,12 +17,20 @@ interface Props {
 
 export default function ProjectCard({ page, user_id, isOwn, onDelete }: Props) {
   const navigate = useNavigate()
+  const url = page.is_published && page.page_id ? `/${user_id}/${page.page_id}` : undefined
 
   return (
     <Card className="hover:border-primary/40 transition-colors overflow-hidden">
-      <div className="flex items-center">
-        {/* 左侧预览图（16:9） */}
-        <div className="w-32 sm:w-44 shrink-0 aspect-video relative bg-muted">
+      <div className="md:flex md:items-center">
+        {/* 封面：移动端顶部全宽（点击跳发布页）；桌面左侧 44 */}
+        <a
+          href={url}
+          className={cn(
+            'block aspect-video w-full relative bg-muted md:w-44 md:shrink-0',
+            !url && 'pointer-events-none'
+          )}
+          aria-label={page.title || '页面封面'}
+        >
           {page.cover_url ? (
             <img
               src={page.cover_url}
@@ -33,57 +42,64 @@ export default function ProjectCard({ page, user_id, isOwn, onDelete }: Props) {
               <FileText className="size-8 opacity-40" />
             </div>
           )}
-        </div>
-        <CardContent className="flex-1 min-w-0 p-4 flex items-center justify-between">
-          <div className="flex-1 min-w-0">
-            <h3 className="font-medium text-foreground truncate">{page.title || '未命名页面'}</h3>
-            <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
-              <span>{new Date(page.created_at).toLocaleDateString('zh-CN')}</span>
-              {page.is_published && page.page_id && (
-                <a
-                  href={`/${user_id}/${page.page_id}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-primary hover:underline inline-flex items-center gap-0.5"
-                >
-                  /{user_id}/{page.page_id}
-                  <ExternalLink className="size-3" />
-                </a>
+        </a>
+
+        <CardContent className="p-4 md:flex-1 md:min-w-0">
+          <div className="flex md:justify-between gap-3">
+            {/* 左：标题 + 日期/链接 + tags */}
+            <div className="flex-1 min-w-0">
+              <h3 className="font-medium text-foreground truncate">{page.title || '未命名页面'}</h3>
+              <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                <span className="shrink-0">{new Date(page.created_at).toLocaleDateString('zh-CN')}</span>
+                {url && (
+                  <a
+                    href={url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary hover:underline inline-flex items-center gap-0.5 truncate min-w-0 max-w-[40vw] md:max-w-full"
+                  >
+                    {url}
+                    <ExternalLink className="size-3 shrink-0" />
+                  </a>
+                )}
+              </div>
+              {page.tags && page.tags.length > 0 && (
+                <div className="flex flex-wrap gap-1 mt-1.5">
+                  {page.tags.map((t) => (
+                    <Badge key={t} variant="muted" className="text-[11px] font-normal">{t}</Badge>
+                  ))}
+                </div>
               )}
             </div>
-            {page.tags && page.tags.length > 0 && (
-              <div className="flex flex-wrap gap-1 mt-1.5">
-                {page.tags.map((t) => (
-                  <Badge key={t} variant="muted" className="text-[11px] font-normal">{t}</Badge>
-                ))}
+
+            {/* 右：操作（移动端 icon-only，桌面带文字） */}
+            {isOwn && (
+              <div className="flex items-start md:items-center gap-1 md:gap-2 shrink-0">
+                <DownloadButton
+                  fileName={page.title || page.page_id}
+                  getContent={() => getPage(page.id).then((res) => res.data.html_content)}
+                />
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="px-2 md:px-3"
+                  onClick={() => navigate(`/creation?pageId=${page.id}`)}
+                >
+                  <Pencil className="size-4" />
+                  <span className="hidden md:inline">编辑</span>
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="px-2 md:px-3 text-destructive hover:text-destructive hover:bg-destructive/10"
+                  onClick={() => onDelete(page)}
+                >
+                  <Trash2 className="size-4" />
+                  <span className="hidden md:inline">删除</span>
+                </Button>
               </div>
             )}
           </div>
-          {isOwn && (
-            <div className="flex items-center gap-2 ml-4 shrink-0">
-              <DownloadButton
-                fileName={page.title || page.page_id}
-                getContent={() => getPage(page.id).then((res) => res.data.html_content)}
-              />
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => navigate(`/creation?pageId=${page.id}`)}
-              >
-                <Pencil className="size-4" />
-                编辑
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                onClick={() => onDelete(page)}
-              >
-                <Trash2 className="size-4" />
-                删除
-              </Button>
-            </div>
-          )}
         </CardContent>
       </div>
     </Card>
