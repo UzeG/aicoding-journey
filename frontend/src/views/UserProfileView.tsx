@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import {
-  Activity, BookOpen, Camera, CircleAlert, FileText, Pencil, Plus, SquarePen, User,
+  Activity, BookOpen, Camera, CircleAlert, FileText, Pencil, SquarePen, User,
 } from 'lucide-react'
 import { deletePage, getUserActivity, getUserProfile, updateProfile, uploadAvatar } from '../api/endpoints'
 import { useAuthStore } from '../stores/auth'
@@ -267,10 +267,6 @@ export default function UserProfileView() {
                   <Pencil className="size-4" />
                   编辑资料
                 </Button>
-                <Button className="w-full" onClick={() => navigate('/')}>
-                  <Plus className="size-4" />
-                  新建页面
-                </Button>
               </div>
             )}
           </aside>
@@ -449,7 +445,7 @@ export default function UserProfileView() {
             </div>
 
             <div className="space-y-2">
-              <Label>个人主页 README（支持 Markdown）</Label>
+              <Label>README.md</Label>
               <Textarea
                 value={editReadme}
                 onChange={(e) => setEditReadme(e.target.value)}
