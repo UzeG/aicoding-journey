@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, NavLink, useNavigate } from 'react-router-dom'
-import { LogOut, LogIn, User, FolderOpen, Settings, Shield, LayoutGrid, SquarePen, Zap } from 'lucide-react'
+import { LogOut, LogIn, User, FolderOpen, Settings, Shield, LayoutGrid, SquarePen, Home, Zap } from 'lucide-react'
 import { useAuthStore } from '../../stores/auth'
 import { cn } from '../../lib/utils'
 import { Button } from '../ui/button'
@@ -44,7 +44,8 @@ export default function AppHeader() {
 
   return (
     <header className="bg-card border-b border-border sticky top-0 z-50">
-      <div className="max-w-7xl mx-auto px-4 h-(--header-height) flex items-center justify-between">
+      <div className="max-w-7xl mx-auto px-4 h-(--header-height) grid grid-cols-[1fr_auto_1fr] items-center">
+        {/* 左列：logo */}
         <Link to="/" className="flex items-center gap-2 text-foreground no-underline">
           <span className="inline-flex items-center justify-center size-8 rounded-lg bg-primary text-primary-foreground">
             <Zap className="size-4" fill="currentColor" />
@@ -52,33 +53,49 @@ export default function AppHeader() {
           <span className="text-base font-bold tracking-tight">Manifest</span>
         </Link>
 
-        <div className="flex items-center gap-6">
-          <nav className="flex items-center gap-1">
-            <NavLink
-              to="/creation"
-              className={({ isActive }) =>
-                cn(
-                  'flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-sm transition-colors',
-                  isActive ? 'text-primary bg-accent' : 'text-muted-foreground hover:text-foreground hover:bg-accent'
-                )
-              }
-            >
-              <SquarePen className="size-4" />
-              创作
-            </NavLink>
-            <NavLink
-              to="/gallery"
-              className={({ isActive }) =>
-                cn(
-                  'flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-sm transition-colors',
-                  isActive ? 'text-primary bg-accent' : 'text-muted-foreground hover:text-foreground hover:bg-accent'
-                )
-              }
-            >
-              <LayoutGrid className="size-4" />
-              作品广场
-            </NavLink>
-          </nav>
+        {/* 中列：tab 居中 */}
+        <nav className="flex items-center gap-1">
+          <NavLink
+            to="/"
+            end
+            className={({ isActive }) =>
+              cn(
+                'flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-sm transition-colors',
+                isActive ? 'text-primary bg-accent' : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+              )
+            }
+          >
+            <Home className="size-4" />
+            首页
+          </NavLink>
+          <NavLink
+            to="/gallery"
+            className={({ isActive }) =>
+              cn(
+                'flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-sm transition-colors',
+                isActive ? 'text-primary bg-accent' : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+              )
+            }
+          >
+            <LayoutGrid className="size-4" />
+            作品广场
+          </NavLink>
+          <NavLink
+            to="/creation"
+            className={({ isActive }) =>
+              cn(
+                'flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-sm transition-colors',
+                isActive ? 'text-primary bg-accent' : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+              )
+            }
+          >
+            <SquarePen className="size-4" />
+            创作
+          </NavLink>
+        </nav>
+
+        {/* 右列：用户菜单/登录 */}
+        <div className="flex items-center justify-end">
           <div className="flex items-center">
           {isAuthenticated ? (
             <div className="relative" ref={menuRef}>
