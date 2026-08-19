@@ -10,6 +10,7 @@ import PromptCardSkeleton from '../components/home/PromptCardSkeleton'
 import ShowcaseSection from '../components/home/ShowcaseSection'
 import FeaturesSection from '../components/home/FeaturesSection'
 import HomeFooter from '../components/home/HomeFooter'
+import { useLoginPrompt } from '../hooks/useLoginPrompt'
 import { resolvePromptMeta } from '../lib/promptMeta'
 import { useAuthStore } from '../stores/auth'
 import type { RecommendedPrompt } from '../types'
@@ -36,6 +37,7 @@ export default function HomeView() {
   const [uploadName, setUploadName] = useState('')
   const { isAuthenticated } = useAuthStore()
   const navigate = useNavigate()
+  const { askLogin, loginModal } = useLoginPrompt('/')
 
   useEffect(() => {
     listPrompts()
@@ -46,7 +48,7 @@ export default function HomeView() {
 
   const handleGenerate = (prompt: string) => {
     if (!isAuthenticated) {
-      navigate('/login')
+      askLogin() // 未登录弹窗提示要登录才能生成，确认后去登录
       return
     }
     navigate(`/creation?prompt=${encodeURIComponent(prompt)}`)
@@ -137,6 +139,8 @@ export default function HomeView() {
 
       {/* CTA + Footer（仅首页） */}
       <HomeFooter />
+
+      {loginModal}
     </div>
   )
 }

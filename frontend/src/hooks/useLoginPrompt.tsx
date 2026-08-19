@@ -11,10 +11,11 @@ import {
 } from '../components/ui/dialog'
 
 /**
- * 创作页需要登录的操作（生成/发布/存草稿）：先弹窗提示，确认后跳登录。
+ * 需要登录的操作（生成/发布/存草稿）：先弹窗提示，确认后跳登录。
+ * `redirectTo` 登录后返回的地址，默认 /creation（创作页），首页传 '/'。
  * 返回 askLogin()（触发弹窗）+ loginModal（渲染在组件 JSX 中）。
  */
-export function useLoginPrompt() {
+export function useLoginPrompt(redirectTo = '/creation') {
   const [open, setOpen] = useState(false)
   const navigate = useNavigate()
 
@@ -22,7 +23,7 @@ export function useLoginPrompt() {
 
   const goLogin = () => {
     setOpen(false)
-    navigate(`/login?redirect=${encodeURIComponent('/creation')}`)
+    navigate(`/login?redirect=${encodeURIComponent(redirectTo)}`)
   }
 
   const loginModal = (
