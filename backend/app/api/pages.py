@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 from typing import Optional
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile, status
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -420,6 +420,38 @@ async def _resolve_page(db: AsyncSession, pk: str) -> Page:
     if not page:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Page not found")
     return page
+
+
+@router.get("/{pk}/qrcode")
+async def page_qrcode(
+    pk: str,
+    url: str = Query(..., min_length=1, max_length=500),
+    db: AsyncSession = Depends(get_db),
+):
+    """Generate a QR code SVG for sharing a published page.
+
+    `url` is the shareable link (client sends current location.href — works in any
+    environment, same-origin or public). Public: no auth needed (sharing is public).
+    """
+    page = await _resolve_page(db, pk)
+    if not page.is_published:
+        raise HTTPException(status_code=404, detail="Page not published")
+
+    import io
+
+    import qrcode
+    import qrcode.image.svg
+
+    qr = qrcode.QRCode(border=1)
+    qr.add_data(url)
+    img = qr.make_image(image_factory=qrcode.image.svg.SvgPathImage)
+    buf = io.BytesIO()
+    img.save(buf)
+    return Response(
+        content=buf.getvalue(),
+        media_type="image/svg+xml",
+        headers={"Cache-Control": "no-store"},
+    )
 
 
 @router.get("/{pk}/interactions", response_model=InteractionResponse)

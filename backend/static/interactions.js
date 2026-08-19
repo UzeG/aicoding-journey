@@ -121,6 +121,10 @@
     '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" x2="4" y1="22" y2="15"/></svg>'
   var EYE_ICON =
     '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>'
+  var COPY_ICON =
+    '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>'
+  var CHECK_ICON =
+    '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>'
 
   // ── styles ──
   var style = document.createElement('style')
@@ -205,10 +209,16 @@ html.pi-open #pi-trigger{opacity:0;pointer-events:none;}
 #pi-panel .pi-ta::placeholder{color:var(--pi-muted);}
 #pi-panel .pi-submit{height:38px;width:38px;padding:0;border:none;border-radius:8px;background:var(--pi-theme);color:var(--pi-theme-fg);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;}
 .pi-modal{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:3005;font-family:system-ui,sans-serif;}
-.pi-modal-box{background:var(--pi-surface);border-radius:12px;padding:1.5rem;max-width:320px;text-align:center;color:var(--pi-text);box-shadow:0 8px 30px rgba(0,0,0,.3);}
+.pi-modal-box{background:var(--pi-surface);border-radius:12px;padding:1.5rem;max-width:320px;text-align:center;color:var(--pi-text);box-shadow:0 8px 30px rgba(0,0,0,.3);padding-bottom:1.25rem;}
 .pi-modal-title{font-weight:600;margin:0 0 .5rem;font-size:1rem;}
 .pi-modal-desc{color:var(--pi-muted);font-size:.9rem;margin:0 0 1rem;}
 .pi-modal-row{display:flex;gap:.5rem;justify-content:center;}
+/* 分享弹窗：二维码 + 链接 + 复制 */
+.pi-share-qr{width:160px;height:160px;margin:0 auto .8rem;display:block;background:#fff;padding:6px;border-radius:8px;}
+.pi-share-link{display:flex;align-items:center;gap:.5rem;background:color-mix(in srgb, var(--pi-theme) 6%, transparent);border:1px solid var(--pi-border);border-radius:8px;padding:.4rem .6rem;}
+.pi-share-link .pi-share-url{flex:1;min-width:0;font-size:.78rem;color:var(--pi-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left;}
+.pi-share-link button{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;padding:0;background:none;border:none;border-radius:6px;color:var(--pi-muted);cursor:pointer;flex-shrink:0;}
+.pi-share-link button:hover{background:color-mix(in srgb, var(--pi-theme) 12%, transparent);color:var(--pi-text);}
 .pi-modal-cancel{padding:.4rem 1rem;border:1px solid var(--pi-border);border-radius:8px;background:transparent;color:var(--pi-text);cursor:pointer;font:inherit;}
 .pi-modal-go{padding:.4rem 1rem;border:none;border-radius:8px;background:var(--pi-theme);color:var(--pi-theme-fg);font:inherit;font-weight:600;cursor:pointer;}
 /* PC：抽屉收窄并锚定右下角（移动端保持基础全宽 bottom sheet） */
@@ -297,6 +307,7 @@ html.pi-open #pi-trigger{opacity:0;pointer-events:none;}
   var reportBtn = makeBtn(REPORT_ICON + '<span class="pi-count"></span>')
   likeBtn.addEventListener('click', toggleLike)
   favBtn.addEventListener('click', toggleFavorite)
+  shareBtn.addEventListener('click', showShareModal)
   actionsEl.appendChild(likeBtn)
   actionsEl.appendChild(favBtn)
   actionsEl.appendChild(shareBtn)
@@ -797,6 +808,68 @@ html.pi-open #pi-trigger{opacity:0;pointer-events:none;}
         document.removeEventListener('click', handler)
       })
     }, 0)
+  }
+
+  // ── share modal：二维码 + 链接 + 复制 ──
+  function showShareModal() {
+    var existing = document.getElementById('pi-share-modal')
+    if (existing) return
+    var url = location.href
+    var overlay = document.createElement('div')
+    overlay.id = 'pi-share-modal'
+    overlay.className = 'pi-modal'
+    overlay.addEventListener('click', function (e) { if (e.target === overlay) overlay.remove() })
+
+    var box = document.createElement('div')
+    box.className = 'pi-modal-box'
+
+    var qr = document.createElement('img')
+    qr.className = 'pi-share-qr'
+    qr.alt = '分享二维码'
+    qr.src = '/api/pages/' + pk + '/qrcode?url=' + encodeURIComponent(url)
+
+    var linkRow = document.createElement('div')
+    linkRow.className = 'pi-share-link'
+    var urlEl = document.createElement('span')
+    urlEl.className = 'pi-share-url'
+    urlEl.textContent = url
+    var copyBtn = document.createElement('button')
+    copyBtn.type = 'button'
+    copyBtn.title = '复制链接'
+    copyBtn.innerHTML = COPY_ICON
+    copyBtn.addEventListener('click', function () { copyText(url, copyBtn) })
+    linkRow.appendChild(urlEl)
+    linkRow.appendChild(copyBtn)
+
+    box.appendChild(qr)
+    box.appendChild(linkRow)
+    overlay.appendChild(box)
+    document.documentElement.appendChild(overlay)
+  }
+
+  function copyText(text, btn) {
+    var done = function () {
+      var prev = btn.innerHTML
+      btn.innerHTML = CHECK_ICON
+      setTimeout(function () { btn.innerHTML = prev }, 1500)
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done).catch(function () { fallbackCopy(text); done() })
+    } else {
+      fallbackCopy(text)
+      done()
+    }
+  }
+
+  function fallbackCopy(text) {
+    var ta = document.createElement('textarea')
+    ta.value = text
+    ta.style.position = 'fixed'
+    ta.style.opacity = '0'
+    document.body.appendChild(ta)
+    ta.select()
+    try { document.execCommand('copy') } catch (e) {}
+    document.body.removeChild(ta)
   }
 
   // ── login modal ──
