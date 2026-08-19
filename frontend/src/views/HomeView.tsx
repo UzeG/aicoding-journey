@@ -8,7 +8,6 @@ import Reveal from '../components/common/Reveal'
 import PromptCard from '../components/home/PromptCard'
 import PromptCardSkeleton from '../components/home/PromptCardSkeleton'
 import ShowcaseSection from '../components/home/ShowcaseSection'
-import HowItWorks from '../components/home/HowItWorks'
 import FeaturesSection from '../components/home/FeaturesSection'
 import HomeFooter from '../components/home/HomeFooter'
 import { resolvePromptMeta } from '../lib/promptMeta'
@@ -132,9 +131,6 @@ export default function HomeView() {
           )}
         </div>
       </section>
-
-      {/* 三步流程 */}
-      <HowItWorks />
 
       {/* 平台特性 */}
       <FeaturesSection />

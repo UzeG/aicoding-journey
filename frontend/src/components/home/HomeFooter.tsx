@@ -13,14 +13,14 @@ export default function HomeFooter() {
           <Reveal>
             <div className="rounded-lg border border-primary/20 bg-primary/5 p-10 md:p-14 text-center">
             <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground">
-              想部署一个能用的页面？
+              想让别人看到你的作品？
             </h2>
             <p className="mt-2 text-muted-foreground">
-              上传你的 HTML，或让 AI 生成一个——一键部署上线，分享给所有人使用
+              上传你的 HTML，或让 AI 生成一个——一键部署上线，分享给所有人
             </p>
             <Button size="lg" className="mt-6" asChild>
               <Link to="/creation">
-                <Sparkles className="size-4" /> 开始部署
+                <Sparkles className="size-4" /> 去创作
               </Link>
             </Button>
             </div>
