@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Upload, Loader2, PartyPopper, Clipboard, ExternalLink } from 'lucide-react'
+import { Upload, Loader2, PartyPopper, Clipboard, Check, ExternalLink } from 'lucide-react'
 import { createPage, publishPage } from '../../api/endpoints'
 import { useLoginPrompt } from '../../hooks/useLoginPrompt'
 import { useAuthStore } from '../../stores/auth'
@@ -26,6 +26,7 @@ export default function PublishButton({ pageId, disabled }: Props) {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [result, setResult] = useState<PublishResult | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
   const title = useGenerationStore((s) => s.title)
   const setTitle = useGenerationStore((s) => s.setTitle)
   const tags = useGenerationStore((s) => s.tags)
@@ -35,6 +36,23 @@ export default function PublishButton({ pageId, disabled }: Props) {
   const publicPageId = useGenerationStore((s) => s.publicPageId)
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
   const { askLogin, loginModal } = useLoginPrompt()
+
+  const copyLink = async () => {
+    if (!result) return
+    const url = window.location.origin + result.url
+    try {
+      await navigator.clipboard.writeText(url)
+    } catch {
+      const ta = document.createElement('textarea')
+      ta.value = url
+      document.body.appendChild(ta)
+      ta.select()
+      try { document.execCommand('copy') } catch { /* ignore */ }
+      document.body.removeChild(ta)
+    }
+    setCopied(true)
+    window.setTimeout(() => setCopied(false), 1500)
+  }
 
   const handleClick = () => {
     // 发布需要登录态：未登录弹窗提示，确认后去登录
@@ -94,8 +112,15 @@ export default function PublishButton({ pageId, disabled }: Props) {
               <PartyPopper className="size-5 text-primary" />
               <DialogTitle>{isEdit ? '保存成功！' : '部署成功！'}</DialogTitle>
             </div>
-            <DialogDescription>页面已上线，复制链接或打开访问。</DialogDescription>
+            <DialogDescription>页面已上线，扫描二维码或点击链接以访问。</DialogDescription>
           </DialogHeader>
+          {result && (
+            <img
+              src={`/api/pages/${result.id}/qrcode?url=${encodeURIComponent(window.location.origin + result.url)}`}
+              alt="发布页二维码"
+              className="w-36 h-36 mx-auto mb-4 block rounded-lg bg-white p-1.5"
+            />
+          )}
           <div className="rounded-lg bg-muted p-4">
             <p className="text-sm text-muted-foreground mb-2">页面链接</p>
             <a
@@ -108,9 +133,9 @@ export default function PublishButton({ pageId, disabled }: Props) {
             </a>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => result && navigator.clipboard.writeText(result.url)}>
-              <Clipboard className="size-4" />
-              复制链接
+            <Button variant="outline" onClick={copyLink} disabled={copied}>
+              {copied ? <Check className="size-4" /> : <Clipboard className="size-4" />}
+              {copied ? '已复制' : '复制链接'}
             </Button>
             <Button onClick={() => result && window.open(result.url, '_blank')}>
               <ExternalLink className="size-4" />
