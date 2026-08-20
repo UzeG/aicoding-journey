@@ -10,7 +10,7 @@ export default defineConfig(({ mode }) => {
     plugins: [react(), tailwindcss()],
     server: {
       // 允许 Cloudflare 临时隧道域名访问 dev server（Host 校验白名单）
-      allowedHosts: ['.trycloudflare.com'],
+      allowedHosts: ['.trycloudflare.com', 'uzzze.me'],
       proxy: {
         '/api/generate': isMock
           ? {
