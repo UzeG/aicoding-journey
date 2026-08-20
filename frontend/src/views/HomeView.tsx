@@ -63,7 +63,7 @@ export default function HomeView() {
     <div>
       {/* Hero：左文案+输入，右编译面板（产品在首页上跑起来）。
           -mt-(--header-height) 顶到视口顶：hero 背景延伸到悬浮 header 之下、占满一整屏 */}
-      <section className="relative overflow-hidden -mt-(--header-height) min-h-svh py-12 md:py-0 md:flex md:items-center">
+      <section className="relative overflow-hidden -mt-(--header-height) min-h-svh pt-24 pb-12 md:pt-0 md:pb-0 md:flex md:items-center">
         {/* 背景：稀疏细点 + 鼠标视差/推开 + 点击扩散圆环（懒加载 three） */}
         <div aria-hidden className="absolute inset-0 overflow-hidden pointer-events-none">
           <Suspense fallback={null}>
