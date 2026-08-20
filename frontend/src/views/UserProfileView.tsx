@@ -214,21 +214,25 @@ export default function UserProfileView() {
 
   return (
     <div>
-      {/* Tab 栏 —— 全宽、sticky 在系统 header 下方（GitHub 风格） */}
-      <div className="sticky top-[var(--header-height)] z-40 bg-card border-b border-border">
-        <div className="max-w-7xl mx-auto px-4 flex gap-6 overflow-x-auto h-(--profile-tab-height)">
-          {TABS.map((t) => (
-            <button
-              key={t.key}
-              onClick={() => setTab(t.key)}
-              className={cn(
-                'text-sm font-medium whitespace-nowrap border-b-2 -mb-px transition-colors',
-                tab === t.key ? 'border-primary text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground'
-              )}
-            >
-              {t.label}
-            </button>
-          ))}
+      {/* Tab 栏 —— 透明背景 + 居中胶囊（与 header 分块呼应，滚动时两侧内容穿过） */}
+      <div className="sticky top-[var(--header-height)] z-40">
+        <div className="max-w-7xl mx-auto px-4 h-(--profile-tab-height) flex items-center overflow-x-auto">
+          <nav className="inline-flex items-center gap-1 rounded-full bg-card/80 backdrop-blur ring-1 ring-border/60 shadow-sm p-1">
+            {TABS.map((t) => (
+              <button
+                key={t.key}
+                onClick={() => setTab(t.key)}
+                className={cn(
+                  'px-3 py-1.5 rounded-full text-sm whitespace-nowrap transition-colors',
+                  tab === t.key
+                    ? 'bg-primary text-primary-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+                )}
+              >
+                {t.label}
+              </button>
+            ))}
+          </nav>
         </div>
       </div>
 
