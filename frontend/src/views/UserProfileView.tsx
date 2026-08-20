@@ -198,7 +198,6 @@ export default function UserProfileView() {
   }
 
   const pages = profile.pages
-  const publishedCount = pages.filter((p) => p.is_published).length
   // 最新项目仅展示已发布页面（草稿由「项目」tab 的筛选区分）
   const latestProjects = pages.filter((p) => p.is_published).slice(0, 4)
   const filtered = pages.filter((p) => {
@@ -263,7 +262,6 @@ export default function UserProfileView() {
                 {profile.following_count} 正在关注
               </button>
             </div>
-            <p className="text-sm text-muted-foreground mb-5">{publishedCount} 个已发布页面</p>
             {isOwnProfile && (
               <div className="space-y-2">
                 <Button variant="outline" className="w-full" onClick={openEdit}>

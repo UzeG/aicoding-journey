@@ -115,7 +115,7 @@ export default function IdentityCard({ mode, avatarSrc, name, userId, phone }: P
             <div className="flex items-center gap-5 text-sm">
               <span className="flex items-center gap-1.5 text-muted-foreground">
                 <FileText className="size-4 text-primary" />
-                页面 <span className="font-semibold text-foreground">0</span>
+                作品 <span className="font-semibold text-foreground">0</span>
               </span>
               <span className="flex items-center gap-1.5 text-muted-foreground">
                 <Users className="size-4 text-primary" />
