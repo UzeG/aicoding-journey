@@ -45,7 +45,7 @@ frontend/src/
 │   │   ├── HeroBackground.tsx     # hero Three.js 背景（细点+鼠标视差/推开+点击圆环，懒加载 three）
 │   │   ├── PromptCard.tsx         # 推荐提示词卡片（图标 + 分类标签）
 │   │   ├── PromptCardSkeleton.tsx # 推荐提示词加载骨架屏
-│   │   ├── ShowcaseSection.tsx    # 示例作品展示区（静态假数据）
+│   │   ├── ShowcaseSection.tsx    # 示例作品展示区（最热 10 条真实数据；纯 CSS `showcase-scroll` 动画无缝横滚，hover 暂停）
 │   │   ├── MockThumbnail.tsx      # CSS 手绘页面骨架缩略图
 │   │   ├── HowItWorks.tsx         # 三步流程区块
 │   │   ├── FeaturesSection.tsx    # 平台特性区块

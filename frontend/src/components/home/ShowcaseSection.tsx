@@ -1,24 +1,13 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { FileText } from 'lucide-react'
 import Reveal from '../common/Reveal'
 import { getGallery } from '../../api/endpoints'
-import { cn } from '../../lib/utils'
 import type { GalleryItem } from '../../types'
 
-/** 示例作品展示区：真实数据（最热 10 条）横向自动滚动封面墙。悬停停止滚动。 */
+/** 示例作品展示区：真实数据（最热 10 条）横向自动滚动封面墙（纯 CSS transform 动画，
+    iOS Safari 稳定，不受 scrollLeft/requestAnimationFrame 节流影响）。hover 暂停。 */
 export default function ShowcaseSection() {
-  const scrollerRef = useRef<HTMLDivElement>(null)
-  const [paused, setPaused] = useState(false)
-  const pausedRef = useRef(false)
   const [items, setItems] = useState<GalleryItem[]>([])
-  const reduced = useMemo(
-    () => window.matchMedia('(prefers-reduced-motion: reduce)').matches,
-    []
-  )
-
-  useEffect(() => {
-    pausedRef.current = paused
-  }, [paused])
 
   // 拉最热 10 条
   useEffect(() => {
@@ -27,23 +16,8 @@ export default function ShowcaseSection() {
       .catch(() => setItems([]))
   }, [])
 
-  // 自动横向滚动（循环：滚完一半后回绕）
-  useEffect(() => {
-    if (reduced || items.length === 0) return
-    let raf = 0
-    const tick = () => {
-      const el = scrollerRef.current
-      if (el && !pausedRef.current) {
-        el.scrollLeft += 0.6
-        if (el.scrollLeft >= el.scrollWidth / 2) el.scrollLeft = 0
-      }
-      raf = requestAnimationFrame(tick)
-    }
-    raf = requestAnimationFrame(tick)
-    return () => cancelAnimationFrame(raf)
-  }, [reduced, items.length])
-
-  const loopItems = reduced ? items : [...items, ...items]
+  // 复制两份实现无缝循环（动画 translateX 0 → -50% 恰为一份宽）
+  const loopItems = [...items, ...items]
 
   return (
     <section className="py-16 md:py-20">
@@ -57,16 +31,8 @@ export default function ShowcaseSection() {
       {items.length === 0 ? (
         <p className="text-center text-muted-foreground text-sm py-12">暂无作品，快去创作吧</p>
       ) : (
-        <div
-          ref={scrollerRef}
-          onMouseEnter={() => setPaused(true)}
-          onMouseLeave={() => setPaused(false)}
-          className={cn(
-            'w-full [mask-image:linear-gradient(to_right,transparent,black_4%,black_96%,transparent)]',
-            reduced ? 'overflow-x-auto' : 'overflow-hidden'
-          )}
-        >
-          <div className="flex gap-5 px-6 w-max">
+        <div className="w-full overflow-hidden [mask-image:linear-gradient(to_right,transparent,black_4%,black_96%,transparent)]">
+          <div className="flex gap-5 px-6 w-max animate-[showcase-scroll_30s_linear_infinite] hover:[animation-play-state:paused]">
             {loopItems.map((item, i) => (
               <div key={`${item.id}-${i}`} className="shrink-0 w-56">
                 <a

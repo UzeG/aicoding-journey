@@ -231,3 +231,9 @@ body {
 .markdown-body th { background: var(--muted); font-weight: 600; }
 .markdown-body img { max-width: 100%; border-radius: 6px; }
 .markdown-body hr { border: none; border-top: 1px solid var(--border); margin: 1.2em 0; }
+
+/* 首页「看看大家部署了什么」横向无缝滚动（CSS transform 驱动，iOS Safari 稳定） */
+@keyframes showcase-scroll {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
