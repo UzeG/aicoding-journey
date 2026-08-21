@@ -43,9 +43,9 @@ export default function App() {
   const { fetchUser, isAuthenticated } = useAuthStore()
   const user = useAuthStore((s) => s.user)
 
-  // 首帧用缓存的外观 + 主题色，避免刷新时闪默认
+  // 首帧用缓存的外观 + 主题色，避免刷新时闪默认；未登录强制跟随系统
   useEffect(() => {
-    applyAppearance(getCachedAppearance(), getCachedTheme())
+    applyAppearance(isAuthenticated ? getCachedAppearance() : 'system', getCachedTheme())
   }, [])
 
   useEffect(() => {
@@ -62,9 +62,20 @@ export default function App() {
       cacheAppearance(mode)
       cacheTheme(user.theme ?? null)
     } else if (!isAuthenticated) {
-      applyAppearance(getCachedAppearance(), null)
+      applyAppearance('system', null) // 未登录强制跟随系统，忽略本地缓存历史
       cacheTheme(null)
     }
+  }, [user?.appearance, user?.theme, isAuthenticated])
+
+  // 系统深浅变化时：生效外观为 system 则重算（跟随系统实时切换）
+  useEffect(() => {
+    const mq = window.matchMedia('(prefers-color-scheme: dark)')
+    const onChange = () => {
+      const mode = user ? activeAppearance(user.appearance) : 'system'
+      if (mode === 'system') applyAppearance(mode, user?.theme ?? getCachedTheme())
+    }
+    mq.addEventListener('change', onChange)
+    return () => mq.removeEventListener('change', onChange)
   }, [user?.appearance, user?.theme, isAuthenticated])
 
   return <RouterProvider router={router} />
