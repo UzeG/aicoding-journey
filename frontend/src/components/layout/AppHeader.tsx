@@ -48,7 +48,7 @@ export default function AppHeader() {
 
   return (
     <header className="sticky top-0 z-50 py-3">
-      <div className="max-w-7xl mx-auto px-4 grid grid-cols-[1fr_auto_1fr] items-center gap-3">
+      <div className="px-4 grid grid-cols-[1fr_auto_1fr] items-center gap-3">
         {/* 左：logo bubble */}
         <Link
           to="/"
