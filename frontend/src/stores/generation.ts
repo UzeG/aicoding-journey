@@ -7,7 +7,7 @@ interface GenerationState {
   prompt: string
   title: string
   tags: string[]
-  /** AI 生成主色调（用户所选，null → 平台默认 #00a650） */
+  /** AI 生成主色调（用户所选；null → 发送时回落系统主题配色） */
   accentColor: string | null
   /** 是否编辑已有页面（从 ?pageId= 载入）——发布弹窗据此显示"保存"并预填原配置 */
   isEdit: boolean

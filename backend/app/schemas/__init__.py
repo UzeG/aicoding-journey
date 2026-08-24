@@ -94,7 +94,7 @@ class UpdateProfileRequest(BaseModel):
 class GenerateRequest(BaseModel):
     prompt: str = Field(..., min_length=1, max_length=10000)
     page_id: Optional[int] = None
-    # AI 生成主色调（前端可选，预设/自定义/系统主题；None → 平台默认 #00a650）
+    # AI 生成主色调（前端可选，预设/自定义/系统主题；None → 平台默认石板蓝 #3D5A80）
     accent_color: Optional[str] = Field(default=None, max_length=7, pattern=r"^#[0-9a-fA-F]{6}$")
 
 

@@ -44,10 +44,10 @@ def get_step2_prompt(libraries: list[str], centered: bool = False, accent_color:
     `centered` comes from Step 1's judgment — when the page is a single-screen widget/app,
     the backend injects the centering onto <body>, so Step 2 only needs a short note telling
     the LLM NOT to add its own centering wrapper (replaces the old verbose rule).
-    `accent_color` is the user-chosen primary accent (preset / custom / system theme), default #00a650.
+    `accent_color` is the user-chosen primary accent (preset / custom / system theme), default #3D5A80 (平台石板蓝).
     """
 
-    accent = accent_color or "#00a650"
+    accent = accent_color or "#3D5A80"
     usage_notes = build_step2_usage_notes(libraries)
 
     usage_section = ""
@@ -150,9 +150,9 @@ def get_single_step_prompt(accent_color: str | None = None) -> str:
     No Step 1 refinement/library selection — the LLM writes a COMPLETE standalone
     HTML document and pastes its own CDN tags from the registry below. The backend
     only normalizes doctype/charset/title and does NOT validate the CDN URLs.
-    `accent_color` is the user-chosen primary accent, default #00a650.
+    `accent_color` is the user-chosen primary accent, default #3D5A80 (平台石板蓝).
     """
-    accent = accent_color or "#00a650"
+    accent = accent_color or "#3D5A80"
     cdn_text = build_single_stage_cdn_text()
 
     return f"""You are an expert frontend developer. Generate a COMPLETE standalone HTML page based on the user's description.

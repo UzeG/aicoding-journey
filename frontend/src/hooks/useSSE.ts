@@ -1,6 +1,8 @@
 import { generateSSE } from '../api/endpoints'
 import { useGenerationStore } from '../stores/generation'
 import { useProgressStore } from '../stores/progress'
+import { useAuthStore } from '../stores/auth'
+import { SLATE_THEME } from '../lib/theme'
 
 export function useSSE() {
   const store = useGenerationStore()
@@ -8,7 +10,10 @@ export function useSSE() {
   const startGeneration = async (prompt: string, existingPageId?: string | null) => {
     // Capture current pageId + accentColor before startStreaming resets the pageId
     const pageId = existingPageId ?? useGenerationStore.getState().pageId
-    const accentColor = useGenerationStore.getState().accentColor
+    // 未显式选主色调 → 默认系统主题配色（登录用户主题色，未设置则平台默认石板蓝）
+    const picked = useGenerationStore.getState().accentColor
+    const userTheme = useAuthStore.getState().user?.theme
+    const accentColor = picked || userTheme || SLATE_THEME.hex
     store.startStreaming(prompt)
     useProgressStore.getState().start() // 顶部加载进度条
 

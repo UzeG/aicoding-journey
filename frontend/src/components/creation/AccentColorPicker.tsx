@@ -1,14 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import { Check } from 'lucide-react'
-import { THEME_ACCENTS } from '../../lib/theme'
+import { SLATE_THEME, THEME_ACCENTS } from '../../lib/theme'
 import { cn } from '../../lib/utils'
 import { Button } from '../ui/button'
 
-const DEFAULT_ACCENT = '#00a650'
 const PRESETS = THEME_ACCENTS.map((a) => a.hex)
 
 interface Props {
-  /** 当前选中的主色调；null = 用平台默认 #00a650 */
+  /** 当前选中的主色调；null = 默认系统主题配色（登录用户主题色，无则平台石板蓝） */
   value: string | null
   /** 登录用户的系统主题色（无则 null，不显示系统主题选项） */
   systemTheme?: string | null
@@ -30,7 +29,8 @@ export default function AccentColorPicker({ value, systemTheme, onChange }: Prop
     return () => document.removeEventListener('mousedown', onClick)
   }, [open])
 
-  const current = value || DEFAULT_ACCENT
+  // 未选主色调时显示生效的默认色：系统主题配色（用户主题色 → 平台石板蓝）
+  const current = value || systemTheme || SLATE_THEME.hex
   const select = (c: string | null) => {
     onChange(c)
     setOpen(false)
@@ -96,7 +96,7 @@ export default function AccentColorPicker({ value, systemTheme, onChange }: Prop
               onClick={() => select(null)}
               className="mt-3 w-full text-left px-1.5 py-1 text-xs text-muted-foreground hover:text-primary transition-colors"
             >
-              恢复默认（#00a650）
+              恢复默认（系统主题配色）
             </button>
           )}
         </div>
