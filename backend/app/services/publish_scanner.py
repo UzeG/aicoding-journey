@@ -14,8 +14,6 @@ DANGEROUS_PATTERNS = [
     ("eval(", "Dynamic code execution (eval)"),
     ("new Function(", "Dynamic code execution (new Function)"),
     ("document.cookie", "Cookie access"),
-    ("localStorage.", "localStorage access"),
-    ("sessionStorage.", "sessionStorage access"),
     ("document.write(", "document.write usage"),
 ]
 
@@ -30,6 +28,18 @@ async def scan_html(html_code: str) -> dict:
     for pattern, desc in DANGEROUS_PATTERNS:
         if pattern in html_code:
             issues.append(f"Dangerous API: {desc}")
+
+    # 1b. localStorage/sessionStorage 允许合法用途（偏好/分数存储），
+    #     但读取平台登录 token 仍拦截（防窃取 access_token）
+    storage_used = "localStorage" in html_code or "sessionStorage" in html_code
+    token_read = (
+        "access_token" in html_code
+        or "getItem(\"token\")" in html_code
+        or "getItem('token')" in html_code
+        or ".token" in html_code
+    )
+    if storage_used and token_read:
+        issues.append("Dangerous API: storage accessing login token")
 
     # 2. Check external links (basic — parse with regex for demo)
     import re

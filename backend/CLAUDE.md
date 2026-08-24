@@ -40,7 +40,7 @@ backend/
 │   │   ├── page_id.py       # page_id 生成与校验
 │   │   ├── snapshot.py      # 页面封面快照（Playwright + headless Chrome）
 │   │   ├── sdk_injector.py  # Platform SDK 注入
-│   │   ├── publish_scanner.py # 发布前 HTML 安全扫描
+│   │   ├── publish_scanner.py # 发布前 HTML 安全扫描（localStorage/sessionStorage 放行合法用途，仅拦「存储+读 access_token」）
 │   │   ├── content_filter.py  # Prompt 敏感词过滤
 │   │   └── proxy_service.py   # API 代理 (SSRF 防护 + 域名白名单)
 │   ├── middleware/
