@@ -23,6 +23,18 @@ cd frontend && npm run dev
 
 前端 dev server 已配置 proxy：`/api` 自动转发到 `localhost:8000`。已发布页面与应用**同源**访问 `/{user_id}/{page_id}`（Vite proxy 把该段路径转发到 8000；生产用 Cloudflare 同域代理）。
 
+## 公网访问（Cloudflare Tunnel）
+
+前置（已完成，无需重做）：`cloudflared tunnel login` → `cloudflared tunnel create uze-app`（ID `241297b8-1283-4561-b632-efbca74f285b`）→ `cloudflared tunnel route dns uze-app uzzze.me`。凭证在 `~/.cloudflared/`（cert.pem + 凭证 json），**没有 config.yml**——ingress 由命令行 `--url` 提供。
+
+```bash
+# 前后端启动后，第三个终端：
+cloudflared tunnel run --url http://localhost:5173 uze-app
+# 访问 https://uzzze.me（Vite allowedHosts 已白名单 uzzze.me / .trycloudflare.com）
+```
+
+**陷阱**：`cloudflared tunnel run <ID或名字>` 必须带 `--url http://localhost:5173`——`--url` 本身就是 ingress 规则；漏掉它 tunnel 显示连接正常，但没有任何转发规则，uzzze.me 一律 404。若想固化配置可补 `~/.cloudflared/config.yml`（tunnel + credentials-file + ingress: uzzze.me → localhost:5173），之后可省略 `--url`。临时共享用 `cloudflared tunnel --url http://localhost:5173`（免登录，随机 trycloudflare.com 域名）。
+
 ## 环境
 
 | 工具 | 位置 |
