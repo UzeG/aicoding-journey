@@ -1,0 +1,40 @@
+services:
+  backend:
+    build: ./backend
+    container_name: aicoding-backend
+    restart: unless-stopped
+    env_file:
+      - backend/.env
+    environment:
+      # environment 优先于 env_file：把 SQLite 指到持久化 volume（4 个斜杠 = 绝对路径）
+      DATABASE_URL: "sqlite+aiosqlite:////app/data/htmlhost.db"
+      # 必须与 uvicorn 监听端口一致（services/snapshot.py 自访问 http://127.0.0.1:{APP_PORT}/...）
+      APP_PORT: "8000"
+    volumes:
+      - backend-data:/app/data
+      # 只挂子目录：static 根目录的 interactions.js 随镜像走，不能被 volume 遮盖
+      - backend-avatars:/app/static/avatars
+      - backend-snapshots:/app/static/snapshots
+    expose:
+      - "8000" # 仅容器网络可见，唯一入口是 nginx
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/openapi.json', timeout=5)"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  nginx:
+    build: ./frontend
+    container_name: aicoding-nginx
+    restart: unless-stopped
+    ports:
+      - "${HTTP_PORT:-80}:80" # 云服务器可 HTTP_PORT=8080 docker compose up -d 换端口
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  backend-data:
+  backend-avatars:
+  backend-snapshots:

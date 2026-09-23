@@ -35,6 +35,20 @@ cloudflared tunnel run --url http://localhost:5173 uze-app
 
 **陷阱**：`cloudflared tunnel run <ID或名字>` 必须带 `--url http://localhost:5173`——`--url` 本身就是 ingress 规则；漏掉它 tunnel 显示连接正常，但没有任何转发规则，uzzze.me 一律 404。若想固化配置可补 `~/.cloudflared/config.yml`（tunnel + credentials-file + ingress: uzzze.me → localhost:5173），之后可省略 `--url`。临时共享用 `cloudflared tunnel --url http://localhost:5173`（免登录，随机 trycloudflare.com 域名）。
 
+## Docker 部署（云服务器）
+
+面向云服务器部署（HTTPS 由外层 CDN/caddy 负责，nginx 只暴露 80）。详见 `DEPLOY.md`。结构：`docker-compose.yml`（根目录）+ `backend/Dockerfile`（python:3.12-slim + apt chromium + fonts-noto-cjk，非 root 运行，CMD 先幂等 `python -m app.seed` 再 uvicorn）+ `frontend/Dockerfile`（node:22-alpine 多阶段构建 → nginx:alpine）+ `frontend/nginx.conf`。
+
+```bash
+cp backend/.env.example backend/.env   # 填 JWT_SECRET/ENCRYPTION_KEY/LLM_API_KEY
+docker compose up -d --build
+HTTP_PORT=8080 docker compose up -d    # 换宿主机端口
+```
+
+nginx 同源路由复刻 vite dev proxy：`^~ /api/`、`^~ /static/` 前缀 + 发布页正则 `^/(?!admin|api|static)[a-zA-Z0-9_-]{3,30}/[a-zA-Z0-9_-]{1,50}$` → backend:8000；其余 SPA fallback。`/api` 关 buffering（SSE）、read timeout 300s、`client_max_body_size 4m`。后端不发布宿主机端口（`expose`），唯一入口 nginx。
+
+数据持久化三个 named volume：`backend-data`（SQLite，compose 覆盖 `DATABASE_URL` 为 `sqlite+aiosqlite:////app/data/htmlhost.db`）、`backend-avatars`、`backend-snapshots`（挂子目录，不遮盖 static 根的 `interactions.js`）。
+
 ## 环境
 
 | 工具 | 位置 |
