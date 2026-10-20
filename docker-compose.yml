@@ -29,7 +29,9 @@ services:
     container_name: aicoding-nginx
     restart: unless-stopped
     ports:
-      - "${HTTPS_PORT:-8082}:443" # 云服务器可 HTTP_PORT=8080 docker compose up -d 换端口
+      - "${HTTPS_PORT:-8082}:443" # 换端口：HTTPS_PORT=8444 docker compose up -d
+    volumes:
+      - ./certs:/etc/nginx/certs:ro # TLS 证书（uzzze.me），续期后 restart 即可
     depends_on:
       backend:
         condition: service_healthy

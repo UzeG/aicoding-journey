@@ -19,3 +19,6 @@ reports/
 # === User-generated assets (avatars, page snapshots) — not tracked in git ===
 backend/static/avatars/
 backend/static/snapshots/
+
+# === TLS 证书（含私钥），不入库 ===
+certs/
