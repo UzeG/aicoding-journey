@@ -29,7 +29,7 @@ services:
     container_name: aicoding-nginx
     restart: unless-stopped
     ports:
-      - "${HTTP_PORT:-80}:80" # 云服务器可 HTTP_PORT=8080 docker compose up -d 换端口
+      - "${HTTPS_PORT:-8082}:443" # 云服务器可 HTTP_PORT=8080 docker compose up -d 换端口
     depends_on:
       backend:
         condition: service_healthy
